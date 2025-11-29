@@ -1,8 +1,8 @@
 .PHONY: main uefi run clean
 
 DL = build/downloads
-COMMON_INCLUDES = -Iinclude -I$(DL)/Flanterm/src/
-COMMON_CFLAGS = -ffreestanding -fno-pie -mno-red-zone -Wall -Wextra $(COMMON_INCLUDES)
+COMMON_INCLUDES = -Iinclude -Iinclude/std -I$(DL)/Flanterm/src/
+COMMON_CFLAGS = -ffreestanding -nostdinc -fno-pie -mno-red-zone -Wall -Wextra $(COMMON_INCLUDES)
 
 LIBC_SOURCES = src/libc/mem.c
 

@@ -1,5 +1,5 @@
-#include <stdint.h>
-#include "flanterm.h"
+#include "stdint.h"
+#include "flanterm.h" // build/downloads/Flanterm/src
 #include "flanterm_backends/fb.h"
 #include "limine.h"
 
@@ -39,7 +39,7 @@ void _start(void) {
         0
     );
 
-    const char msg[] = "\n\n\nhello world";
+    const char msg[] = "Welcome to CuoreOS\n:3";
     flanterm_write(ft_ctx, msg, sizeof(msg));
 
     for (;;) __asm__("hlt");

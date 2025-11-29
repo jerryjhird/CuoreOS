@@ -1,5 +1,4 @@
-#include <stddef.h>
-#include <stdint.h>
+#include "stdint.h"
 
 void *memset(void *s, int c, size_t n) {
     unsigned char *p = s;
