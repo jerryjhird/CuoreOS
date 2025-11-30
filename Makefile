@@ -1,26 +1,39 @@
 .PHONY: main uefi run clean
 
 DL = build/downloads
-COMMON_INCLUDES = -Iinclude -Iinclude/std -I$(DL)/Flanterm/src/
+COMMON_INCLUDES = -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
 COMMON_CFLAGS = -ffreestanding -nostdinc -fno-pie -mno-red-zone -Wall -Wextra $(COMMON_INCLUDES)
-
-LIBC_SOURCES = src/libc/mem.c
 
 main: build/kernel.elf
 
-build/kernel.elf: src/kernel.c
+build/kernel.elf: src/kernel/kentry.c
 	mkdir -p build $(DL)/Flanterm $(DL)/Limine
 
 	@test -d $(DL)/Flanterm/.git || git clone https://codeberg.org/Mintsuki/Flanterm.git $(DL)/Flanterm 
 	@test -d $(DL)/Limine/.git || git clone --branch=v10.x-binary --depth=1 https://codeberg.org/Limine/Limine.git $(DL)/Limine
 
-	gcc $(COMMON_CFLAGS) -mcmodel=large -fPIC -c $(DL)/Flanterm/src/flanterm.c -o build/flanterm_core.o
-	gcc $(COMMON_CFLAGS) -mcmodel=large -fPIC -c $(DL)/Flanterm/src/flanterm_backends/fb.c -o build/flanterm_fb.o
+	gcc $(COMMON_CFLAGS) -mcmodel=large -c $(DL)/Flanterm/src/flanterm.c -o build/flanterm_core.o
+	gcc $(COMMON_CFLAGS) -mcmodel=large -c $(DL)/Flanterm/src/flanterm_backends/fb.c -o build/flanterm_fb.o
 	ar rcs build/libflanterm.a build/flanterm_core.o build/flanterm_fb.o
 
-	gcc $(COMMON_CFLAGS) -c $(LIBC_SOURCES) -o build/libc.o
+	gcc $(COMMON_CFLAGS) -c src/libc/mem.c    -o build/libc_mem.o
+	gcc $(COMMON_CFLAGS) -c src/libc/string.c -o build/libc_string.o
+	gcc $(COMMON_CFLAGS) -c src/libc/stdio.c  -o build/libc_stdio.o
+	gcc $(COMMON_CFLAGS) -c src/other/x86.c  -o build/other_x86.o
 
-	gcc $(COMMON_CFLAGS) -mcmodel=large -c src/kernel.c -o build/kernel.o
+	ld -r -o build/libc.o \
+		build/libc_mem.o \
+	    build/libc_string.o \
+	    build/libc_stdio.o \
+		build/other_x86.o
+
+	gcc $(COMMON_CFLAGS) -mcmodel=large -c src/kernel/kentry.c -o build/kernel_kentry.o
+	gcc $(COMMON_CFLAGS) -mcmodel=large -c src/kernel/tests.c   -o build/kernel_tests.o
+
+	ld -r -o build/kernel.o \
+		build/kernel_kentry.o \
+	    build/kernel_tests.o
+
 	ld -nostdlib -T src/kernel.ld build/kernel.o build/libc.o build/libflanterm.a -o build/kernel.elf
 
 uefi: build/uefi.img
