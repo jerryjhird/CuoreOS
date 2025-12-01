@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void memory_test(buffer *buf_ctx, struct flanterm_context *ft_ctx);
+void memory_test(void);
 
 #ifdef __cplusplus
 }

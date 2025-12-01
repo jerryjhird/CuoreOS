@@ -5,17 +5,13 @@
 extern "C" {
 #endif
 
-#define BUF_SIZE 128
+#include "stdint.h"
 
-typedef struct {
-    void* ft_ctx;
-    char buf[BUF_SIZE];
-    size_t len;
-} buffer;
+void write(const char* msg, size_t len);
+void flush(void);
+void bwrite(const char *msg);
 
-void write(void* ft_ctx, const char* msg, size_t len);
-void flush(buffer* ctx);
-void bwrite(buffer* ctx, void* ft_ctx, const char* msg);
+void readline(char *buf, size_t size);
 
 #ifdef __cplusplus
 }

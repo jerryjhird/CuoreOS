@@ -2,58 +2,94 @@
 #include "string.h"
 #include "stdio.h"
 #include "stdint.h"
+#include "stdarg.h"
+
 #include "x86.h"
-#include "types.h"
+#include "drivers/ps2.h"
+#include "time.h"
 
-void write(void* ft_ctx, const char* msg, size_t len) {
-    flanterm_write(ft_ctx, msg, len);
+void write(const char* msg, size_t len) {
+    flanterm_write(g_ft_ctx, msg, len);
 }
 
-void flush(buffer* ctx) {
-    if (ctx->len > 0) {
-        write(ctx->ft_ctx, ctx->buf, ctx->len);
-        ctx->len = 0;
+void flush(void) {
+    if (g_writebuf_len > 0) {
+        write(g_writebuf, g_writebuf_len);
+        g_writebuf_len = 0;
     }
 }
 
-void bwrite(buffer* ctx, void* ft_ctx, const char* msg) {
-    if (ctx->ft_ctx == NULL) {
-        ctx->ft_ctx = ft_ctx;
-        ctx->len = 0;
-    }
+void bwrite(const char *msg) {
+    if (!g_ft_ctx) return;
 
     size_t msg_len = strlen(msg);
     size_t offset = 0;
 
-    // Handle message in chunks so buffer is never overflowed
     while (offset < msg_len) {
-        size_t space = BUF_SIZE - ctx->len;
+        size_t space = BUF_SIZE - g_writebuf_len;
         size_t chunk = (msg_len - offset < space) ? (msg_len - offset) : space;
 
-        memcpy(ctx->buf + ctx->len, msg + offset, chunk);
-        ctx->len += chunk;
+        memcpy((uint8_t*)g_writebuf + g_writebuf_len, (const uint8_t*)msg + offset, chunk);
+        g_writebuf_len += chunk;
         offset += chunk;
 
-        if (ctx->len == BUF_SIZE) {
-            flush(ctx);
+        if (g_writebuf_len == BUF_SIZE) {
+            flush();
         }
     }
 }
 
-void klog(buffer *buf_ctx, struct flanterm_context *ft_ctx, const char *msg) {
+void readline(char *buf, size_t size) {
+    if (size == 0) return;
+    if (g_writebuf_len > 0) {
+        flush();
+    }
+
+    size_t pos = 0;
+    while (1) {
+        char c = getc();  // read one character
+
+        // stop reading if enter
+        if (c == '\r' || c == '\n') {
+            buf[pos] = '\0';
+            write("\n", 1);
+            return;
+        }
+
+        if ((c == '\b' || c == 127) && pos > 0) {
+            pos--;
+            const char bs_seq[] = "\b \b";
+            write(bs_seq, sizeof(bs_seq) - 1); // erase char
+            continue;
+        }
+
+        if (pos < size - 1) {
+            buf[pos++] = c;
+            write(&c, 1);  // echo typed char
+        } else {
+            // buffer full
+            buf[pos] = '\0';
+            return;
+        }
+    }
+}
+
+void klog(void) {
     char decbuf[12];
-    char s1[] = "[";
-    char s2[] = "] ";
-    char s3[] = "\n";
 
     datetime_st now = get_datetime();
     uint32_t epoch = datetime_to_epoch(now);
 
     u32dec(decbuf, epoch);
 
-    bwrite(buf_ctx, ft_ctx, s1);
-    bwrite(buf_ctx, ft_ctx, decbuf);
-    bwrite(buf_ctx, ft_ctx, s2);
-    bwrite(buf_ctx, ft_ctx, msg);
-    bwrite(buf_ctx, ft_ctx, s3);
+    bwrite("\x1b[35m[");
+    bwrite(decbuf);
+    bwrite("]\x1b[0m ");
+}
+
+void kpanic(void) {
+    klog();
+    bwrite("\x1b[31m[ FAIL ] KERNEL PANIC\x1b[0m");
+    flush();
+    for (;;) __asm__ volatile("hlt");
 }

@@ -5,7 +5,11 @@
 extern "C" {
 #endif
 
-void klog(buffer *buf_ctx, struct flanterm_context *ft_ctx, const char *msg);
+#include "stdio.h"
+#include "flanterm.h"
+
+void klog(void);
+void kpanic(void);
 
 #ifdef __cplusplus
 }

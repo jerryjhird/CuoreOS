@@ -1,23 +1,22 @@
 #include "stdint.h"
-#include "types.h"
+#include "time.h"
+#include "x86.h"
+#include "kernel/kio.h"
 
-static inline void outb(uint16_t port, uint8_t val) {
-    __asm__ volatile("outb %0, %1" : : "a"(val), "Nd"(port));
-}
-
-static inline uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
-
-static uint8_t cmos_read(uint8_t reg) {
+uint8_t cmos_read(uint8_t reg) {
     outb(0x70, reg);
     return inb(0x71);
 }
 
+// reads 64-bit timestamp counter
+static inline uint64_t rdtsc(void) {
+    uint32_t lo, hi;
+    __asm__ volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+
 static uint8_t bcd_to_bin(uint8_t val) {
-    return (val & 0x0F) + ((val >> 4) * 10);
+    return (uint8_t)((val & 0x0F) + ((val >> 4) * 10));
 }
 
 void get_cpu(char *buf) {
@@ -53,7 +52,7 @@ datetime_st get_datetime(void) {
     dt.hour  = bcd_to_bin(cmos_read(0x04));
     dt.day   = bcd_to_bin(cmos_read(0x07));
     dt.month = bcd_to_bin(cmos_read(0x08));
-    dt.year  = 2000 + bcd_to_bin(cmos_read(0x09));
+    dt.year  = 2000 + bcd_to_bin(cmos_read(0x09)); // oh no y2k in a 1000 years
 
     return dt;
 }
@@ -71,6 +70,15 @@ uint32_t datetime_to_epoch(datetime_st dt) {
         year -= 1;
     }
 
-    uint32_t days = 365*year + year/4 - year/100 + year/400 + (153*month + 8)/5 + day - 719469;
+    int32_t days_signed = 365*year + year/4 - year/100 + year/400 + (153*month + 8)/5 + day - 719469;
+    uint32_t days = (uint32_t)days_signed;
     return days*86400 + hour*3600 + min*60 + sec;
+}
+
+void sleep_ms(uint64_t ms, uint64_t cpu_hz) {
+    uint64_t start = rdtsc();
+    uint64_t cycles_to_wait = (cpu_hz / 1000) * ms;
+    while ((rdtsc() - start) < cycles_to_wait) {
+        __asm__ volatile("pause"); // prevents busy-wait from hammering the CPU
+    }
 }

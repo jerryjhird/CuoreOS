@@ -1,6 +1,6 @@
 #include "stdint.h"
 
-#define ALIGN_UP(x, a) (((x) + ((a)-1)) & ~((a)-1))
+#define ALIGN_UP(x, a) (((x) + (uintptr_t)((a)-1)) & ~((uintptr_t)((a)-1)))
 
 void *memset(void *s, int c, size_t n) {
     unsigned char *p = s;
