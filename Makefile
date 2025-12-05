@@ -5,7 +5,7 @@ DL = build/downloads
 ENABLED_WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wstrict-prototypes -Wunused-macros
 3PS_ENABLED_WARNINGS = -Wall -Wextra
 
-COMMON_INCLUDES = -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/ -include include/global.h
+COMMON_INCLUDES = -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
 COMMON_CFLAGS = -ffreestanding -mcmodel=large -nostdinc -fno-pie -mno-red-zone -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
 
 FLANTERM_CFLAGS = -ffreestanding -nostdinc -fno-pie -mno-red-zone $(3PS_ENABLED_WARNINGS) -mcmodel=large -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
@@ -25,26 +25,26 @@ build/kernel.elf: src/kernel/kentry.c
 	gcc $(COMMON_CFLAGS) -c src/libc/mem.c    -o build/libc_mem.o
 	gcc $(COMMON_CFLAGS) -c src/libc/string.c -o build/libc_string.o
 	gcc $(COMMON_CFLAGS) -c src/libc/stdio.c  -o build/libc_stdio.o
-	gcc $(COMMON_CFLAGS) -c src/libc/globals.c  -o build/libc_globals.o
 	gcc $(COMMON_CFLAGS) -c src/other/x86.c  -o build/other_x86.o
 
 	ld -r -o build/libc.o \
 		build/libc_mem.o \
 	    build/libc_string.o \
 	    build/libc_stdio.o \
-		build/other_x86.o \
-		build/libc_globals.o
+		build/other_x86.o
 
 	gcc $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
 	gcc $(COMMON_CFLAGS) -c src/kernel/tests.c  -o build/kernel_tests.o
 	gcc $(COMMON_CFLAGS) -c src/other/limineabs.c  -o build/other_limineabs.o
 	gcc $(COMMON_CFLAGS) -c src/drivers/ps2.c  -o build/drivers_ps2.o
+	gcc $(COMMON_CFLAGS) -c src/drivers/serial.c  -o build/drivers_serial.o
 
 	ld -r -o build/kernel.o \
 		build/kernel_kentry.o \
 	    build/kernel_tests.o \
 		build/other_limineabs.o \
-		build/drivers_ps2.o
+		build/drivers_ps2.o \
+		build/drivers_serial.o
 
 	ld -nostdlib -T src/kernel.ld build/kernel.o build/libc.o build/libflanterm.a -o build/kernel.elf
 

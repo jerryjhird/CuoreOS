@@ -18,7 +18,13 @@ static inline uint8_t inb(uint16_t port) {
 }
 
 uint8_t cmos_read(uint8_t reg);
-void get_cpu(char *buf);
+void cpuid(uint32_t leaf, uint32_t subleaf,
+                         uint32_t *eax, uint32_t *ebx,
+                         uint32_t *ecx, uint32_t *edx);
+
+// helpers
+uint8_t bcdtbin(uint8_t val); // bcd to binary
+uint64_t rdtsc(void);
 
 #ifdef __cplusplus
 }

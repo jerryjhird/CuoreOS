@@ -1,4 +1,6 @@
 #include "string.h"
+#include <stdbool.h>
+#include "stdio.h"
 
 size_t strlen(const char* s) {
     size_t len = 0;
@@ -42,7 +44,7 @@ void u32dec(char *buf, uint32_t val) {
     buf[i] = 0;
 }
 
-void itoa(int64_t val, char *buf) {
+void iota(struct writeout_t *wo, int64_t val) {
     char temp[MAX_INT_STR_SIZE];
     int i = 0;
     bool neg = val < 0;
@@ -50,39 +52,43 @@ void itoa(int64_t val, char *buf) {
     if (neg) val = -val;
 
     do {
-        temp[i++] = (char)('0' + (val % 10));
+        temp[i++] = '0' + (val % 10);
         val /= 10;
     } while (val > 0);
 
     if (neg) temp[i++] = '-';
 
-    for (int j = 0; j < i; j++) {
+    // reverse into final buffer
+    char buf[MAX_INT_STR_SIZE];
+    for (int j = 0; j < i; j++)
         buf[j] = temp[i - j - 1];
-    }
+
     buf[i] = '\0';
+    bwrite(wo, buf);
 }
 
-
-void uitoa(uint64_t val, char *buf) {
+void uiota(struct writeout_t *wo, uint64_t val) {
     char temp[MAX_UINT_STR_SIZE];
     int i = 0;
 
     if (val == 0) {
-        buf[0] = '0';
-        buf[1] = '\0';
+        bwrite(wo, "0");
         return;
     }
 
     while (val > 0) {
-        temp[i++] = (char)('0' + (val % 10));
+        temp[i++] = '0' + (val % 10);
         val /= 10;
     }
 
-    for (int j = 0; j < i; j++) {
+    char buf[MAX_UINT_STR_SIZE];
+    for (int j = 0; j < i; j++)
         buf[j] = temp[i - j - 1];
-    }
+
     buf[i] = '\0';
+    bwrite(wo, buf);
 }
+
 
 unsigned int hash(const char *s) {
     unsigned int h = 0;

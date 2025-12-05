@@ -5,20 +5,20 @@
 #include "stdint.h"
 #include "kernel/kio.h"
 
-void memory_test(void) {
+void memory_test(struct writeout_t *wo) {
     const size_t size = 16;
     char* block1 = kzalloc(size);
     if (!block1) {
-        klog();
-        bwrite("[ \x1b[31mFAIL \x1b[0m] kzalloc returned NULL\n");
+        klog(wo);
+        bwrite(wo, "[ \x1b[31mFAIL \x1b[0m] kzalloc returned NULL\n");
         return;
     }
 
     // verify zeroed memory
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != 0) {
-            klog();
-            bwrite("[ \x1b[31mFAIL \x1b[0m] kzalloc did not zero memory\n");
+            klog(wo);
+            bwrite(wo, "[ \x1b[31mFAIL \x1b[0m] kzalloc did not zero memory\n");
             kfree(block1, size);
             return;
         }
@@ -32,8 +32,8 @@ void memory_test(void) {
     // read the pattern back
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != (char)(i + 1)) {
-            klog();
-            bwrite("[ \x1b[31mFAIL \x1b[0m] memory write/read mismatch\n");
+            klog(wo);
+            bwrite(wo, "[ \x1b[31mFAIL \x1b[0m] memory write/read mismatch\n");
             kfree(block1, size);
             return;
         }
@@ -44,16 +44,16 @@ void memory_test(void) {
 
     char* block2 = kzalloc(size);
     if (block2 != block1) {
-        klog();
-        bwrite("[ \x1b[31mFAIL\x1b[0m ] kfree did not rewind heap pointer\n");
+        klog(wo);
+        bwrite(wo, "[ \x1b[31mFAIL\x1b[0m ] kfree did not rewind heap pointer\n");
         kfree(block2, size);
         return;
     }
 
     kfree(block2, size);
     
-    klog();
-    bwrite("[ \x1b[92mPASS\x1b[0m ] memory_test successful\n");
-    flush();        
+    klog(wo);
+    bwrite(wo, "[ \x1b[92mPASS\x1b[0m ] memory_test successful\n");
+    flush(wo);        
 }
 

@@ -16,8 +16,8 @@ typedef struct {
 // src/other/x86.c
 void sleep_ms(uint64_t ms, uint64_t cpu_hz);
 
-uint32_t datetime_to_epoch(datetime_st dt);
-datetime_st get_datetime(void);
+uint32_t dttepoch(datetime_st dt);
+datetime_st getdatetime(void);
 
 #ifdef __cplusplus
 }

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void memory_test(void);
+void memory_test(struct writeout_t *wo);
 
 #ifdef __cplusplus
 }

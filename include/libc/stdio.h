@@ -6,12 +6,20 @@ extern "C" {
 #endif
 
 #include "stdint.h"
+#define BUF_SIZE 256
 
-void write(const char* msg, size_t len);
-void flush(void);
-void bwrite(const char *msg);
+struct writeout_t {
+    char buf[BUF_SIZE];
+    size_t len;
+    void (*write)(const char *msg, size_t len, void *ctx);
+    void *ctx;
+};
 
-void readline(char *buf, size_t size);
+void write(struct writeout_t *wo, const char *msg, size_t len);
+void flush(struct writeout_t *wo);
+void bwrite(struct writeout_t *wo, const char *msg);
+
+void readline(struct writeout_t *wo, char *buf, size_t size);
 
 #ifdef __cplusplus
 }

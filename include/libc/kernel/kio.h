@@ -8,8 +8,8 @@ extern "C" {
 #include "stdio.h"
 #include "flanterm.h"
 
-void klog(void);
-void kpanic(void);
+void klog(struct writeout_t *wo);
+void kpanic(struct writeout_t *wo);
 
 #ifdef __cplusplus
 }

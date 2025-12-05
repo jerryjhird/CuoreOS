@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include "stdint.h"
+#include "stdio.h"
 
 size_t strlen(const char* s);
 int strcmp(const char* s1, const char* s2);
@@ -16,8 +17,8 @@ void *memset(void *s, int c, size_t n);
 
 void u32dec(char *buf, uint32_t val);
 
-void itoa(int64_t val, char *buf);
-void uitoa(uint64_t val, char *buf);
+void iota(struct writeout_t *wo, int64_t val);
+void uiota(struct writeout_t *wo, uint64_t val);
 
 unsigned int hash(const char *s);
 
