@@ -52,7 +52,7 @@ void iota(struct writeout_t *wo, int64_t val) {
     if (neg) val = -val;
 
     do {
-        temp[i++] = '0' + (val % 10);
+        temp[i++] = (char)('0' + (val % 10));
         val /= 10;
     } while (val > 0);
 
@@ -77,7 +77,7 @@ void uiota(struct writeout_t *wo, uint64_t val) {
     }
 
     while (val > 0) {
-        temp[i++] = '0' + (val % 10);
+        temp[i++] = (char)('0' + (val % 10));
         val /= 10;
     }
 
@@ -88,7 +88,6 @@ void uiota(struct writeout_t *wo, uint64_t val) {
     buf[i] = '\0';
     bwrite(wo, buf);
 }
-
 
 unsigned int hash(const char *s) {
     unsigned int h = 0;

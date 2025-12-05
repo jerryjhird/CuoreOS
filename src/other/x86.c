@@ -5,6 +5,8 @@
 #include "kernel/kio.h"
 #include "string.h"
 
+#include "drivers/serial.h"
+
 uint8_t cmos_read(uint8_t reg) {
     outb(0x70, reg);
     return inb(0x71);
@@ -95,4 +97,99 @@ void cpu_brand(struct writeout_t *wo) {
         brand[end--] = '\0';
 
     bwrite(wo, brand);
+}
+
+// GDT
+
+static struct gdt_entry gdt[3];
+static struct gdt_ptr   gp;
+
+// helper to fill a descriptor
+static void gdt_set(
+    int i, uint32_t base, uint32_t limit,
+    uint8_t access, uint8_t gran)
+{
+    gdt[i].limit_low   = limit & 0xFFFF;
+    gdt[i].base_low    = base & 0xFFFF;
+    gdt[i].base_mid    = (base >> 16) & 0xFF;
+    gdt[i].access      = access;
+    gdt[i].granularity = ((limit >> 16) & 0x0F) | (gran & 0xF0);
+    gdt[i].base_high   = (uint8_t)((base >> 24) & 0xFF);
+}
+
+void gdt_init(void) {
+    gp.limit = sizeof(gdt) - 1;
+    gp.base  = (uint64_t)&gdt;
+    gdt_set(0, 0, 0, 0, 0);
+    gdt_set(1, 0, 0, 0x9A, 0xA0); // kernel code
+    gdt_set(2, 0, 0, 0x92, 0xA0); // kernel data
+
+    // load gdt
+    __asm__ volatile (
+        "lgdt %0\n\t"
+        :
+        : "m"(gp)
+        : "memory"
+    );
+
+    __asm__ volatile (
+        "mov $0x10, %%ax\n\t"
+        "mov %%ax, %%ds\n\t"
+        "mov %%ax, %%es\n\t"
+        "mov %%ax, %%ss\n\t"
+        "mov %%ax, %%fs\n\t"
+        "mov %%ax, %%gs\n\t"
+
+        "pushq $0x08\n\t"
+        "leaq 1f(%%rip), %%rax\n\t"
+        "pushq %%rax\n\t"
+        "lretq\n\t"
+        "1:\n\t"
+        :
+        :
+        : "rax", "memory"
+    );
+}
+
+// IDT
+
+static struct idt_entry idt[IDT_ENTRIES];
+static struct idt_ptr   idtp;
+
+// helper to fill a idt entry
+static void idt_set_gate(int n, uint64_t handler, uint16_t sel, uint8_t flags, uint8_t ist) {
+    idt[n].offset_low  = handler & 0xFFFF;
+    idt[n].selector    = sel;
+    idt[n].ist         = ist & 0x7;
+    idt[n].type_attr   = flags;
+    idt[n].offset_mid  = (handler >> 16) & 0xFFFF;
+    idt[n].offset_high = (uint32_t)((handler >> 32) & 0xFFFFFFFF);
+    idt[n].zero        = 0;
+}
+
+void generic_exception_handler_main(void* regs __attribute__((unused))) {
+    serial_write("CPU Exception\n", 14);
+}
+
+
+__attribute__((naked))
+void generic_exception_handler(void)
+{
+    __asm__ volatile(
+        "cli\n\t"
+        "call generic_exception_handler_main\n\t"
+        "hlt\n\t"
+    );
+}
+
+void idt_init(void) {
+    idtp.limit = sizeof(idt) - 1;
+    idtp.base  = (uint64_t)&idt;
+
+    // use the generic_exception handler for all exceptions
+    for (int i = 0; i < IDT_ENTRIES; i++) {
+        idt_set_gate(i, (uint64_t)generic_exception_handler, 0x08, 0x8E, 0);
+    }
+
+    __asm__ volatile("lidt %0" : : "m"(idtp));
 }

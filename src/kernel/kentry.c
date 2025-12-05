@@ -23,30 +23,36 @@ static volatile struct limine_framebuffer_request fb_req = {
     .revision = 0
 };
 
-void serial_write_adapter(const char *msg, size_t len, void *ctx) {
+static inline void serial_write_adapter(const char *msg, size_t len, void *ctx) {
     (void)ctx;
     serial_write(msg, len);
 }
 
-void flanterm_write_adapter(const char *msg, size_t len, void *ctx) {
+static inline void flanterm_write_adapter(const char *msg, size_t len, void *ctx) {
     flanterm_write((struct flanterm_context*)ctx, msg, len);
 }
-
 
 void exec(struct writeout_t *wo, const char *cmd) {
     switch (hash(cmd)) {
         case 0x0030CF41: // "help"
-            bwrite(wo, "commands: memtest, panic, halt\n");
+            bwrite(wo, "commands: memtest, panic, divide0\n");
             break;
         case 0x3896F7E7: // "memtest"
             memory_test(wo);
             break;
-        case 0x0030C041: // "halt"
-            for (;;) __asm__ volatile("hlt");
-            break;
         case 0x06580A77: // "panic"
             kpanic(wo);
             break;
+        case 0x63CC12D7: // "divide0"
+        {
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wdiv-by-zero"
+            volatile int z = 1 / 0;   // exception #0
+            #pragma GCC diagnostic pop
+            (void)z;
+            break;
+        }
+        
         default:
             if (strlen(cmd) > 0) {
                 bwrite(wo, "unknown command: ");
@@ -58,6 +64,9 @@ void exec(struct writeout_t *wo, const char *cmd) {
 }
 
 void _start(void) {
+    gdt_init();
+    idt_init();
+
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
     uint32_t *framebuffer_ptr = (uint32_t *)fb->address;
     size_t width  = fb->width;

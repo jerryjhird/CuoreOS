@@ -19,7 +19,7 @@ static void serial_wait_tx(void) {
 
 static void serial_putc(char c) {
     serial_wait_tx();
-    outb(SERIAL_COM1, c);
+    outb(SERIAL_COM1, (uint8_t)c);
 }
 
 void serial_write(const char *msg, size_t len) {
