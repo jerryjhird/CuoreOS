@@ -33,7 +33,7 @@ static uint8_t read_scancode(void) {
     return inb(KBD_DATA_PORT);
 }
 
-char getc(void) {
+char ps2_getc(void) {
     while (1) {
         uint8_t sc = read_scancode();
         bool released = sc & 0x80;

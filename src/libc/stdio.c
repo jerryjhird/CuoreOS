@@ -50,7 +50,7 @@ void readline(struct writeout_t *wo, char *buf, size_t size) {
 
     size_t pos = 0;
     while (1) {
-        char c = getc();  // read one character
+        char c = ps2_getc();  // read one character
 
         // stop reading if enter
         if (c == '\r' || c == '\n') {
