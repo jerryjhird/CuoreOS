@@ -91,7 +91,7 @@ void _start(void) {
         NULL, NULL,
         NULL, NULL,
         NULL, 0, 0, 1,
-        0, 0, 0
+        0, 0, 0, 0
     );
 
     // register the framebuffer terminal as a writeable interface
