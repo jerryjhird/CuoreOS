@@ -70,7 +70,7 @@ build/uefi.img: build/kernel.elf limine.conf
 	parted -s build/uefi.img mkpart ESP fat32 1MiB 100%
 	parted -s build/uefi.img set 1 esp on
 
-	mkfs.vfat -F 32 -n EFI build/uefi.img
+	mformat -i build/uefi.img ::/
 
 	mmd -i build/uefi.img ::EFI
 	mmd -i build/uefi.img ::EFI/BOOT
