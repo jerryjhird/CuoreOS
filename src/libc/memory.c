@@ -43,7 +43,7 @@ void ptrhex(char *buf, void *ptr) {
 uint8_t* heap_ptr = (uint8_t*)0x100000; 
 uint8_t* heap_end = (uint8_t*)0x200000;
 
-void* kmalloc(size_t size) {
+void* malloc(size_t size) {
     uintptr_t ptr = (uintptr_t)heap_ptr;
     ptr = ALIGN_UP(ptr, 8); // 8-byte alignment
     if (ptr + size > (uintptr_t)heap_end) return NULL;
@@ -52,7 +52,7 @@ void* kmalloc(size_t size) {
     return (void*)ptr;
 }
 
-void kfree(void* ptr, size_t size) {
+void free(void* ptr, size_t size) {
     // free the last allocated block
     uintptr_t block = (uintptr_t)ptr;
     if (block + size == (uintptr_t)heap_ptr) {
@@ -60,14 +60,14 @@ void kfree(void* ptr, size_t size) {
     }
 }
 
-void* kzalloc(size_t size) {
-    void* ptr = kmalloc(size);
+void* zalloc(size_t size) {
+    void* ptr = malloc(size);
     if (!ptr) return NULL;        
     memset(ptr, 0, size);
     return ptr;
 }
 
-void kheapinit(uint8_t* start, uint8_t* end) {
+void heapinit(uint8_t* start, uint8_t* end) {
     heap_ptr = start;
     heap_end = end;
 }

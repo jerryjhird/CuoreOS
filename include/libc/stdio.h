@@ -21,6 +21,9 @@ void bwrite(struct writeout_t *wo, const char *msg);
 
 void readline(struct writeout_t *wo, char *buf, size_t size);
 
+void write_epoch(struct writeout_t *wo);
+void panic(struct writeout_t *wo);
+
 #ifdef __cplusplus
 }
 #endif

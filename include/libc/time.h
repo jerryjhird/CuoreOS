@@ -11,13 +11,13 @@ typedef struct {
     uint8_t sec, min, hour;
     uint8_t day, month;
     uint16_t year;
-} datetime_st;
+} datetime_t;
 
 // src/other/x86.c
 void sleep_ms(uint64_t ms, uint64_t cpu_hz);
 
-uint32_t dttepoch(datetime_st dt);
-datetime_st getdatetime(void);
+uint32_t dttepoch(datetime_t dt);
+datetime_t getdatetime(void);
 
 #ifdef __cplusplus
 }

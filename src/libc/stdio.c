@@ -2,9 +2,8 @@
 #include "string.h"
 #include "stdio.h"
 #include "stdint.h"
-#include "stdarg.h"
 
-#include "x86.h"
+#include "arch/cwarch.h"
 #include "drivers/ps2.h"
 #include "time.h"
 
@@ -77,10 +76,10 @@ void readline(struct writeout_t *wo, char *buf, size_t size) {
     }
 }
 
-void klog(struct writeout_t *wo) {
+void write_epoch(struct writeout_t *wo) {
     char decbuf[12];
 
-    datetime_st now = getdatetime();
+    datetime_t now = getdatetime();
     uint32_t epoch = dttepoch(now);
 
     u32dec(decbuf, epoch);
@@ -90,9 +89,9 @@ void klog(struct writeout_t *wo) {
     bwrite(wo, "]\x1b[0m ");
 }
 
-void kpanic(struct writeout_t *wo) {
-    klog(wo);
+void panic(struct writeout_t *wo) {
+    write_epoch(wo);
     bwrite(wo, "\x1b[31m[ FAIL ] KERNEL PANIC\x1b[0m");
     flush(wo);
-    for (;;) __asm__ volatile("hlt");
+    halt();
 }

@@ -1,5 +1,5 @@
 #include "stddef.h"
-#include "x86.h"
+#include "arch/cwarch.h"
 #include "drivers/serial.h"
 
 void serial_init(void) {

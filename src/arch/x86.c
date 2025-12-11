@@ -1,8 +1,7 @@
 #include "stdint.h"
 #include "stdio.h"
 #include "time.h"
-#include "x86.h"
-#include "kernel/kio.h"
+#include "arch/cwarch.h"
 #include "string.h"
 
 #include "drivers/serial.h"
@@ -33,8 +32,12 @@ void cpuid(uint32_t leaf, uint32_t subleaf,
                      : "a"(leaf), "c"(subleaf));
 }
 
-datetime_st getdatetime(void) {
-    datetime_st dt;
+void halt(void) {
+    for (;;) __asm__ volatile("hlt");
+}
+
+datetime_t getdatetime(void) {
+    datetime_t dt;
 
     while (cmos_read(0x0A) & 0x80); // wait until update-in-progress clear
 
@@ -48,7 +51,7 @@ datetime_st getdatetime(void) {
     return dt;
 }
 
-uint32_t dttepoch(datetime_st dt) { // time.h 
+uint32_t dttepoch(datetime_t dt) { // time.h 
     uint16_t year = dt.year;
     uint8_t month = dt.month;
     uint8_t day = dt.day;

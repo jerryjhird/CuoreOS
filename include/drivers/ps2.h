@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "x86.h"
+#include "arch/cwarch.h"
 #include "stdbool.h"
 
 #define KBD_DATA_PORT   0x60

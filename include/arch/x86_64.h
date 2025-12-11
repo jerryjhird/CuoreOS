@@ -1,5 +1,5 @@
-#ifndef X86_H
-#define X86_H
+#ifndef X86_64_H
+#define X86_64_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,16 +17,13 @@ static inline uint8_t inb(uint16_t port) {
     return ret;
 }
 
-uint8_t cmos_read(uint8_t reg);
 void cpuid(uint32_t leaf, uint32_t subleaf,
                          uint32_t *eax, uint32_t *ebx,
                          uint32_t *ecx, uint32_t *edx);
+void halt(void);
 
-// helpers
-uint8_t bcdtbin(uint8_t val); // bcd to binary
-uint64_t rdtsc(void);
-
-// global descriptor table
+// descriptor tables
+// 1. global descriptor table
 
 struct gdt_entry {
     uint16_t limit_low;
@@ -49,7 +46,7 @@ void gdt_init(void);
 #endif
 
 
-// interupt descriptor table
+// 2. interupt descriptor table
 
 #define IDT_ENTRIES 256
 #define NUM_GPRS 15
@@ -71,5 +68,9 @@ struct idt_ptr {
 
 void idt_init(void);
 
-#endif // X86_H
+// high level abstractions
+void cpu_brand(struct writeout_t *wo);
+
+#endif // X86_64_H
+
 

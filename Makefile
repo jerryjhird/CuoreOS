@@ -7,18 +7,25 @@ ENABLED_WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-convers
 3PS_ENABLED_WARNINGS = -Wall -Wextra
 
 COMMON_INCLUDES = -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
-COMMON_CFLAGS = -ffreestanding -mcmodel=large -nostdinc -fno-pie -mno-red-zone -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
-FLANTERM_CFLAGS = -ffreestanding -nostdinc -fno-pie -mno-red-zone $(3PS_ENABLED_WARNINGS) -mcmodel=large -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
+COMMON_CFLAGS = -ffreestanding -mcmodel=large -nostdinc -fno-pie -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
+FLANTERM_CFLAGS = -ffreestanding -nostdinc -fno-pie $(3PS_ENABLED_WARNINGS) -mcmodel=large -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
 
 HOST_ARCH := $(shell uname -m)
+TARGET_ARCH := x86_64
+
+ifeq ($(TARGET_ARCH),x86_64)
+
+COMMON_CFLAGS   += -mno-red-zone
+FLANTERM_CFLAGS += -mno-red-zone
 
 ifeq ($(HOST_ARCH),x86_64)
-    MAKE_CC := gcc
+	MAKE_CC := gcc
 	MAKE_LD := ld
 else
-    MAKE_CC := x86_64-elf-gcc
+	MAKE_CC := x86_64-elf-gcc
 	MAKE_LD := x86_64-elf-ld
 endif
+endif # TARGET_ARCH
 
 main: build/kernel.elf uefi
 
@@ -32,10 +39,10 @@ build/kernel.elf: src/kernel/kentry.c
 	$(MAKE_CC) $(FLANTERM_CFLAGS) -c $(DL)/Flanterm/src/flanterm_backends/fb.c -o build/flanterm_fb.o
 	ar rcs build/libflanterm.a build/flanterm_core.o build/flanterm_fb.o
 
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/mem.c    -o build/libc_mem.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/memory.c    -o build/libc_mem.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/string.c -o build/libc_string.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/stdio.c  -o build/libc_stdio.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/other/x86.c  -o build/other_x86.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/x86.c  -o build/other_x86.o
 
 	$(MAKE_LD) -r -o build/libc.o \
 		build/libc_mem.o \
@@ -45,10 +52,10 @@ build/kernel.elf: src/kernel/kentry.c
 
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/tests.c  -o build/kernel_tests.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/other/limineabs.c  -o build/other_limineabs.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/limineabs.c  -o build/other_limineabs.o
 
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/drivers/ps2.c  -o build/drivers_ps2.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/drivers/serial.c  -o build/drivers_serial.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/ps2.c  -o build/drivers_ps2.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/serial.c  -o build/drivers_serial.o
 
 	$(MAKE_LD) -r -o build/kernel.o \
 		build/kernel_kentry.o \
@@ -57,7 +64,7 @@ build/kernel.elf: src/kernel/kentry.c
 		build/drivers_ps2.o \
 		build/drivers_serial.o
 
-	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/libc.o build/libflanterm.a -o build/kernel.elf
+	$(MAKE_LD) -nostdlib -T src/kernel_$(TARGET_ARCH).ld build/kernel.o build/libc.o build/libflanterm.a -o build/kernel.elf
 
 uefi: build/uefi.img
 

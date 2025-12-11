@@ -1,20 +1,19 @@
 #include "flanterm.h"
 #include "flanterm_backends/fb.h"
 
+#include "kernel.h"
+
 #include "stdint.h"
 #include "stdio.h"
 #include "string.h"
 
-#include "x86.h"
-#include "x86abs.h"
+#include "arch/cwarch.h"
+#include "memory.h"
 
-#include "kernel/kmem.h"
-#include "kernel/kio.h"
-#include "ktests.h"
 #include "drivers/ps2.h"
 #include "drivers/serial.h"
-#include "limineabs.h"
-#include "limine.h"
+#include "arch/limineabs.h"
+#include "arch/limine.h"
 
 struct flanterm_context *term_ctx;
 
@@ -41,7 +40,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
             memory_test(wo);
             break;
         case 0x06580A77: // "panic"
-            kpanic(wo);
+            panic(wo);
             break;
         case 0x63CC12D7: // "divide0"
         {
@@ -111,7 +110,7 @@ void _start(void) {
     serial_wo.ctx = NULL;
 
     // define heap
-    kheapinit((uint8_t*)0x100000, (uint8_t*)0x200000);
+    heapinit((uint8_t*)0x100000, (uint8_t*)0x200000);
     memory_test(&term_wo);
 
     uint64_t count = limine_module_count();
@@ -119,7 +118,7 @@ void _start(void) {
     for (uint64_t i = 0; i < count; i++) {
         struct limine_file *mod = limine_get_module(i);
 
-        klog(&term_wo);
+        write_epoch(&term_wo);
         bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (LIMINE/MOD:");
         uiota(&term_wo, i);
         bwrite(&term_wo, ") ");
@@ -136,17 +135,17 @@ void _start(void) {
 
     int pdcount = ps2_dev_count();
     
-    klog(&term_wo);
+    write_epoch(&term_wo);
     bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (PS/2) Devices: ");
     uiota(&term_wo, (uint64_t)pdcount);
     bwrite(&term_wo, "\n");
 
-    klog(&term_wo);
+    write_epoch(&term_wo);
     bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (CPU) Brand: ");
     cpu_brand(&term_wo);
     bwrite(&term_wo, "\n");
 
-    klog(&serial_wo);
+    write_epoch(&serial_wo);
     bwrite(&serial_wo, "Finished Booting\n");
     flush(&serial_wo);
 
@@ -160,5 +159,5 @@ void _start(void) {
         exec(&term_wo, line);
     }
 
-    for (;;) __asm__ volatile("hlt");
+    halt();
 }

@@ -1,3 +1,5 @@
+// high level abstractions for limine protocol
+
 #ifndef LIMINEABS_H
 #define LIMINEABS_H
 
@@ -5,9 +7,9 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "limine.h"
+#include "stdint.h"
+#include "stdbool.h"
+#include "arch/limine.h"
 
 uint64_t limine_module_count(void);
 struct limine_file *limine_get_module(uint64_t index);
