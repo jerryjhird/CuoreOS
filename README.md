@@ -6,16 +6,19 @@ Hobby x86-64 ELF Kernel
 - GNU linker (ld)
 - GNU find
 - Make
+- mtools
+- Git
 - ar
 - cpio
-- dd
-- parted
-- mkfs.vfat
-- losetup
-- mount
-- umount
-- sudo
-- git
+- DD
+- Parted
+- echo 
+- test
+- 
+- losetup (for mounting/unmounting (not required for building or running))
+- Mount (for mounting/unmounting)
+- umount (for mounting/unmounting)
+- Sudo (for mounting/unmounting)
 
 ## Requirements ("make run")
 - qemu-system-x86_64
