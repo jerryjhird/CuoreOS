@@ -6,6 +6,7 @@
 #include "arch/cwarch.h"
 #include "drivers/ps2.h"
 #include "time.h"
+#include "memory.h"
 
 void write(struct writeout_t *wo, const char *msg, size_t len) {
     if (wo && wo->write) {

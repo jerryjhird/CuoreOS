@@ -3,6 +3,7 @@
 #include "time.h"
 #include "arch/cwarch.h"
 #include "string.h"
+#include "memory.h"
 
 #include "drivers/serial.h"
 
