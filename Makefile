@@ -5,18 +5,15 @@ OVMF_PATH = /usr/share/OVMF/OVMF_CODE.fd
 
 ENABLED_WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wstrict-prototypes -Wunused-macros
 3PS_ENABLED_WARNINGS = -Wall -Wextra
+COMMON_INCLUDES = -Iinclude -Iinclude/libc
+COMMON_CFLAGS = -mno-red-zone -ffreestanding -mcmodel=large -nostdinc -fno-pie -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
 
-COMMON_INCLUDES = -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
-COMMON_CFLAGS = -ffreestanding -mcmodel=large -nostdinc -fno-pie -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
-FLANTERM_CFLAGS = -ffreestanding -nostdinc -fno-pie $(3PS_ENABLED_WARNINGS) -mcmodel=large -Iinclude -Iinclude/libc -I$(DL)/Flanterm/src/
+LIMINE_URL = --branch=v10.x-binary --depth=1 https://codeberg.org/Limine/Limine.git
+LIMINE_ROLLBACK_COMMIT = f777d332c6
 
 HOST_ARCH := $(shell uname -m)
-TARGET_ARCH := x86_64
 
-ifeq ($(TARGET_ARCH),x86_64)
-
-COMMON_CFLAGS   += -mno-red-zone
-FLANTERM_CFLAGS += -mno-red-zone
+NO_ROLLBACK ?= 0
 
 ifeq ($(HOST_ARCH),x86_64)
 	MAKE_CC := gcc
@@ -25,19 +22,27 @@ else
 	MAKE_CC := x86_64-elf-gcc
 	MAKE_LD := x86_64-elf-ld
 endif
-endif # TARGET_ARCH
+
+# clone repo($1) at specific commit($2) into folder($3)
+# use NO_ROLLBACK=1 before downloading to use the current versions of deps (you can redownload by running make fullclean and then running make)
+define git_clone
+	( \
+		mkdir -p $3; \
+		test -d $3/.git || git clone $1 $3; \
+		commit_len=$$(echo -n $2 | wc -c); \
+		if [ "$$NO_ROLLBACK" != "1" ] && [ "$$(git -C $3 rev-parse --short=$$commit_len HEAD)" != "$2" ]; then \
+			git -C $3 reset --hard $2; \
+		fi \
+	)
+endef
+
 
 main: build/kernel.elf uefi
 
 build/kernel.elf: src/kernel/kentry.c
-	mkdir -p build $(DL)/Flanterm $(DL)/Limine
+	mkdir -p build $(DL)/Limine
 
-	@test -d $(DL)/Flanterm/.git || git clone https://codeberg.org/Mintsuki/Flanterm.git $(DL)/Flanterm 
-	@test -d $(DL)/Limine/.git || git clone --branch=v10.x-binary --depth=1 https://codeberg.org/Limine/Limine.git $(DL)/Limine
-
-	$(MAKE_CC) $(FLANTERM_CFLAGS) -c $(DL)/Flanterm/src/flanterm.c -o build/flanterm_core.o
-	$(MAKE_CC) $(FLANTERM_CFLAGS) -c $(DL)/Flanterm/src/flanterm_backends/fb.c -o build/flanterm_fb.o
-	ar rcs build/libflanterm.a build/flanterm_core.o build/flanterm_fb.o
+	$(call git_clone,$(LIMINE_URL),$(LIMINE_ROLLBACK_COMMIT),$(DL)/Limine)
 
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/memory.c    -o build/libc_mem.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/string.c -o build/libc_string.o
@@ -52,19 +57,21 @@ build/kernel.elf: src/kernel/kentry.c
 
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/tests.c  -o build/kernel_tests.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/limineabs.c  -o build/other_limineabs.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/graphics.c -o build/kernel_graphics.o
 
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/limineabs.c  -o build/other_limineabs.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/ps2.c  -o build/drivers_ps2.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/serial.c  -o build/drivers_serial.o
 
 	$(MAKE_LD) -r -o build/kernel.o \
 		build/kernel_kentry.o \
 	    build/kernel_tests.o \
+		build/kernel_graphics.o \
 		build/other_limineabs.o \
 		build/drivers_ps2.o \
 		build/drivers_serial.o
 
-	$(MAKE_LD) -nostdlib -T src/kernel_$(TARGET_ARCH).ld build/kernel.o build/libc.o build/libflanterm.a -o build/kernel.elf
+	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/libc.o -o build/kernel.elf
 
 uefi: build/uefi.img
 

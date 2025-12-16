@@ -1,4 +1,4 @@
-#include "stddef.h"
+#include "stdint.h"
 #include "arch/cwarch.h"
 #include "drivers/serial.h"
 

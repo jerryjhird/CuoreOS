@@ -1,6 +1,3 @@
-#include "flanterm.h"
-#include "flanterm_backends/fb.h"
-
 #include "kernel.h"
 
 #include "stdint.h"
@@ -15,7 +12,7 @@
 #include "arch/limineabs.h"
 #include "arch/limine.h"
 
-struct flanterm_context *term_ctx;
+#include "graphics.h"
 
 static volatile struct limine_framebuffer_request fb_req = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
@@ -27,8 +24,8 @@ static inline void serial_write_adapter(const char *msg, size_t len, void *ctx) 
     serial_write(msg, len);
 }
 
-static inline void flanterm_write_adapter(const char *msg, size_t len, void *ctx) {
-    flanterm_write((struct flanterm_context*)ctx, msg, len);
+void term_write_adapter(const char *msg, size_t len, void *ctx) {
+    term_write(ctx, msg, len);
 }
 
 void exec(struct writeout_t *wo, const char *cmd) {
@@ -62,43 +59,36 @@ void exec(struct writeout_t *wo, const char *cmd) {
     }
 }
 
+struct terminal fb_term;
+
 void _start(void) {
     gdt_init();
     idt_init();
 
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
-    uint32_t *framebuffer_ptr = (uint32_t *)fb->address;
-    size_t width  = fb->width;
-    size_t height = fb->height;
-    size_t pitch = fb->pitch;
+    
+    struct framebuffer fb_ctx = {
+        .addr = fb->address,
+        .width = fb->width,
+        .height = fb->height,
+        .pitch = fb->pitch,
+        .bpp = fb->bpp,
+        .r_size = fb->red_mask_size,
+        .r_shift = fb->red_mask_shift,
+        .g_size = fb->green_mask_size,
+        .g_shift = fb->green_mask_shift,
+        .b_size = fb->blue_mask_size,
+        .b_shift = fb->blue_mask_shift,
+    };
 
-    uint8_t red_mask_size    = fb->red_mask_size;
-    uint8_t red_mask_shift   = fb->red_mask_shift;
-    uint8_t green_mask_size  = fb->green_mask_size;
-    uint8_t green_mask_shift = fb->green_mask_shift;
-    uint8_t blue_mask_size   = fb->blue_mask_size;
-    uint8_t blue_mask_shift  = fb->blue_mask_shift;
-
-    term_ctx = flanterm_fb_init(
-        NULL, NULL,
-        framebuffer_ptr, width, height, pitch,
-        red_mask_size, red_mask_shift,
-        green_mask_size, green_mask_shift,
-        blue_mask_size, blue_mask_shift,
-        NULL,
-        NULL, NULL,
-        NULL, NULL,
-        NULL, NULL,
-        NULL, 0, 0, 1,
-        0, 0, 0, 0
-    );
+    term_init(&fb_term, &fb_ctx);
 
     // register the framebuffer terminal as a writeable interface
     struct writeout_t term_wo;
     term_wo.len = 0;
     term_wo.buf[0] = '\0';
-    term_wo.write = flanterm_write_adapter;
-    term_wo.ctx = term_ctx;
+    term_wo.write = term_write_adapter;
+    term_wo.ctx = &fb_term;
 
     serial_init();
 

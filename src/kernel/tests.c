@@ -1,5 +1,4 @@
 #include "memory.h"
-#include "flanterm.h"
 #include "stdio.h"
 #include "stdint.h"
 

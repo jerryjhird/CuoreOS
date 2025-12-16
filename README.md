@@ -26,7 +26,7 @@ Hobby x86-64 ELF Kernel
 
 ### Other make modes:
 - make clean (removes compiled files)
-- make fullclean (removes compiled files and the downloaded git repos / requirements (limine and flanterm))
+- make fullclean (removes compiled files and the downloaded git repos / requirements (limine))
 - make buildutils (compiles src/buildutils/hash.c for linux userspace so you can generate command hashes if you wanted to expand on the command parser)
 
 - make initramfs (rebuilds initramfs image)

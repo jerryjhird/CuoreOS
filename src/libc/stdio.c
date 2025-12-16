@@ -1,4 +1,3 @@
-#include "flanterm.h"
 #include "string.h"
 #include "stdio.h"
 #include "stdint.h"
@@ -85,9 +84,9 @@ void write_epoch(struct writeout_t *wo) {
 
     u32dec(decbuf, epoch);
 
-    bwrite(wo, "\x1b[35m[");
+    bwrite(wo, "[");
     bwrite(wo, decbuf);
-    bwrite(wo, "]\x1b[0m ");
+    bwrite(wo, "] ");
 }
 
 void panic(struct writeout_t *wo) {
