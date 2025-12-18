@@ -48,18 +48,19 @@ build/kernel.elf: src/kernel/kentry.c
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/string.c -o build/libc_string.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/stdio.c  -o build/libc_stdio.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/x86.c  -o build/other_x86.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/other/cpio_newc.c  -o build/other_cpio_newc.o
 
 	$(MAKE_LD) -r -o build/libc.o \
 		build/libc_mem.o \
 	    build/libc_string.o \
 	    build/libc_stdio.o \
-		build/other_x86.o
+		build/other_x86.o \
+		build/other_cpio_newc.o
 
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/tests.c  -o build/kernel_tests.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/graphics.c -o build/kernel_graphics.o
 
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/limineabs.c  -o build/other_limineabs.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/ps2.c  -o build/drivers_ps2.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/serial.c  -o build/drivers_serial.o
 
@@ -67,7 +68,6 @@ build/kernel.elf: src/kernel/kentry.c
 		build/kernel_kentry.o \
 	    build/kernel_tests.o \
 		build/kernel_graphics.o \
-		build/other_limineabs.o \
 		build/drivers_ps2.o \
 		build/drivers_serial.o
 

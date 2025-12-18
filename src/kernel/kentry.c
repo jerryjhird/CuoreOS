@@ -9,13 +9,20 @@
 
 #include "drivers/ps2.h"
 #include "drivers/serial.h"
-#include "arch/limineabs.h"
+#include "fs/cpio_newc.h"
 #include "arch/limine.h"
 
 #include "graphics.h"
 
+struct limine_file *initramfs_mod = NULL;
+
 static volatile struct limine_framebuffer_request fb_req = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+    .revision = 0
+};
+
+static volatile struct limine_module_request module_request = {
+    .id = LIMINE_MODULE_REQUEST_ID,
     .revision = 0
 };
 
@@ -29,15 +36,38 @@ void term_write_adapter(const char *msg, size_t len, void *ctx) {
 }
 
 void exec(struct writeout_t *wo, const char *cmd) {
-    switch (hash(cmd)) {
+    while (*cmd == ' ') cmd++;
+
+    // find first space
+    const char *space = cmd;
+    while (*space && *space != ' ') space++;
+
+    // copy command into buffer
+    char command[32];
+    size_t cmd_len = space - cmd;
+    if (cmd_len >= sizeof(command)) cmd_len = sizeof(command) - 1;
+    memcpy(command, cmd, cmd_len);
+    command[cmd_len] = '\0';
+
+    // get arg
+    const char *arg = space;
+    while (*arg == ' ') arg++;
+
+    switch (hash(command)) {
         case 0x0030CF41: // "help"
-            bwrite(wo, "commands: memtest, panic, divide0\n");
+            bwrite(wo, "commands: ls, readf, memtest, panic, divide0\n");
             break;
         case 0x3896F7E7: // "memtest"
             memory_test(wo);
             break;
         case 0x06580A77: // "panic"
             panic(wo);
+            break;
+        case 0X00000D87: // "ls" (for cpio initramfs limine module)
+            cpio_list_files(wo, initramfs_mod->address);
+            break;
+        case 0x0675D990: // "readf" (cpio)
+            cpio_read_file(wo, initramfs_mod->address, arg);
             break;
         case 0x63CC12D7: // "divide0"
         {
@@ -48,6 +78,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
             (void)z;
             break;
         }
+
         
         default:
             if (strlen(cmd) > 0) {
@@ -103,28 +134,7 @@ void _start(void) {
     heapinit((uint8_t*)0x100000, (uint8_t*)0x200000);
     memory_test(&term_wo);
 
-    uint64_t count = limine_module_count();
-
-    for (uint64_t i = 0; i < count; i++) {
-        struct limine_file *mod = limine_get_module(i);
-
-        write_epoch(&term_wo);
-        bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (LIMINE/MOD:");
-        uiota(&term_wo, i);
-        bwrite(&term_wo, ") ");
-
-        char hexbuf[32];
-        if (mod) {
-            ptrhex(hexbuf, mod->address);
-            bwrite(&term_wo, hexbuf);
-        } else {
-            bwrite(&term_wo, "<NULL>");
-        }
-        bwrite(&term_wo, "\n");
-    }
-
     int pdcount = ps2_dev_count();
-    
     write_epoch(&term_wo);
     bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (PS/2) Devices: ");
     uiota(&term_wo, (uint64_t)pdcount);
@@ -135,9 +145,13 @@ void _start(void) {
     cpu_brand(&term_wo);
     bwrite(&term_wo, "\n");
 
-    write_epoch(&serial_wo);
-    bwrite(&serial_wo, "Finished Booting\n");
-    flush(&serial_wo);
+    struct limine_module_response *resp = module_request.response;
+
+    if (resp->module_count == 0) {
+        bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (MOD) No Module");
+    } else {
+        initramfs_mod = resp->modules[0];
+    }
 
     char line[256];
 
