@@ -15,14 +15,17 @@ struct writeout_t {
     void *ctx;
 };
 
+
 void write(struct writeout_t *wo, const char *msg, size_t len);
-void flush(struct writeout_t *wo);
-void bwrite(struct writeout_t *wo, const char *msg);
+void bwrite(struct writeout_t *wo, const char *msg); // writeout buffered (use flush to flush)
+void lbwrite(struct writeout_t *wo, const char *msg, size_t len); // bwrite but with length argument
+void printf(struct writeout_t *wo, const char *fmt, ...); // writeout buffered (use flush to flush)
+
+void flush(struct writeout_t *wo); // flush writeout_t->buf to writeout_t->write
 
 void readline(struct writeout_t *wo, char *buf, size_t size);
 
-void write_epoch(struct writeout_t *wo);
-void panic(struct writeout_t *wo);
+uint32_t get_epoch(void);
 
 #ifdef __cplusplus
 }

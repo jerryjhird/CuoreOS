@@ -99,10 +99,11 @@ build/uefi.img: build/kernel.elf limine.conf
 initramfs:
 	mkdir -p build/initramfs
 	echo "hello world" > build/initramfs/hworld.txt
-	find build/initramfs -mindepth 1 -print0 \
-		| cpio --null -ov --format=newc \
+	find build/initramfs -type f -print0 \
+		| sed 's|^build/initramfs/||' \
+		| cpio --null -ov --format=newc -D build/initramfs \
 		> build/initramfs.img
-	
+
 run:
 	qemu-system-x86_64 \
 	    -bios $(OVMF_PATH) \

@@ -1,22 +1,28 @@
 #include "stdio.h"
 #include "stdint.h"
+#include "string.h"
 #include "fs/cpio_newc.h"
 
-static unsigned int hex_to_uint(const char *s, int len) {
-    unsigned int v = 0;
+static unsigned int hex_to_uint(const char *s, int len)
+{
+    unsigned int v = 0u;
     for (int i = 0; i < len; i++) {
         char c = s[i];
         v <<= 4;
-        if (c >= '0' && c <= '9') v |= c - '0';
-        else if (c >= 'A' && c <= 'F') v |= c - 'A' + 10;
-        else if (c >= 'a' && c <= 'f') v |= c - 'a' + 10;
+        if (c >= '0' && c <= '9')
+            v |= (unsigned int)(c - '0');
+        else if (c >= 'A' && c <= 'F')
+            v |= (unsigned int)(c - 'A' + 10);
+        else if (c >= 'a' && c <= 'f')
+            v |= (unsigned int)(c - 'a' + 10);
     }
     return v;
 }
 
-static inline uintptr_t align4(uintptr_t x) {
-    return (x + 3) & ~3;
+static uintptr_t align4(uintptr_t x) {
+    return (x + 3u) & ~(uintptr_t)3u;
 }
+
 
 int cpio_read_file(struct writeout_t *wo, void *archive, const char *filename) {
     uint8_t *p = (uint8_t *)archive;
@@ -24,8 +30,9 @@ int cpio_read_file(struct writeout_t *wo, void *archive, const char *filename) {
     while (1) {
         struct cpio_newc_header *hdr = (struct cpio_newc_header *)p;
 
+        // CPIO magic
         if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7') {
-            bwrite(wo, "invalid CPIO archive\n");
+            lbwrite(wo, "invalid CPIO archive\n", 21);
             return -1;
         }
 
@@ -34,35 +41,22 @@ int cpio_read_file(struct writeout_t *wo, void *archive, const char *filename) {
 
         char *name = (char *)(p + sizeof(*hdr));
 
-        if (namesize == 11 &&
-            name[0]=='T' && name[1]=='R' && name[2]=='A' &&
-            name[3]=='I' && name[4]=='L' && name[5]=='E' &&
-            name[6]=='R') {
-            bwrite(wo, "file not found: ");
-            bwrite(wo, filename);
-            bwrite(wo, "\n");
+        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) {
+            printf(wo, "file not found: %s\n", filename);
             return -2;
         }
 
-        int match = 1;
-        for (unsigned int i = 0; i < namesize - 1; i++) {
-            if (filename[i] != name[i]) { match = 0; break; }
-        }
-        if (match && filename[namesize - 1] == 0) {
+        if (namesize - 1 == strlen(filename) && !strncmp(name, filename, namesize - 1)) {
             uint8_t *data = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
-            for (unsigned int i = 0; i < fsize; i++) {
-                char c = (char)data[i];
-                char buf[2] = {c, 0};
-                bwrite(wo, buf);
-            }
+            lbwrite(wo, (const char *)data, fsize); // bulk write
             return 0;
         }
 
+        // advance to next header
         p = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
         p = (uint8_t *)align4((uintptr_t)(p + fsize));
     }
 }
-
 void cpio_list_files(struct writeout_t *wo, void *archive) {
     uint8_t *p = (uint8_t *)archive;
 
@@ -70,7 +64,7 @@ void cpio_list_files(struct writeout_t *wo, void *archive) {
         struct cpio_newc_header *hdr = (struct cpio_newc_header *)p;
 
         if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7') {
-            bwrite(wo, "invalid CPIO archive\n");
+            lbwrite(wo, "invalid CPIO archive\n", 21);
             return;
         }
 
@@ -80,21 +74,11 @@ void cpio_list_files(struct writeout_t *wo, void *archive) {
         char *name = (char *)(p + sizeof(*hdr));
 
         // end of archive
-        if (namesize == 11 &&
-            name[0]=='T' && name[1]=='R' && name[2]=='A' &&
-            name[3]=='I' && name[4]=='L' && name[5]=='E' &&
-            name[6]=='R') {
-            return;
-        }
+        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) return;
 
-        // write filename
-        for (unsigned int i = 0; i < namesize - 1; i++) {
-            char buf[2] = {name[i], 0};
-            bwrite(wo, buf);
-        }
-        bwrite(wo, "\n");
+        lbwrite(wo, name, namesize - 1);
+        lbwrite(wo, "\n", 1);
 
-        // next header
         p = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
         p = (uint8_t *)align4((uintptr_t)(p + fsize));
     }

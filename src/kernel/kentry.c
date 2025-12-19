@@ -26,11 +26,6 @@ static volatile struct limine_module_request module_request = {
     .revision = 0
 };
 
-static inline void serial_write_adapter(const char *msg, size_t len, void *ctx) {
-    (void)ctx;
-    serial_write(msg, len);
-}
-
 void term_write_adapter(const char *msg, size_t len, void *ctx) {
     term_write(ctx, msg, len);
 }
@@ -38,30 +33,25 @@ void term_write_adapter(const char *msg, size_t len, void *ctx) {
 void exec(struct writeout_t *wo, const char *cmd) {
     while (*cmd == ' ') cmd++;
 
-    // find first space
     const char *space = cmd;
     while (*space && *space != ' ') space++;
 
     // copy command into buffer
     char command[32];
-    size_t cmd_len = space - cmd;
+    size_t cmd_len = (size_t)(space - cmd);
     if (cmd_len >= sizeof(command)) cmd_len = sizeof(command) - 1;
     memcpy(command, cmd, cmd_len);
     command[cmd_len] = '\0';
 
-    // get arg
     const char *arg = space;
     while (*arg == ' ') arg++;
 
     switch (hash(command)) {
         case 0x0030CF41: // "help"
-            bwrite(wo, "commands: ls, readf, memtest, panic, divide0\n");
+            bwrite(wo, "commands: ls, readf, memtest, divide0\n");
             break;
         case 0x3896F7E7: // "memtest"
             memory_test(wo);
-            break;
-        case 0x06580A77: // "panic"
-            panic(wo);
             break;
         case 0X00000D87: // "ls" (for cpio initramfs limine module)
             cpio_list_files(wo, initramfs_mod->address);
@@ -82,9 +72,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
         
         default:
             if (strlen(cmd) > 0) {
-                bwrite(wo, "unknown command: ");
-                bwrite(wo, cmd);
-                bwrite(wo, "\n");
+                printf(wo, "unknown command: %s\n", cmd);
             }
             break;
     }
@@ -95,15 +83,15 @@ struct terminal fb_term;
 void _start(void) {
     gdt_init();
     idt_init();
+    serial_init(); // exception handler writes to serial directly
 
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
-    
     struct framebuffer fb_ctx = {
         .addr = fb->address,
-        .width = fb->width,
-        .height = fb->height,
-        .pitch = fb->pitch,
-        .bpp = fb->bpp,
+        .width  = (unsigned int)fb->width,
+        .height = (unsigned int)fb->height,
+        .pitch  = (unsigned int)fb->pitch,
+        .bpp = (unsigned char)fb->bpp,
         .r_size = fb->red_mask_size,
         .r_shift = fb->red_mask_shift,
         .g_size = fb->green_mask_size,
@@ -121,41 +109,26 @@ void _start(void) {
     term_wo.write = term_write_adapter;
     term_wo.ctx = &fb_term;
 
-    serial_init();
-
-    // register serial as a writeable interface
-    struct writeout_t serial_wo;
-    serial_wo.len = 0;
-    serial_wo.buf[0] = '\0';
-    serial_wo.write = serial_write_adapter;
-    serial_wo.ctx = NULL;
-
     // define heap
     heapinit((uint8_t*)0x100000, (uint8_t*)0x200000);
     memory_test(&term_wo);
 
-    int pdcount = ps2_dev_count();
-    write_epoch(&term_wo);
-    bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (PS/2) Devices: ");
-    uiota(&term_wo, (uint64_t)pdcount);
-    bwrite(&term_wo, "\n");
+    printf(&term_wo, "[%u] [ \x1b[94mINFO\x1b[0m ] (PS/2) Devices: %u\n", get_epoch(), ps2_dev_count());
+    printf(&term_wo, "[%u] [ \x1b[94mINFO\x1b[0m ] (CPU) Brand: ", get_epoch());
 
-    write_epoch(&term_wo);
-    bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (CPU) Brand: ");
     cpu_brand(&term_wo);
     bwrite(&term_wo, "\n");
 
     struct limine_module_response *resp = module_request.response;
 
     if (resp->module_count == 0) {
-        bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (MOD) No Module");
+        bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (MOD) No Module\n");
     } else {
         initramfs_mod = resp->modules[0];
     }
 
-    char line[256];
-
     // shell
+    char line[256];
     while (1) {
         flush(&term_wo);
         write(&term_wo, "> ", 2);

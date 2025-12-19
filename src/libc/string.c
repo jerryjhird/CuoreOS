@@ -44,51 +44,6 @@ void u32dec(char *buf, uint32_t val) {
     buf[i] = 0;
 }
 
-void iota(struct writeout_t *wo, int64_t val) {
-    char temp[MAX_INT_STR_SIZE];
-    int i = 0;
-    bool neg = val < 0;
-
-    if (neg) val = -val;
-
-    do {
-        temp[i++] = (char)('0' + (val % 10));
-        val /= 10;
-    } while (val > 0);
-
-    if (neg) temp[i++] = '-';
-
-    // reverse into final buffer
-    char buf[MAX_INT_STR_SIZE];
-    for (int j = 0; j < i; j++)
-        buf[j] = temp[i - j - 1];
-
-    buf[i] = '\0';
-    bwrite(wo, buf);
-}
-
-void uiota(struct writeout_t *wo, uint64_t val) {
-    char temp[MAX_UINT_STR_SIZE];
-    int i = 0;
-
-    if (val == 0) {
-        bwrite(wo, "0");
-        return;
-    }
-
-    while (val > 0) {
-        temp[i++] = (char)('0' + (val % 10));
-        val /= 10;
-    }
-
-    char buf[MAX_UINT_STR_SIZE];
-    for (int j = 0; j < i; j++)
-        buf[j] = temp[i - j - 1];
-
-    buf[i] = '\0';
-    bwrite(wo, buf);
-}
-
 unsigned int hash(const char *s) {
     unsigned int h = 0;
     while (*s) {

@@ -1,6 +1,7 @@
 #include "string.h"
 #include "stdio.h"
 #include "stdint.h"
+#include "stdarg.h"
 
 #include "arch/cwarch.h"
 #include "drivers/ps2.h"
@@ -41,6 +42,155 @@ void bwrite(struct writeout_t *wo, const char *msg) {
     }
 }
 
+void lbwrite(struct writeout_t *wo, const char *msg, size_t len) {
+    if (!wo || !wo->write || !msg || len == 0) return;
+
+    size_t offset = 0;
+
+    while (offset < len) {
+        size_t space = BUF_SIZE - wo->len;
+        size_t chunk = (len - offset < space) ? (len - offset) : space;
+
+        memcpy(wo->buf + wo->len, msg + offset, chunk);
+        wo->len += chunk;
+        offset += chunk;
+
+        if (wo->len == BUF_SIZE) {
+            flush(wo);
+        }
+    }
+}
+
+void printf(struct writeout_t *wo, const char *fmt, ...)
+{
+    if (!wo || !fmt) return;
+
+    va_list ap;
+    va_start(ap, fmt);
+
+    while (*fmt) {
+        if (*fmt != '%') {
+            lbwrite(wo, fmt, 1);
+            fmt++;
+            continue;
+        }
+
+        fmt++; /* skip '%' */
+
+        switch (*fmt) {
+        case '%':
+            lbwrite(wo, "%", 1);
+            break;
+
+        case 'c': {
+            char c = (char)va_arg(ap, int);
+            lbwrite(wo, &c, 1);
+            break;
+        }
+
+        case 's': {
+            const char *s = va_arg(ap, const char *);
+            if (!s) s = "(null)";
+            lbwrite(wo, s, strlen(s));
+            break;
+        }
+
+        case 'd': {
+            int v = va_arg(ap, int);
+            unsigned uv;
+            char buf[12];
+            int i = 0;
+
+            if (v < 0) {
+                lbwrite(wo, "-", 1);
+                uv = (unsigned)(-(v + 1)) + 1; /* avoid INT_MIN UB */
+            } else {
+                uv = (unsigned)v;
+            }
+
+            if (uv == 0u) {
+                lbwrite(wo, "0", 1);
+                break;
+            }
+
+            while (uv) {
+                buf[i++] = (char)('0' + (uv % 10u));
+                uv /= 10u;
+            }
+            while (i--) lbwrite(wo, &buf[i], 1);
+            break;
+        }
+
+        case 'u': {
+            unsigned v = va_arg(ap, unsigned);
+            char buf[12];
+            int i = 0;
+
+            if (v == 0u) {
+                lbwrite(wo, "0", 1);
+                break;
+            }
+
+            while (v) {
+                buf[i++] = (char)('0' + (v % 10u));
+                v /= 10u;
+            }
+            while (i--) lbwrite(wo, &buf[i], 1);
+            break;
+        }
+
+        case 'x': {
+            unsigned v = va_arg(ap, unsigned);
+            char buf[sizeof(unsigned) * 2];
+            int i = 0;
+            static const char hex[] = "0123456789abcdef";
+
+            if (v == 0u) {
+                lbwrite(wo, "0", 1);
+                break;
+            }
+
+            while (v) {
+                buf[i++] = hex[v & 0xfu];
+                v >>= 4;
+            }
+            while (i--) lbwrite(wo, &buf[i], 1);
+            break;
+        }
+
+        case 'p': {
+            uintptr_t v = (uintptr_t)va_arg(ap, void *);
+            char buf[sizeof(uintptr_t) * 2];
+            int i = 0;
+            static const char hex[] = "0123456789abcdef";
+
+            lbwrite(wo, "0x", 2);
+
+            if (v == 0u) {
+                lbwrite(wo, "0", 1);
+                break;
+            }
+
+            while (v) {
+                buf[i++] = hex[v & 0xfu];
+                v >>= 4;
+            }
+            while (i--) lbwrite(wo, &buf[i], 1);
+            break;
+        }
+
+        default:
+            lbwrite(wo, "%", 1);
+            lbwrite(wo, fmt, 1);
+            break;
+        }
+
+        fmt++;
+    }
+
+    va_end(ap);
+}
+
 void readline(struct writeout_t *wo, char *buf, size_t size) {
     if (size == 0) return;
     if (wo->len > 0) {
@@ -76,22 +226,7 @@ void readline(struct writeout_t *wo, char *buf, size_t size) {
     }
 }
 
-void write_epoch(struct writeout_t *wo) {
-    char decbuf[12];
-
+uint32_t get_epoch(void) {
     datetime_t now = getdatetime();
-    uint32_t epoch = dttepoch(now);
-
-    u32dec(decbuf, epoch);
-
-    bwrite(wo, "[");
-    bwrite(wo, decbuf);
-    bwrite(wo, "] ");
-}
-
-void panic(struct writeout_t *wo) {
-    write_epoch(wo);
-    bwrite(wo, "\x1b[31m[ FAIL ] KERNEL PANIC\x1b[0m");
-    flush(wo);
-    halt();
+    return dttepoch(now);
 }

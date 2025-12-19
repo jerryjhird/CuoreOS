@@ -15,9 +15,6 @@ int strncmp(const char* s1, const char* s2, size_t n);
 void u32dec(char *buf, uint32_t val);
 void *ptrhex(char *buf, void *ptr);
 
-void iota(struct writeout_t *wo, int64_t val);
-void uiota(struct writeout_t *wo, uint64_t val);
-
 unsigned int hash(const char *s);
 
 #ifdef __cplusplus
