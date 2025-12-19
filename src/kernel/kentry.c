@@ -4,7 +4,7 @@
 #include "stdio.h"
 #include "string.h"
 
-#include "arch/cwarch.h"
+#include "arch/x86_64.h"
 #include "memory.h"
 
 #include "drivers/ps2.h"
@@ -85,7 +85,11 @@ void _start(void) {
     idt_init();
     serial_init(); // exception handler writes to serial directly
 
+    heapinit((uint8_t*)0x100000, (uint8_t*)0x200000); // init heap
+
+    struct limine_module_response *resp = module_request.response;
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
+    
     struct framebuffer fb_ctx = {
         .addr = fb->address,
         .width  = (unsigned int)fb->width,
@@ -109,17 +113,10 @@ void _start(void) {
     term_wo.write = term_write_adapter;
     term_wo.ctx = &fb_term;
 
-    // define heap
-    heapinit((uint8_t*)0x100000, (uint8_t*)0x200000);
     memory_test(&term_wo);
 
     printf(&term_wo, "[%u] [ \x1b[94mINFO\x1b[0m ] (PS/2) Devices: %u\n", get_epoch(), ps2_dev_count());
-    printf(&term_wo, "[%u] [ \x1b[94mINFO\x1b[0m ] (CPU) Brand: ", get_epoch());
-
-    cpu_brand(&term_wo);
-    bwrite(&term_wo, "\n");
-
-    struct limine_module_response *resp = module_request.response;
+    printf(&term_wo, "[%u] [ \x1b[94mINFO\x1b[0m ] (CPU) Brand: %s\n", get_epoch(), cpu_brand());
 
     if (resp->module_count == 0) {
         bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (MOD) No Module\n");

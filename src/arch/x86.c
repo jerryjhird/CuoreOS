@@ -1,7 +1,7 @@
 #include "stdint.h"
 #include "stdio.h"
 #include "time.h"
-#include "arch/cwarch.h"
+#include "arch/x86_64.h"
 #include "string.h"
 #include "memory.h"
 
@@ -78,15 +78,17 @@ void sleep_ms(uint64_t ms, uint64_t cpu_hz) { // time.h
     }
 }
 
-void cpu_brand(struct writeout_t *wo) {
-    char brand[49];
+char* cpu_brand(void) {
     uint32_t eax, ebx, ecx, edx;
+
+    // allocate 49 bytes
+    char *brand = zalloc(49);
     char *p = brand;
 
     for (uint32_t leaf = 0x80000002; leaf <= 0x80000004; leaf++) {
         cpuid(leaf, 0, &eax, &ebx, &ecx, &edx);
 
-        /* copy 4 registers (16 bytes) per leaf into the brand buffer */
+        // copy 4 registers (16 bytes) per leaf
         memcpy(p, &eax, 4); p += 4;
         memcpy(p, &ebx, 4); p += 4;
         memcpy(p, &ecx, 4); p += 4;
@@ -95,12 +97,12 @@ void cpu_brand(struct writeout_t *wo) {
 
     brand[48] = '\0';
 
-    /* trim trailing spaces and newlines (optional, but nice) */
+    // trim
     int end = 47;
     while (end >= 0 && (brand[end] == ' ' || brand[end] == '\0' || brand[end] == '\n' || brand[end] == '\r'))
         brand[end--] = '\0';
 
-    bwrite(wo, brand);
+    return brand;
 }
 
 // GDT

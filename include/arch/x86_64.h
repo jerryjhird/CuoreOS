@@ -70,7 +70,7 @@ struct idt_ptr {
 void idt_init(void);
 
 // high level abstractions
-void cpu_brand(struct writeout_t *wo);
+char* cpu_brand(void);
 
 #endif // X86_64_H
 
