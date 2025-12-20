@@ -115,11 +115,15 @@ void _start(void) {
 
     memory_test(&term_wo);
 
-    printf(&term_wo, "[%u] [ \x1b[94mINFO\x1b[0m ] (PS/2) Devices: %u\n", get_epoch(), ps2_dev_count());
-    printf(&term_wo, "[%u] [ \x1b[94mINFO\x1b[0m ] (CPU) Brand: %s\n", get_epoch(), cpu_brand());
+    printf(&term_wo, "[%u] [ INFO ] (PS/2) Devices: %u\n", get_epoch(), ps2_dev_count());
+
+
+    char *brand = cpu_brand();
+    printf(&term_wo, "[%u] [ INFO ] (CPU) Brand: %s\n", get_epoch(), brand);
+    free(brand, 49);
 
     if (resp->module_count == 0) {
-        bwrite(&term_wo, "[ \x1b[94mINFO\x1b[0m ] (MOD) No Module\n");
+        bwrite(&term_wo, "[ INFO ] (MOD) No Module\n");
     } else {
         initramfs_mod = resp->modules[0];
     }
