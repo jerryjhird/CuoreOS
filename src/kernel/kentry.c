@@ -12,7 +12,7 @@
 #include "fs/cpio_newc.h"
 #include "arch/limine.h"
 
-#include "graphics.h"
+#include "cuoreterm.h"
 
 struct limine_file *initramfs_mod = NULL;
 
@@ -27,7 +27,7 @@ static volatile struct limine_module_request module_request = {
 };
 
 void term_write_adapter(const char *msg, size_t len, void *ctx) {
-    term_write(ctx, msg, len);
+    cuoreterm_write(ctx, msg, len);
 }
 
 void exec(struct writeout_t *wo, const char *cmd) {
@@ -96,15 +96,9 @@ void _start(void) {
         .height = (unsigned int)fb->height,
         .pitch  = (unsigned int)fb->pitch,
         .bpp = (unsigned char)fb->bpp,
-        .r_size = fb->red_mask_size,
-        .r_shift = fb->red_mask_shift,
-        .g_size = fb->green_mask_size,
-        .g_shift = fb->green_mask_shift,
-        .b_size = fb->blue_mask_size,
-        .b_shift = fb->blue_mask_shift,
     };
 
-    term_init(&fb_term, &fb_ctx);
+    cuoreterm_init(&fb_term, &fb_ctx);
 
     // register the framebuffer terminal as a writeable interface
     struct writeout_t term_wo;

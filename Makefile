@@ -5,15 +5,13 @@ OVMF_PATH = /usr/share/OVMF/OVMF_CODE.fd
 
 ENABLED_WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wstrict-prototypes -Wunused-macros
 3PS_ENABLED_WARNINGS = -Wall -Wextra
-COMMON_INCLUDES = -Iinclude -Iinclude/libc
+COMMON_INCLUDES = -Iinclude -Iinclude/libc -I$(DL)/Cuoreterm/src
 COMMON_CFLAGS = -mno-red-zone -ffreestanding -mcmodel=large -nostdinc -fno-pie -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
 
 LIMINE_URL = --branch=v10.x-binary --depth=1 https://codeberg.org/Limine/Limine.git
-LIMINE_ROLLBACK_COMMIT = f777d332c6
+CUORETERM_URL = https://codeberg.org/jerryjhird/Cuoreterm.git
 
 HOST_ARCH := $(shell uname -m)
-
-NO_ROLLBACK ?= 0
 
 ifeq ($(HOST_ARCH),x86_64)
 	MAKE_CC := gcc
@@ -24,31 +22,32 @@ else
 endif
 
 # clone repo($1) at specific commit($2) into folder($3)
-# use NO_ROLLBACK=1 before downloading to use the current versions of deps (you can redownload by running make fullclean and then running make)
 define git_clone
 	( \
-		mkdir -p $3; \
-		test -d $3/.git || git clone $1 $3; \
-		commit_len=$$(echo -n $2 | wc -c); \
-		if [ "$$NO_ROLLBACK" != "1" ] && [ "$$(git -C $3 rev-parse --short=$$commit_len HEAD)" != "$2" ]; then \
-			git -C $3 reset --hard $2; \
-		fi \
+		mkdir -p $2; \
+		test -d $2/.git || git clone $1 $2; \
 	)
 endef
-
 
 main: build/kernel.elf uefi
 
 build/kernel.elf: src/kernel/kentry.c
-	mkdir -p build $(DL)/Limine
+	mkdir -p build $(DL)/Limine $(DL)/Cuoreterm
 
-	$(call git_clone,$(LIMINE_URL),$(LIMINE_ROLLBACK_COMMIT),$(DL)/Limine)
+	$(call git_clone,$(LIMINE_URL),$(DL)/Limine)
+	$(call git_clone,$(CUORETERM_URL),$(DL)/Cuoreterm)
+	
+	$(MAKE_CC) $(COMMON_CFLAGS) -c $(DL)/Cuoreterm/src/term.c -o build/cuoreterm.o -I$(DL)/Cuoreterm/src
 
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/memory.c    -o build/libc_mem.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/memory.c -o build/libc_mem.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/string.c -o build/libc_string.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/stdio.c  -o build/libc_stdio.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/x86.c  -o build/other_x86.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/other/cpio_newc.c  -o build/other_cpio_newc.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/x86.c -o build/other_x86.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/other/cpio_newc.c -o build/other_cpio_newc.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/tests.c -o build/kernel_tests.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/ps2.c -o build/drivers_ps2.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/serial.c -o build/drivers_serial.o
 
 	$(MAKE_LD) -r -o build/libc.o \
 		build/libc_mem.o \
@@ -57,21 +56,13 @@ build/kernel.elf: src/kernel/kentry.c
 		build/other_x86.o \
 		build/other_cpio_newc.o
 
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/tests.c  -o build/kernel_tests.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/graphics.c -o build/kernel_graphics.o
-
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/ps2.c  -o build/drivers_ps2.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/serial.c  -o build/drivers_serial.o
-
 	$(MAKE_LD) -r -o build/kernel.o \
 		build/kernel_kentry.o \
 	    build/kernel_tests.o \
-		build/kernel_graphics.o \
 		build/drivers_ps2.o \
 		build/drivers_serial.o
 
-	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/libc.o -o build/kernel.elf
+	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/libc.o build/cuoreterm.o -o build/kernel.elf
 
 uefi: build/uefi.img
 
