@@ -34,4 +34,4 @@ Hobby x86-64 ELF Kernel
 - make umount (unmounts the initramfs)
 
 
-### the source code of this project is released under the MIT license granting permission to use copy modify merge publish distribute sublicense and or sell copies of the software.
+### the source code of this project is released under the MIT license granting permission to use copy modify merge publish distribute sublicense and or sell copies of the software. the projects fetched externally specifcally from the makefile will follow different licenses please check and follow these before attempting to do something with them
