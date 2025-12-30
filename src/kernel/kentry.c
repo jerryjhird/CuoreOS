@@ -89,16 +89,15 @@ void _start(void) {
 
     struct limine_module_response *resp = module_request.response;
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
-    
-    struct framebuffer fb_ctx = {
-        .addr = fb->address,
-        .width  = (unsigned int)fb->width,
-        .height = (unsigned int)fb->height,
-        .pitch  = (unsigned int)fb->pitch,
-        .bpp = (unsigned char)fb->bpp,
-    };
 
-    cuoreterm_init(&fb_term, &fb_ctx);
+    cuoreterm_init(
+         &fb_term,
+         (void *)fb->address,
+         (uint32_t)fb->width,
+         (uint32_t)fb->height,
+         (uint32_t)fb->pitch,
+         (uint32_t)fb->bpp
+    );
 
     // register the framebuffer terminal as a writeable interface
     struct writeout_t term_wo;
