@@ -15,6 +15,7 @@
 #include "cuoreterm.h"
 
 struct limine_file *initramfs_mod = NULL;
+uint32_t (*hash)(const char *s);
 
 static volatile struct limine_framebuffer_request fb_req = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
@@ -47,29 +48,18 @@ void exec(struct writeout_t *wo, const char *cmd) {
     while (*arg == ' ') arg++;
 
     switch (hash(command)) {
-        case 0x0030CF41: // "help"
-            bwrite(wo, "commands: ls, readf, memtest, divide0\n");
+        case 0xB5E3B64C: // "help"
+            bwrite(wo, "commands: ls, readf, memtest\n");
             break;
-        case 0x3896F7E7: // "memtest"
+        case 0xED1ABDF6: // "memtest"
             memory_test(wo);
             break;
-        case 0X00000D87: // "ls" (for cpio initramfs limine module)
+        case 0x31CA209B: // "ls" (for cpio initramfs limine module)
             cpio_list_files(wo, initramfs_mod->address);
             break;
-        case 0x0675D990: // "readf" (cpio)
+        case 0x030C68B6: // "readf" (cpio)
             cpio_read_file(wo, initramfs_mod->address, arg);
             break;
-        case 0x63CC12D7: // "divide0"
-        {
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wdiv-by-zero"
-            volatile int z = 1 / 0;   // exception #0
-            #pragma GCC diagnostic pop
-            (void)z;
-            break;
-        }
-
-        
         default:
             if (strlen(cmd) > 0) {
                 printf(wo, "unknown command: %s\n", cmd);
@@ -81,9 +71,10 @@ void exec(struct writeout_t *wo, const char *cmd) {
 struct terminal fb_term;
 
 void _start(void) {
+    
+    serial_init();
     gdt_init();
     idt_init();
-    serial_init(); // exception handler writes to serial directly
 
     heapinit((uint8_t*)0x100000, (uint8_t*)0x200000); // init heap
 
@@ -110,13 +101,31 @@ void _start(void) {
 
     printf(&term_wo, "[%u] [ INFO ] (PS/2) Devices: %u\n", get_epoch(), ps2_dev_count());
 
-
     char *brand = cpu_brand();
+    const char fucky_cpu[] = "QEMU Virtual CPU version 2.5+"; // cpu tends to be fucky with reporting SSE4.2 avaliability in my own testing (this is why the makefile dosent use it by default but the following code makes it usable)
+    
+    int is_fucky = 1;
+    for (int i = 0; i < 27; i++) {
+        if (brand[i] != fucky_cpu[i]) {
+            is_fucky = 0;
+            break;
+        }
+    }
+
+    if (sse_init() >= 0 && !is_fucky) {
+        hash = crc32c_hwhash; // hardware based hash
+        hash_test(&term_wo);
+    } else {
+        printf(&term_wo, "[%u] [ WARN ] SSE4.2 Not Supported \n", get_epoch());
+        hash = crc32c_swhash; // software based hash
+    }
+
     printf(&term_wo, "[%u] [ INFO ] (CPU) Brand: %s\n", get_epoch(), brand);
     free(brand, 49);
 
     if (resp->module_count == 0) {
-        bwrite(&term_wo, "[ INFO ] (MOD) No Module\n");
+        printf(&term_wo, "[%u] [ WARN ] (MOD) No Limine Modules Detected\n", get_epoch());
+        halt();
     } else {
         initramfs_mod = resp->modules[0];
     }

@@ -72,6 +72,10 @@ void idt_init(void);
 // high level abstractions
 char* cpu_brand(void);
 
+// SSE
+int sse_init(void);
+uint32_t crc32c_hwhash(const char *s);
+
 #endif // X86_64_H
 
 

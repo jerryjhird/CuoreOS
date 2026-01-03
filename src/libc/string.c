@@ -1,5 +1,5 @@
 #include "string.h"
-#include <stdbool.h>
+#include "stdbool.h"
 #include "stdio.h"
 
 size_t strlen(const char* s) {
@@ -44,10 +44,19 @@ void u32dec(char *buf, uint32_t val) {
     buf[i] = 0;
 }
 
-unsigned int hash(const char *s) {
-    unsigned int h = 0;
+uint32_t crc32c_swhash(const char *s)
+{
+    const uint32_t poly = 0x82F63B78;
+    uint32_t crc = 0;
+
     while (*s) {
-        h = h * 31 + (unsigned char)(*s++);
+        uint32_t c = (uint8_t)*s++;
+        crc ^= c;
+
+        for (int i = 0; i < 8; i++) {
+            crc = (crc >> 1) ^ (poly & -(crc & 1));
+        }
     }
-    return h;
+
+    return crc;
 }

@@ -15,7 +15,7 @@ int strncmp(const char* s1, const char* s2, size_t n);
 void u32dec(char *buf, uint32_t val);
 void *ptrhex(char *buf, void *ptr);
 
-unsigned int hash(const char *s);
+uint32_t crc32c_swhash(const char *s); // software based crc32c
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,8 @@
 #include "memory.h"
 #include "stdio.h"
 #include "stdint.h"
+#include "arch/x86_64.h"
+#include "string.h"
 
 void memory_test(struct writeout_t *wo) {
     const size_t size = 16;
@@ -49,3 +51,29 @@ void memory_test(struct writeout_t *wo) {
     flush(wo);        
 }
 
+void hash_test(struct writeout_t *wo) {
+    const char *tests[] = {"hello", "world", "123456789", "the quick brown fox jumps over the lazy dog", "uwu", "nya"};
+
+    const size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    int failed = 0;
+
+    for (size_t i = 0; i < ntests; i++) {
+        const char *s = tests[i];
+
+        uint32_t hw = crc32c_hwhash(s);
+        uint32_t sw = crc32c_swhash(s);
+
+        if (hw != sw) {
+            failed = 1;   // mark as failed if any mismatch occurs
+            break;        // no need to continue once a failure is found
+        }
+    }
+
+    if (failed) {
+        printf(wo, "[%u] [ FAIL ] Hash Test\n", get_epoch());
+    } else {
+        printf(wo, "[%u] [ PASS ] Hash Test\n", get_epoch());
+    }
+
+    flush(wo);
+}

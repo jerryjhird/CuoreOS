@@ -199,3 +199,39 @@ void idt_init(void) {
 
     __asm__ volatile("lidt %0" : : "m"(idtp));
 }
+
+// SSE 
+
+int sse_init(void) {
+    uint32_t eax, ebx, ecx, edx;
+    cpuid(1, 0, &eax, &ebx, &ecx, &edx);
+
+    if (!(edx & (1U << 25))) {
+        return -1; // no SSE support
+    }
+
+    // CR0
+    uint64_t cr0;
+    __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0));
+    cr0 &= ~(1ULL << 2);   // clear EM
+    cr0 |=  (1ULL << 1);   // set MP
+    __asm__ volatile ("mov %0, %%cr0" :: "r"(cr0));
+
+    // CR4
+    uint64_t cr4;
+    __asm__ volatile ("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= (1ULL << 9) | (1ULL << 10); // OSFXSR | OSXMMEXCPT
+    __asm__ volatile ("mov %0, %%cr4" :: "r"(cr4));
+
+    return 0;
+}
+
+__attribute__((noinline, optimize("O0")))
+uint32_t crc32c_hwhash(const char *s) {
+    unsigned int h = 0;
+    while (*s) {
+        unsigned char c = (unsigned char)(*s++);
+        __asm__ volatile ("crc32b %1, %0" : "+r"(h) : "rm"(c));
+    }
+    return h;
+}

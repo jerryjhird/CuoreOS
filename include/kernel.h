@@ -13,6 +13,7 @@ extern "C" {
 
 // kernel tests
 void memory_test(struct writeout_t *wo);
+void hash_test(struct writeout_t *wo);
 
 #ifdef __cplusplus
 }
