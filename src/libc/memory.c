@@ -1,4 +1,5 @@
 #include "stdint.h"
+#include "stdbool.h"
 
 #define ALIGN_UP(x, a) (((x) + (uintptr_t)((a)-1)) & ~((uintptr_t)((a)-1)))
 
@@ -40,10 +41,23 @@ void ptrhex(char *buf, void *ptr) {
     buf[sizeof(void*)*2] = 0;
 }
 
-uint8_t* heap_ptr = (uint8_t*)0x100000; 
-uint8_t* heap_end = (uint8_t*)0x200000;
+uint8_t* heap_ptr = (uint8_t*)0x100000;  // placeholder (these are set using heapinit and no heap allocation should be done beforehand)
+uint8_t* heap_end = (uint8_t*)0x200000; // placeholder
+
+bool heap_can_alloc(size_t size) {
+    uintptr_t ptr = (uintptr_t)heap_ptr;
+    ptr = ALIGN_UP(ptr, 8);
+
+    if (ptr + size > (uintptr_t)heap_end)
+        return false;
+
+    return true;
+}
 
 void* malloc(size_t size) {
+    if (!heap_can_alloc(size))
+        return NULL;
+
     uintptr_t ptr = (uintptr_t)heap_ptr;
     ptr = ALIGN_UP(ptr, 8); // 8-byte alignment
     if (ptr + size > (uintptr_t)heap_end) return NULL;

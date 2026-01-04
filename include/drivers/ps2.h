@@ -17,7 +17,6 @@ extern const char scta_uk_shift[128];
 // funcs
 char ps2_getc(void);
 bool ps2_dev_exists(uint8_t port);
-int ps2_dev_count(void);
 
 #ifdef __cplusplus
 }

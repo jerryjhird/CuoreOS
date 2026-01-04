@@ -1,3 +1,4 @@
+#include "arch/limine.h"
 #include "kernel.h"
 
 #include "stdint.h"
@@ -10,12 +11,17 @@
 #include "drivers/ps2.h"
 #include "drivers/serial.h"
 #include "fs/cpio_newc.h"
-#include "arch/limine.h"
-
 #include "cuoreterm.h"
 
 struct limine_file *initramfs_mod = NULL;
 uint32_t (*hash)(const char *s);
+
+#define KHEAP_PAGES 512  // 512 * 4096 = 2 MiB
+
+uint8_t *KHEAP_START = NULL;
+uint8_t *KHEAP_END   = NULL;
+
+// limine requests
 
 static volatile struct limine_framebuffer_request fb_req = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
@@ -27,8 +33,28 @@ static volatile struct limine_module_request module_request = {
     .revision = 0
 };
 
+static volatile struct limine_memmap_request memmap_req = {
+    .id = LIMINE_MEMMAP_REQUEST_ID,
+    .revision = 0
+};
+
+static volatile struct limine_executable_address_request kaddr_req = {
+    .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
+    .revision = 0
+};
+
+static volatile struct limine_hhdm_request hhdm_req = {
+    .id = LIMINE_HHDM_REQUEST_ID,
+    .revision = 0
+};
+
 void term_write_adapter(const char *msg, size_t len, void *ctx) {
     cuoreterm_write(ctx, msg, len);
+}
+
+void serial_write_adapter(const char *msg, size_t len, void *ctx) {
+    (void)ctx;
+    serial_write(msg, len);
 }
 
 void exec(struct writeout_t *wo, const char *cmd) {
@@ -49,7 +75,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
 
     switch (hash(command)) {
         case 0xB5E3B64C: // "help"
-            bwrite(wo, "commands: ls, readf, memtest\n");
+            lbwrite(wo, "commands: ls, readf, memtest\n", 29);
             break;
         case 0xED1ABDF6: // "memtest"
             memory_test(wo);
@@ -59,6 +85,9 @@ void exec(struct writeout_t *wo, const char *cmd) {
             break;
         case 0x030C68B6: // "readf" (cpio)
             cpio_read_file(wo, initramfs_mod->address, arg);
+            break;
+        case 0x57C5E155: // "pma_state" (gets the current state of the physical memory allocator)
+            printf(wo, "(PMA) total pages: %u\n(PMA) used pages: %u\n(PMA) free pages: %u\n", (unsigned)pma_total(), (unsigned)pma_used(), (unsigned)pma_free());
             break;
         default:
             if (strlen(cmd) > 0) {
@@ -71,15 +100,13 @@ void exec(struct writeout_t *wo, const char *cmd) {
 struct terminal fb_term;
 
 void _start(void) {
-    
     serial_init();
     gdt_init();
     idt_init();
 
-    heapinit((uint8_t*)0x100000, (uint8_t*)0x200000); // init heap
-
     struct limine_module_response *resp = module_request.response;
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
+    struct limine_memmap_response *mm = memmap_req.response;
 
     cuoreterm_init(
          &fb_term,
@@ -97,10 +124,26 @@ void _start(void) {
     term_wo.write = term_write_adapter;
     term_wo.ctx = &fb_term;
 
+    struct writeout_t serial_wo;
+    serial_wo.len = 0;
+    serial_wo.buf[0] = '\0';
+    serial_wo.write = serial_write_adapter;
+    serial_wo.ctx = NULL;
+
+    printf(&term_wo, "[ TIME ] [%u]\n", get_epoch());
+
+    // memory init stuff
+    pma_init(mm);
+
+    void *heap_phys = (void *)pma_alloc_pages(KHEAP_PAGES); // ask pma
+    uint64_t hhdm_offset = hhdm_req.response->offset;
+    uint8_t *KHEAP_START = (uint8_t *)heap_phys + hhdm_offset;
+    uint8_t *KHEAP_END   = KHEAP_START + KHEAP_PAGES * 4096;
+
+    heapinit(KHEAP_START, KHEAP_END);
     memory_test(&term_wo);
 
-    printf(&term_wo, "[%u] [ INFO ] (PS/2) Devices: %u\n", get_epoch(), ps2_dev_count());
-
+    // information prints and SSE + fucky cpu detection
     char *brand = cpu_brand();
     const char fucky_cpu[] = "QEMU Virtual CPU version 2.5+"; // cpu tends to be fucky with reporting SSE4.2 avaliability in my own testing (this is why the makefile dosent use it by default but the following code makes it usable)
     
@@ -114,21 +157,24 @@ void _start(void) {
 
     if (sse_init() >= 0 && !is_fucky) {
         hash = crc32c_hwhash; // hardware based hash
-        hash_test(&term_wo);
     } else {
-        printf(&term_wo, "[%u] [ WARN ] SSE4.2 Not Supported \n", get_epoch());
+        lbwrite(&term_wo, "[ WARN ] SSE4.2 Not Supported\n", 30);
         hash = crc32c_swhash; // software based hash
     }
 
-    printf(&term_wo, "[%u] [ INFO ] (CPU) Brand: %s\n", get_epoch(), brand);
+    hash_test(&term_wo, &hash);
+
+    printf(&term_wo, "[ INFO ] (CPU) Brand: %s\n", brand);
     free(brand, 49);
 
     if (resp->module_count == 0) {
-        printf(&term_wo, "[%u] [ WARN ] (MOD) No Limine Modules Detected\n", get_epoch());
+        lbwrite(&term_wo, "[ WARN ] (MOD) No Limine Modules Detected\n", 42);
         halt();
     } else {
         initramfs_mod = resp->modules[0];
     }
+
+    printf(&term_wo, "[ INFO ] (PMA) total pages: %u\n[ INFO ] (PMA) used pages: %u\n[ INFO ] (PMA) free pages: %u\n", (unsigned)pma_total(), (unsigned)pma_used(), (unsigned)pma_free());
 
     // shell
     char line[256];

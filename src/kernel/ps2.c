@@ -72,10 +72,3 @@ bool ps2_dev_exists(uint8_t port) {
 
     return (ack == 0xFA && selftest == 0xAA);
 }
-
-int ps2_dev_count(void) {
-    int count = 0;
-    if (ps2_dev_exists(1)) count++;
-    if (ps2_dev_exists(2)) count++;
-    return count;
-}

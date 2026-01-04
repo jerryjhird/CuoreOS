@@ -15,11 +15,12 @@ struct writeout_t {
     void *ctx;
 };
 
-
 void write(struct writeout_t *wo, const char *msg, size_t len);
-void bwrite(struct writeout_t *wo, const char *msg); // writeout buffered (use flush to flush)
+void bwrite(struct writeout_t *wo, const char *msg); // writeout buffered
 void lbwrite(struct writeout_t *wo, const char *msg, size_t len); // bwrite but with length argument
-void printf(struct writeout_t *wo, const char *fmt, ...); // writeout buffered (use flush to flush)
+
+// supports %c, %x, %d,%u, %s, %p
+void printf(struct writeout_t *wo, const char *fmt, ...); // writeout buffered
 
 void flush(struct writeout_t *wo); // flush writeout_t->buf to writeout_t->write
 
