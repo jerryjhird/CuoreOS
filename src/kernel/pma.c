@@ -3,14 +3,13 @@
 #include "arch/limine.h"
 #include "memory.h"
 #include "drivers/serial.h"
-
-#define PMA_PAGE_SIZE 4096
+#include "kernel.h"
 
 static uint8_t *pma_bitmap;
 static size_t pma_bitmap_bytes;
 
-static size_t pma_total_pages;
-static size_t pma_used_pages;
+size_t pma_total_pages;
+size_t pma_used_pages;
 
 static inline void bit_set(size_t bit) {
     pma_bitmap[bit / 8] |= (uint8_t)(1u << (bit % 8));
@@ -56,7 +55,6 @@ void pma_init(struct limine_memmap_response *mm) {
 
     pma_bitmap = pma_bitmap_storage;
 
-    // mark everything as used initially
     memset(pma_bitmap, 0xFF, pma_bitmap_bytes);
     pma_used_pages = pma_total_pages;
 
@@ -115,7 +113,6 @@ uintptr_t pma_alloc_pages(size_t count) {
     return 0;
 }
 
-
 // free 
 
 void pma_free_page(uintptr_t phys) {
@@ -142,22 +139,3 @@ void pma_free_pages(uintptr_t phys, size_t count) {
         }
     }
 }
-
-// info getters (seriously couldnt think of a better name)
-
-size_t pma_page_size(void) {
-    return PMA_PAGE_SIZE;
-}
-
-size_t pma_total(void) {
-    return pma_total_pages;
-}
-
-size_t pma_used(void) {
-    return pma_used_pages;
-}
-
-size_t pma_free(void) {
-    return pma_total_pages - pma_used_pages;
-}
-

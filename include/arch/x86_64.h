@@ -76,6 +76,9 @@ char* cpu_brand(void);
 int sse_init(void);
 uint32_t crc32c_hwhash(const char *s);
 
+// stack
+void swstack_jmp(void *new_sp, void (*entry)(void));
+
 #endif // X86_64_H
 
 

@@ -235,3 +235,16 @@ uint32_t crc32c_hwhash(const char *s) {
     }
     return h;
 }
+
+// switch stack and jmp
+__attribute__((noreturn))
+void swstack_jmp(void *new_sp, void (*entry)(void)) {
+    __asm__ volatile (
+        "mov %0, %%rsp\n"
+        "jmp *%1\n"
+        :
+        : "r"(new_sp), "r"(entry)
+        : "memory"
+    );
+    __builtin_unreachable();
+}

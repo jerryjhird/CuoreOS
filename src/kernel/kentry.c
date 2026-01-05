@@ -17,6 +17,7 @@ struct limine_file *initramfs_mod = NULL;
 uint32_t (*hash)(const char *s);
 
 #define KHEAP_PAGES 512  // 512 * 4096 = 2 MiB
+#define KSTACK_PAGES 4
 
 uint8_t *KHEAP_START = NULL;
 uint8_t *KHEAP_END   = NULL;
@@ -35,11 +36,6 @@ static volatile struct limine_module_request module_request = {
 
 static volatile struct limine_memmap_request memmap_req = {
     .id = LIMINE_MEMMAP_REQUEST_ID,
-    .revision = 0
-};
-
-static volatile struct limine_executable_address_request kaddr_req = {
-    .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
     .revision = 0
 };
 
@@ -75,7 +71,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
 
     switch (hash(command)) {
         case 0xB5E3B64C: // "help"
-            lbwrite(wo, "commands: ls, readf, memtest\n", 29);
+            lbwrite(wo, "commands: ls, readf, memtest, pma_state\n", 40);
             break;
         case 0xED1ABDF6: // "memtest"
             memory_test(wo);
@@ -87,7 +83,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
             cpio_read_file(wo, initramfs_mod->address, arg);
             break;
         case 0x57C5E155: // "pma_state" (gets the current state of the physical memory allocator)
-            printf(wo, "(PMA) total pages: %u\n(PMA) used pages: %u\n(PMA) free pages: %u\n", (unsigned)pma_total(), (unsigned)pma_used(), (unsigned)pma_free());
+            printf(wo, "(PMA) total pages: %u\n(PMA) used pages: %u\n(PMA) free pages: %u\n", pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
             break;
         default:
             if (strlen(cmd) > 0) {
@@ -99,14 +95,9 @@ void exec(struct writeout_t *wo, const char *cmd) {
 
 struct terminal fb_term;
 
-void _start(void) {
-    serial_init();
-    gdt_init();
-    idt_init();
-
+void kernel_main(void) {
     struct limine_module_response *resp = module_request.response;
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
-    struct limine_memmap_response *mm = memmap_req.response;
 
     cuoreterm_init(
          &fb_term,
@@ -124,21 +115,13 @@ void _start(void) {
     term_wo.write = term_write_adapter;
     term_wo.ctx = &fb_term;
 
-    struct writeout_t serial_wo;
-    serial_wo.len = 0;
-    serial_wo.buf[0] = '\0';
-    serial_wo.write = serial_write_adapter;
-    serial_wo.ctx = NULL;
-
     printf(&term_wo, "[ TIME ] [%u]\n", get_epoch());
-
-    // memory init stuff
-    pma_init(mm);
 
     void *heap_phys = (void *)pma_alloc_pages(KHEAP_PAGES); // ask pma
     uint64_t hhdm_offset = hhdm_req.response->offset;
-    uint8_t *KHEAP_START = (uint8_t *)heap_phys + hhdm_offset;
-    uint8_t *KHEAP_END   = KHEAP_START + KHEAP_PAGES * 4096;
+    
+    KHEAP_START = (uint8_t *)heap_phys + hhdm_offset;
+    KHEAP_END   = KHEAP_START + KHEAP_PAGES * 4096;
 
     heapinit(KHEAP_START, KHEAP_END);
     memory_test(&term_wo);
@@ -169,12 +152,11 @@ void _start(void) {
 
     if (resp->module_count == 0) {
         lbwrite(&term_wo, "[ WARN ] (MOD) No Limine Modules Detected\n", 42);
-        halt();
     } else {
         initramfs_mod = resp->modules[0];
     }
 
-    printf(&term_wo, "[ INFO ] (PMA) total pages: %u\n[ INFO ] (PMA) used pages: %u\n[ INFO ] (PMA) free pages: %u\n", (unsigned)pma_total(), (unsigned)pma_used(), (unsigned)pma_free());
+    printf(&term_wo, "[ INFO ] (PMA) page size: %u bytes\n[ INFO ] (PMA) total pages: %u\n[ INFO ] (PMA) used pages: %u\n[ INFO ] (PMA) free pages: %u\n", pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
 
     // shell
     char line[256];
@@ -184,6 +166,20 @@ void _start(void) {
         readline(&term_wo, line, 256);
         exec(&term_wo, line);
     }
+}
 
-    halt();
+void _start(void) {
+    serial_init();
+    gdt_init();
+    idt_init();
+
+    pma_init(memmap_req.response);
+
+    // setup stack
+    uintptr_t phys = pma_alloc_pages(KSTACK_PAGES);
+    uintptr_t top = phys + hhdm_req.response->offset + (KSTACK_PAGES * PMA_PAGE_SIZE);
+    top &= ~(uintptr_t)0xF;
+
+    // switch to stack and jmp to kernel_main 
+    swstack_jmp((void *)top, kernel_main);
 }
