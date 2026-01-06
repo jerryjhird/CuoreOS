@@ -11,6 +11,15 @@ extern "C" {
 
 #include "stdio.h"
 
+// global hashing function
+extern uint32_t (*hash)(const char *s);
+
+// limine requests
+extern volatile struct limine_framebuffer_request fb_req;
+extern volatile struct limine_module_request      module_request;
+extern volatile struct limine_memmap_request      memmap_req;
+extern volatile struct limine_hhdm_request        hhdm_req;
+
 // kernel tests
 void memory_test(struct writeout_t *wo);
 void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *));

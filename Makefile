@@ -13,6 +13,7 @@ CUORETERM_URL = https://codeberg.org/jerryjhird/Cuoreterm.git
 
 HOST_ARCH := $(shell uname -m)
 QEMU_CPU ?= max
+QEMU_MEM ?= -m 4G
 
 ifeq ($(HOST_ARCH),x86_64)
 	MAKE_CC := gcc
@@ -100,12 +101,14 @@ initramfs:
 
 run:
 	qemu-system-x86_64 $(if $(QEMU_CPU),-cpu $(QEMU_CPU)) \
+		$(QEMU_MEM) \
 	    -bios $(OVMF_PATH) \
 	    -drive if=virtio,format=raw,file=build/uefi.img \
 	    -serial stdio \
 
 run-kvm:
 	qemu-system-x86_64 \
+		$(QEMU_MEM) \
 	 	-enable-kvm \
 	    -cpu host \
 	    -bios $(OVMF_PATH) \

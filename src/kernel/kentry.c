@@ -24,22 +24,22 @@ uint8_t *KHEAP_END   = NULL;
 
 // limine requests
 
-static volatile struct limine_framebuffer_request fb_req = {
+volatile struct limine_framebuffer_request fb_req = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
     .revision = 0
 };
 
-static volatile struct limine_module_request module_request = {
+volatile struct limine_module_request module_request = {
     .id = LIMINE_MODULE_REQUEST_ID,
     .revision = 0
 };
 
-static volatile struct limine_memmap_request memmap_req = {
+volatile struct limine_memmap_request memmap_req = {
     .id = LIMINE_MEMMAP_REQUEST_ID,
     .revision = 0
 };
 
-static volatile struct limine_hhdm_request hhdm_req = {
+volatile struct limine_hhdm_request hhdm_req = {
     .id = LIMINE_HHDM_REQUEST_ID,
     .revision = 0
 };
@@ -79,7 +79,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
         case 0x31CA209B: // "ls" (for cpio initramfs limine module)
             cpio_list_files(wo, initramfs_mod->address);
             break;
-        case 0x030C68B6: // "readf" (cpio)
+        case 0x030C68B6: // "readf [filename]" (cpio)
             cpio_read_file(wo, initramfs_mod->address, arg);
             break;
         case 0x57C5E155: // "pma_state" (gets the current state of the physical memory allocator)
@@ -156,7 +156,7 @@ void kernel_main(void) {
         initramfs_mod = resp->modules[0];
     }
 
-    printf(&term_wo, "[ INFO ] (PMA) page size: %u bytes\n[ INFO ] (PMA) total pages: %u\n[ INFO ] (PMA) used pages: %u\n[ INFO ] (PMA) free pages: %u\n", pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
+    printf(&term_wo, "[ INFO ] (PMA) page size: %u bytes\n[ INFO ] (PMA) total pages: %u\n[ INFO ] (PMA) used pages: %u\n[ INFO ] (PMA) free pages: %u\n", PMA_PAGE_SIZE, pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
 
     // shell
     char line[256];
