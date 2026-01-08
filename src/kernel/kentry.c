@@ -73,22 +73,32 @@ void exec(struct writeout_t *wo, const char *cmd) {
         case 0xB5E3B64C: // "help"
             lbwrite(wo, "commands: ls, readf, memtest, pma_state\n", 40);
             break;
+
         case 0xED1ABDF6: // "memtest"
             memory_test(wo);
             break;
+
         case 0x31CA209B: // "ls" (for cpio initramfs limine module)
-            cpio_list_files(wo, initramfs_mod->address);
+            char *cpio_filelist = cpio_list_files(initramfs_mod->address);
+            bwrite(wo, cpio_filelist);
+            free(cpio_filelist, strlen(cpio_filelist) + 1);
             break;
+
         case 0x030C68B6: // "readf [filename]" (cpio)
-            cpio_read_file(wo, initramfs_mod->address, arg);
+            size_t size;
+            void *file_data = cpio_read_file(initramfs_mod->address, arg, &size);
+
+            if (!file_data) {
+                printf(wo, "%s not found\n", arg);
+                break; // exit and dont free because nothing gets allocated at this point in cpio_read_file i thunk
+            }
+            
+            lbwrite(wo, file_data, size);
+            free(file_data, size);
             break;
+
         case 0x57C5E155: // "pma_state" (gets the current state of the physical memory allocator)
             printf(wo, "(PMA) total pages: %u\n(PMA) used pages: %u\n(PMA) free pages: %u\n", pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
-            break;
-        default:
-            if (strlen(cmd) > 0) {
-                printf(wo, "unknown command: %s\n", cmd);
-            }
             break;
     }
 }
@@ -173,7 +183,7 @@ void _start(void) {
     gdt_init();
     idt_init();
 
-    pma_init(memmap_req.response);
+    pma_init();
 
     // setup stack
     uintptr_t phys = pma_alloc_pages(KSTACK_PAGES);

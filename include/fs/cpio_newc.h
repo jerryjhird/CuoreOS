@@ -24,8 +24,8 @@ struct cpio_newc_header {
     char c_check[8];
 };
 
-int cpio_read_file(struct writeout_t *wo, void *archive, const char *filename);
-void cpio_list_files(struct writeout_t *wo, void *archive);
+void *cpio_read_file(void *archive, const char *filename, size_t *out_size);
+char *cpio_list_files(void *archive);
 
 #ifdef __cplusplus
 }

@@ -1,8 +1,9 @@
-#include "stdio.h"
 #include "stdint.h"
-#include "string.h"
+#include "memory.h" // for malloc/free
 #include "fs/cpio_newc.h"
+#include "string.h"
 
+// convert hex string to uint
 static unsigned int hex_to_uint(const char *s, int len)
 {
     unsigned int v = 0u;
@@ -23,63 +24,96 @@ static uintptr_t align4(uintptr_t x) {
     return (x + 3u) & ~(uintptr_t)3u;
 }
 
-
-int cpio_read_file(struct writeout_t *wo, void *archive, const char *filename) {
+void *cpio_read_file(void *archive, const char *filename, size_t *out_size) {
     uint8_t *p = (uint8_t *)archive;
 
     while (1) {
         struct cpio_newc_header *hdr = (struct cpio_newc_header *)p;
 
-        // CPIO magic
+        // validate magic
         if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7') {
-            lbwrite(wo, "invalid CPIO archive\n", 21);
-            return -1;
+            return NULL;
         }
 
         unsigned int namesize = hex_to_uint(hdr->c_namesize, 8);
         unsigned int fsize = hex_to_uint(hdr->c_filesize, 8);
-
         char *name = (char *)(p + sizeof(*hdr));
 
-        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) {
-            printf(wo, "file not found: %s\n", filename);
-            return -2;
-        }
+        // end of archive
+        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) return NULL;
 
+        // found the file?
         if (namesize - 1 == strlen(filename) && !strncmp(name, filename, namesize - 1)) {
             uint8_t *data = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
-            lbwrite(wo, (const char *)data, fsize); // bulk write
-            return 0;
+
+            // allocate memory for file data
+            void *heap_copy = malloc(fsize);
+            if (!heap_copy) return NULL;
+
+            memcpy(heap_copy, data, fsize);
+
+            if (out_size)
+                *out_size = fsize;
+
+            return heap_copy;
         }
 
-        // advance to next header
+        // move to next header
         p = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
         p = (uint8_t *)align4((uintptr_t)(p + fsize));
     }
 }
-void cpio_list_files(struct writeout_t *wo, void *archive) {
-    uint8_t *p = (uint8_t *)archive;
 
+// list all files
+char *cpio_list_files(void *archive) {
+    uint8_t *p = (uint8_t *)archive;
+    size_t total_len = 0;
+
+    // compute required size
     while (1) {
         struct cpio_newc_header *hdr = (struct cpio_newc_header *)p;
-
-        if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7') {
-            lbwrite(wo, "invalid CPIO archive\n", 21);
-            return;
-        }
+        if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7') break;
 
         unsigned int namesize = hex_to_uint(hdr->c_namesize, 8);
-        unsigned int fsize = hex_to_uint(hdr->c_filesize, 8);
-
         char *name = (char *)(p + sizeof(*hdr));
 
-        // end of archive
-        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) return;
+        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) break;
 
-        lbwrite(wo, name, namesize - 1);
-        lbwrite(wo, "\n", 1);
+        total_len += (namesize - 1) + 1; // name + newline
 
         p = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
+        unsigned int fsize = hex_to_uint(hdr->c_filesize, 8);
         p = (uint8_t *)align4((uintptr_t)(p + fsize));
     }
+
+    if (total_len == 0) return NULL;
+
+    // allocate heap memory
+    char *list = malloc(total_len + 1); // +1 for final null terminator
+    if (!list) return NULL;
+
+    char *ptr = list;
+    p = (uint8_t *)archive;
+
+    // copy names
+    while (1) {
+        struct cpio_newc_header *hdr = (struct cpio_newc_header *)p;
+        if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7') break;
+
+        unsigned int namesize = hex_to_uint(hdr->c_namesize, 8);
+        char *name = (char *)(p + sizeof(*hdr));
+
+        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) break;
+
+        memcpy(ptr, name, namesize - 1);
+        ptr += (namesize - 1);
+        *ptr++ = '\n'; // separator
+
+        p = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
+        unsigned int fsize = hex_to_uint(hdr->c_filesize, 8);
+        p = (uint8_t *)align4((uintptr_t)(p + fsize));
+    }
+
+    *ptr = '\0'; // null terminate
+    return list;
 }

@@ -10,7 +10,7 @@ void memory_test(struct writeout_t *wo) {
     const size_t size = 16;
     char* block1 = zalloc(size);
     if (!block1) {
-        lbwrite(wo, "[%u] [ FAIL ] zalloc returned NULL\n", 31);
+        lbwrite(wo, "[ FAIL ] zalloc returned NULL\n", 26);
         return;
     }
 

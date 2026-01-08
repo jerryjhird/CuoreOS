@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "drivers/serial.h"
 #include "kernel.h"
+#include "arch/x86_64.h"
 
 static uint8_t *pma_bitmap;
 static size_t pma_bitmap_bytes;
@@ -26,20 +27,20 @@ static inline bool bit_test(size_t bit) {
 #define PMA_BITMAP_MAX_BYTES (1024 * 1024) // supports up to 32 GiB RAM
 uint8_t pma_bitmap_storage[PMA_BITMAP_MAX_BYTES];
 
-void pma_init(struct limine_memmap_response *mm) {
+void pma_init(void) {
     uintptr_t max_addr = 0;
 
     // find highest physical address
-    for (size_t i = 0; i < mm->entry_count; i++) {
-        struct limine_memmap_entry *e = mm->entries[i];
+    for (size_t i = 0; i < memmap_req.response->entry_count; i++) {
+        struct limine_memmap_entry *e = memmap_req.response->entries[i];
         uintptr_t end = e->base + e->length;
         if (end > max_addr)
             max_addr = end;
     }
 
     pma_total_pages = 0;
-    for (size_t i = 0; i < mm->entry_count; i++) {
-        struct limine_memmap_entry *e = mm->entries[i];
+    for (size_t i = 0; i < memmap_req.response->entry_count; i++) {
+        struct limine_memmap_entry *e = memmap_req.response->entries[i];
         if (e->type != LIMINE_MEMMAP_USABLE)
             continue;
     
@@ -59,8 +60,8 @@ void pma_init(struct limine_memmap_response *mm) {
     pma_used_pages = pma_total_pages;
 
     // mark usable memory as free
-    for (size_t i = 0; i < mm->entry_count; i++) {
-        struct limine_memmap_entry *e = mm->entries[i];
+    for (size_t i = 0; i < memmap_req.response->entry_count; i++) {
+        struct limine_memmap_entry *e = memmap_req.response->entries[i];
 
         if (e->type != LIMINE_MEMMAP_USABLE)
             continue;

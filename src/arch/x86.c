@@ -19,6 +19,16 @@ uint64_t rdtsc(void) {
     return ((uint64_t)hi << 32) | lo;
 }
 
+uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    __asm__ volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
+
+void outb(uint16_t port, uint8_t val) {
+    __asm__ volatile("outb %0, %1" :: "a"(val), "Nd"(port));
+}
+
 uint8_t bcdtbin(uint8_t val) { // bcd to binary
     return (uint8_t)((val & 0x0F) + ((val >> 4) * 10));
 }

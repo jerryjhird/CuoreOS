@@ -43,7 +43,7 @@ build/kernel.elf: src/kernel/kentry.c
 
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/memory.c -o build/libc_mem.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/string.c -o build/libc_string.o
-	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/stdio.c  -o build/libc_stdio.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/libc/stdio.c -o build/libc_stdio.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/arch/x86.c -o build/other_x86.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/other/cpio_newc.c -o build/other_cpio_newc.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
@@ -94,10 +94,9 @@ build/uefi.img: build/kernel.elf limine.conf
 initramfs:
 	mkdir -p build/initramfs
 	echo "hello world" > build/initramfs/hworld.txt
-	find build/initramfs -type f -print0 \
-		| sed 's|^build/initramfs/||' \
-		| cpio --null -ov --format=newc -D build/initramfs \
-		> build/initramfs.img
+	cd build/initramfs && find . -type f -print0 \
+		| cpio --null -ov --format=newc \
+		> ../initramfs.img
 
 run:
 	qemu-system-x86_64 $(if $(QEMU_CPU),-cpu $(QEMU_CPU)) \

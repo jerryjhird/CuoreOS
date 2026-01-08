@@ -25,11 +25,12 @@ void memory_test(struct writeout_t *wo);
 void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *));
 
 // physical memory allocator (PMA)
+
 #define PMA_PAGE_SIZE 4096
 extern size_t pma_total_pages;
 extern size_t pma_used_pages;
 
-void pma_init(struct limine_memmap_response *mm);
+void pma_init(void);
 
 // pma allocation
 uintptr_t pma_alloc_page(void);
