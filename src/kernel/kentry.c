@@ -73,7 +73,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
 
     switch (hash(command)) {
         case 0xB5E3B64C: // "help"
-            lbwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls\n", 40);
+            bwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls\n");
             break;
 
         case 0xED1ABDF6: // "memtest"
