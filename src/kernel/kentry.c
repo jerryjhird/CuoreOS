@@ -12,9 +12,11 @@
 #include "drivers/serial.h"
 #include "fs/cpio_newc.h"
 #include "cuoreterm.h"
+#include "kfont.h"
 
 struct limine_file *initramfs_mod = NULL;
 uint32_t (*hash)(const char *s);
+struct terminal fb_term;
 
 #define KHEAP_PAGES 512  // 512 * 4096 = 2 MiB
 #define KSTACK_PAGES 4
@@ -71,7 +73,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
 
     switch (hash(command)) {
         case 0xB5E3B64C: // "help"
-            lbwrite(wo, "commands: ls, readf, memtest, pma_state\n", 40);
+            lbwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls\n", 40);
             break;
 
         case 0xED1ABDF6: // "memtest"
@@ -96,14 +98,20 @@ void exec(struct writeout_t *wo, const char *cmd) {
             lbwrite(wo, file_data, size);
             free(file_data, size);
             break;
+        
+        case 0xFDC59B25: // "cls" Windows style clear command
+            cuoreterm_clear(&fb_term);
+            break;
+
+        case 0x8B0CA256: // "clear" posix style clear
+            cuoreterm_clear(&fb_term);
+            break;
 
         case 0x57C5E155: // "pma_state" (gets the current state of the physical memory allocator)
             printf(wo, "(PMA) total pages: %u\n(PMA) used pages: %u\n(PMA) free pages: %u\n", pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
             break;
     }
 }
-
-struct terminal fb_term;
 
 void kernel_main(void) {
     struct limine_module_response *resp = module_request.response;
@@ -115,7 +123,10 @@ void kernel_main(void) {
          (uint32_t)fb->width,
          (uint32_t)fb->height,
          (uint32_t)fb->pitch,
-         (uint32_t)fb->bpp
+         (uint32_t)fb->bpp,
+         iso10_f14_psf,
+         8,
+         14
     );
 
     // register the framebuffer terminal as a writeable interface
@@ -128,9 +139,8 @@ void kernel_main(void) {
     printf(&term_wo, "[ TIME ] [%u]\n", get_epoch());
 
     void *heap_phys = (void *)pma_alloc_pages(KHEAP_PAGES); // ask pma
-    uint64_t hhdm_offset = hhdm_req.response->offset;
     
-    KHEAP_START = (uint8_t *)heap_phys + hhdm_offset;
+    KHEAP_START = (uint8_t *)heap_phys + hhdm_req.response->offset;;
     KHEAP_END   = KHEAP_START + KHEAP_PAGES * 4096;
 
     heapinit(KHEAP_START, KHEAP_END);
