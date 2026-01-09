@@ -8,6 +8,12 @@ extern "C" {
 #include "stdint.h"
 #define BUF_SIZE 256
 
+#define INFO_LOG_STR "\x1b[#48B9D7m[ INFO ]\x1b[0m"
+#define TIME_LOG_STR "\x1b[#48B9D7m[ TIME ]\x1b[0m"
+#define PASS_LOG_STR "\x1b[#96D9C0m[ PASS ]\x1b[0m"
+#define FAIL_LOG_STR "\x1b[#D99696m[ FAIL ]\x1b[0m"
+#define WARN_LOG_STR "\x1b[#D35A11m[ WARN ]\x1b[0m"
+
 struct writeout_t {
     char buf[BUF_SIZE];
     size_t len;

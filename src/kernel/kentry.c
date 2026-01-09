@@ -124,6 +124,12 @@ void kernel_main(void) {
          (uint32_t)fb->height,
          (uint32_t)fb->pitch,
          (uint32_t)fb->bpp,
+         fb->red_mask_shift,
+         fb->green_mask_shift,
+         fb->blue_mask_shift,
+         fb->red_mask_size,
+         fb->green_mask_size,
+         fb->blue_mask_size,
          iso10_f14_psf,
          8,
          14
@@ -136,7 +142,7 @@ void kernel_main(void) {
     term_wo.write = term_write_adapter;
     term_wo.ctx = &fb_term;
 
-    printf(&term_wo, "[ TIME ] [%u]\n", get_epoch());
+    printf(&term_wo, TIME_LOG_STR" [%u]\n", get_epoch());
 
     void *heap_phys = (void *)pma_alloc_pages(KHEAP_PAGES); // ask pma
     
@@ -161,22 +167,24 @@ void kernel_main(void) {
     if (sse_init() >= 0 && !is_fucky) {
         hash = crc32c_hwhash; // hardware based hash
     } else {
-        lbwrite(&term_wo, "[ WARN ] SSE4.2 Not Supported\n", 30);
+        bwrite(&term_wo, WARN_LOG_STR " SSE4.2 Not Supported\n");
         hash = crc32c_swhash; // software based hash
     }
 
     hash_test(&term_wo, &hash);
 
-    printf(&term_wo, "[ INFO ] (CPU) Brand: %s\n", brand);
+    printf(&term_wo, INFO_LOG_STR " (CPU) Brand: %s\n", brand);
     free(brand, 49);
 
-    if (resp->module_count == 0) {
-        lbwrite(&term_wo, "[ WARN ] (MOD) No Limine Modules Detected\n", 42);
+    if (resp == NULL || resp->module_count == 0 || resp->modules == NULL) {
+        bwrite(&term_wo, WARN_LOG_STR " (MOD) No Limine Modules Detected\n");
     } else {
-        initramfs_mod = resp->modules[0];
+        if (resp->modules[0] != NULL) {
+            initramfs_mod = resp->modules[0];
+        } else {
+            bwrite(&term_wo, WARN_LOG_STR " (MOD) first module pointer is NULL\n");
+        }
     }
-
-    printf(&term_wo, "[ INFO ] (PMA) page size: %u bytes\n[ INFO ] (PMA) total pages: %u\n[ INFO ] (PMA) used pages: %u\n[ INFO ] (PMA) free pages: %u\n", PMA_PAGE_SIZE, pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
 
     // shell
     char line[256];

@@ -10,14 +10,14 @@ void memory_test(struct writeout_t *wo) {
     const size_t size = 16;
     char* block1 = zalloc(size);
     if (!block1) {
-        lbwrite(wo, "[ FAIL ] zalloc returned NULL\n", 26);
+        bwrite(wo, FAIL_LOG_STR " zalloc returned NULL\n");
         return;
     }
 
     // verify zeroed memory
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != 0) {
-            lbwrite(wo, "[ FAIL ] zalloc did not zero memory\n", 35);
+            bwrite(wo, FAIL_LOG_STR " zalloc did not zero memory\n");
             free(block1, size);
             return;
         }
@@ -31,7 +31,7 @@ void memory_test(struct writeout_t *wo) {
     // read the pattern back
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != (char)(i + 1)) {
-            lbwrite(wo, "[ FAIL ] memory write/read mismatch\n", 38);
+            bwrite(wo, FAIL_LOG_STR " memory write/read mismatch\n");
             free(block1, size);
             return;
         }
@@ -42,14 +42,14 @@ void memory_test(struct writeout_t *wo) {
 
     char* block2 = zalloc(size);
     if (block2 != block1) {
-        lbwrite(wo, "[ FAIL ] free did not rewind heap pointer\n", 41);
+        bwrite(wo, FAIL_LOG_STR " free did not rewind heap pointer\n");
         free(block2, size);
         return;
     }
 
     free(block2, size);
 
-    lbwrite(wo, "[ PASS ] memory_test successful\n", 32);
+    bwrite(wo, PASS_LOG_STR " memory_test successful\n");
 }
 
 void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *)) {
@@ -58,26 +58,26 @@ void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *)) {
         uint32_t sw = crc32c_swhash("uwu");
 
         if (hw == CRC32C_UWU)
-            bwrite(wo, "[ PASS ] crc32c_hwhash matches expected hash\n");
+            bwrite(wo, PASS_LOG_STR " crc32c_hwhash matches expected hash\n");
         else {
-            bwrite(wo, "[ FAIL ] crc32c_hwhash does NOT match expected hash\n");
+            bwrite(wo, FAIL_LOG_STR " crc32c_hwhash does NOT match expected hash\n");
             if (sw == CRC32C_UWU) {
-                bwrite(wo, "[ INFO ] Falling back to crc32c_swhash\n");
+                bwrite(wo, "\x1b[#48B9D7m[ INFO ]\x1b[0m Falling back to crc32c_swhash\n");
                 *hash = crc32c_swhash;
             } else {
-                bwrite(wo, "[ FAIL ] Both HW and SW crc32c checks failed!\n");
+                bwrite(wo, FAIL_LOG_STR " Both HW and SW crc32c checks failed!\n");
             }
         }
 
         if (sw != CRC32C_UWU)
-            bwrite(wo, "[ WARN ] SW hash isnt functional, may break CPUs without CRC32C support\n");
+            bwrite(wo, WARN_LOG_STR " SW hash isnt functional, may break CPUs without CRC32C support\n");
 
     } else if (*hash == crc32c_swhash) {
         bwrite(wo,
             crc32c_swhash("uwu") == CRC32C_UWU
-                ? "[ PASS ] crc32c_swhash matches expected hash\n"
-                : "[ FAIL ] crc32c_swhash does NOT match expected hash\n");
+                ? PASS_LOG_STR " crc32c_swhash matches expected hash\x1b[0m\n"
+                : FAIL_LOG_STR " crc32c_swhash does NOT match expected hash\n");
     } else {
-        bwrite(wo, "[ WARN ] Unknown hash function pointer!\n");
+        bwrite(wo, WARN_LOG_STR " Unknown hash function pointer!\n");
     }
 }
