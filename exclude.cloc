@@ -1,0 +1,8 @@
+include/arch/limine.h
+.git
+LICENSE
+build/downloads/Cuoreterm/src/kfont.h
+build/downloads/Cuoreterm/.git
+build/downloads/Cuoreterm/LICENSE
+build/downloads/Limine
+build/initramfs

@@ -18,7 +18,7 @@ void memory_test(struct writeout_t *wo) {
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != 0) {
             bwrite(wo, FAIL_LOG_STR " zalloc did not zero memory\n");
-            free(block1, size);
+            free(block1);
             return;
         }
     }
@@ -32,22 +32,22 @@ void memory_test(struct writeout_t *wo) {
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != (char)(i + 1)) {
             bwrite(wo, FAIL_LOG_STR " memory write/read mismatch\n");
-            free(block1, size);
+            free(block1);
             return;
         }
     }
 
     // Free
-    free(block1, size);
+    free(block1);
 
     char* block2 = zalloc(size);
     if (block2 != block1) {
         bwrite(wo, FAIL_LOG_STR " free did not rewind heap pointer\n");
-        free(block2, size);
+        free(block2);
         return;
     }
 
-    free(block2, size);
+    free(block2);
 
     bwrite(wo, PASS_LOG_STR " memory_test successful\n");
 }

@@ -72,21 +72,63 @@ void exec(struct writeout_t *wo, const char *cmd) {
     while (*arg == ' ') arg++;
 
     switch (hash(command)) {
+
         case 0xB5E3B64C: // "help"
-            bwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls\n");
+            bwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls, div0, dumpreg\n");
             break;
+
+        case 0x5AE561ED: // "div0" (divide by zero)
+        {
+            int a = 42;
+            int b = 0;
+            int c = a / b;
+            (void)c;
+            break;
+        }
+
+        case 0x214CE06B: // "dumpreg" dump registers
+        {
+            uint64_t regs[15];
+            __asm__ volatile(
+                "mov %%rax, %0\n\t"
+                "mov %%rbx, %1\n\t"
+                "mov %%rcx, %2\n\t"
+                "mov %%rdx, %3\n\t"
+                "mov %%rsi, %4\n\t"
+                "mov %%rdi, %5\n\t"
+                "mov %%rbp, %6\n\t"
+                "mov %%r8,  %7\n\t"
+                "mov %%r9,  %8\n\t"
+                "mov %%r10, %9\n\t"
+                "mov %%r11, %10\n\t"
+                "mov %%r12, %11\n\t"
+                "mov %%r13, %12\n\t"
+                "mov %%r14, %13\n\t"
+                "mov %%r15, %14\n\t"
+            : "=m"(regs[0]), "=m"(regs[1]), "=m"(regs[2]), "=m"(regs[3]),
+              "=m"(regs[4]), "=m"(regs[5]), "=m"(regs[6]), "=m"(regs[7]),
+              "=m"(regs[8]), "=m"(regs[9]), "=m"(regs[10]), "=m"(regs[11]),
+              "=m"(regs[12]), "=m"(regs[13]), "=m"(regs[14])
+            :
+            : 
+        );
+            regtserial(regs);
+            break;
+        }
 
         case 0xED1ABDF6: // "memtest"
             memory_test(wo);
             break;
 
         case 0x31CA209B: // "ls" (for cpio initramfs limine module)
+        {
             char *cpio_filelist = cpio_list_files(initramfs_mod->address);
             bwrite(wo, cpio_filelist);
-            free(cpio_filelist, strlen(cpio_filelist) + 1);
+            free(cpio_filelist);
             break;
-
+        }
         case 0x030C68B6: // "readf [filename]" (cpio)
+        {
             size_t size;
             void *file_data = cpio_read_file(initramfs_mod->address, arg, &size);
 
@@ -96,9 +138,10 @@ void exec(struct writeout_t *wo, const char *cmd) {
             }
             
             lbwrite(wo, file_data, size);
-            free(file_data, size);
+            free(file_data);
             break;
-        
+        }
+
         case 0xFDC59B25: // "cls" Windows style clear command
             cuoreterm_clear(&fb_term);
             break;
@@ -174,7 +217,7 @@ void kernel_main(void) {
     hash_test(&term_wo, &hash);
 
     printf(&term_wo, INFO_LOG_STR " (CPU) Brand: %s\n", brand);
-    free(brand, 49);
+    free(brand);
 
     if (resp == NULL || resp->module_count == 0 || resp->modules == NULL) {
         bwrite(&term_wo, WARN_LOG_STR " (MOD) No Limine Modules Detected\n");

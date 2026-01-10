@@ -17,7 +17,8 @@ bool heap_can_alloc(size_t size); // check if size can be allocated to heap (use
 
 void* malloc(size_t size);
 void* zalloc(size_t size);
-void free(void* ptr, size_t size);
+void free(void* ptr);
+void sfree(void* ptr, size_t size);
 
 #ifdef __cplusplus
 }

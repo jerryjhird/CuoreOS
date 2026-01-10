@@ -106,13 +106,13 @@ run:
 	    -serial stdio \
 
 run-kvm:
-	qemu-system-x86_64 \
+	@qemu-system-x86_64 \
 		$(QEMU_MEM) \
-	 	-enable-kvm \
-	    -cpu host \
-	    -bios $(OVMF_PATH) \
-    	-drive if=virtio,format=raw,file=build/uefi.img \
-    	-serial stdio \
+		-enable-kvm \
+		-cpu host \
+		-bios $(OVMF_PATH) \
+		-drive if=virtio,format=raw,file=build/uefi.img \
+		-serial stdio || $(MAKE) run-max
 
 mount:
 	sudo losetup -Pf --show build/uefi.img > build/loopdev
@@ -131,3 +131,7 @@ clean:
 
 fullclean:
 	rm -rf $(DL) build
+
+# tool specific
+cloc:
+	cloc . --exclude-list-file=exclude.cloc

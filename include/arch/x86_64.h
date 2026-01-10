@@ -39,7 +39,6 @@ void gdt_init(void);
 }
 #endif
 
-
 // 2. interupt descriptor table
 
 #define IDT_ENTRIES 256
@@ -71,6 +70,9 @@ uint32_t crc32c_hwhash(const char *s);
 
 // stack
 void swstack_jmp(void *new_sp, void (*entry)(void));
+
+// dump refgisters to serial
+void regtserial(uint64_t *regs);
 
 #endif // X86_64_H
 

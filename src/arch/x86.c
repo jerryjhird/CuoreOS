@@ -183,18 +183,60 @@ static void idt_set_gate(int n, uint64_t handler, uint16_t sel, uint8_t flags, u
     idt[n].zero        = 0;
 }
 
-void generic_exception_handler_main(void* regs __attribute__((unused))) {
-    serial_write("CPU Exception\n", 14);
+__attribute__((unused))
+void regtserial(uint64_t *regs) {
+    char buf[32];
+    const char *names[] = {
+        "RAX", "RBX", "RCX", "RDX",
+        "RSI", "RDI", "RBP", "R8",
+        "R9",  "R10", "R11", "R12",
+        "R13", "R14", "R15"
+    };
+
+    for (int i = 0; i < 15; i++) {
+        serial_write(names[i], 3);
+        serial_write(": 0x", 4);
+        ptrhex(buf, (void*)regs[i]);
+        serial_write(buf, sizeof(void*)*2);
+        serial_write("\n", 1);
+    }
 }
 
-
 __attribute__((naked))
-void generic_exception_handler(void)
-{
+void generic_exception_handler(void) {
     __asm__ volatile(
-        "cli\n\t"
-        "call generic_exception_handler_main\n\t"
+        "push %rax\n\t"
+        "push %rbx\n\t"
+        "push %rcx\n\t"
+        "push %rdx\n\t"
+        "push %rsi\n\t"
+        "push %rdi\n\t"
+        "push %rbp\n\t"
+        "push %r8\n\t"
+        "push %r9\n\t"
+        "push %r10\n\t"
+        "push %r11\n\t"
+        "push %r12\n\t"
+        "push %r13\n\t"
+        "push %r14\n\t"
+        "push %r15\n\t"
+
+        "lea panic_str(%rip), %rdi\n\t"   // pointer to string
+        "mov $18, %rsi\n\t"               // length
+        "call serial_write\n\t"
+
+        // dump registers
+        "mov %rsp, %rdi\n\t"
+        "call regtserial\n\t"
+
+        // Halt
+        "jmp haltjmp\n\t"
+
+        "haltjmp:\n\t"
         "hlt\n\t"
+        "jmp haltjmp\n\t"
+
+        "panic_str: .ascii \"CPU EXCEPTION!!!!\\n\""
     );
 }
 

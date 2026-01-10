@@ -48,30 +48,43 @@ bool heap_can_alloc(size_t size) {
     uintptr_t ptr = (uintptr_t)heap_ptr;
     ptr = ALIGN_UP(ptr, 8);
 
-    if (ptr + size > (uintptr_t)heap_end)
-        return false;
-
-    return true;
+    size_t total_size = size + sizeof(size_t);
+    return (ptr + total_size <= (uintptr_t)heap_end);
 }
 
 void* malloc(size_t size) {
-    if (!heap_can_alloc(size))
-        return NULL;
+    if (!size) return NULL;
+
+    // space for storing size before the block
+    size_t total_size = size + sizeof(size_t);
 
     uintptr_t ptr = (uintptr_t)heap_ptr;
     ptr = ALIGN_UP(ptr, 8); // 8-byte alignment
-    if (ptr + size > (uintptr_t)heap_end) return NULL;
 
-    heap_ptr = (uint8_t*)(ptr + size);
-    return (void*)ptr;
+    if (ptr + total_size > (uintptr_t)heap_end) return NULL;
+
+    // store size before block
+    *((size_t*)ptr) = size;
+
+    heap_ptr = (uint8_t*)(ptr + total_size);
+    return (void*)(ptr + sizeof(size_t)); // return pointer after size
 }
 
-void free(void* ptr, size_t size) {
-    // free the last allocated block
+void sfree(void* ptr, size_t size) {
     uintptr_t block = (uintptr_t)ptr;
     if (block + size == (uintptr_t)heap_ptr) {
         heap_ptr = (uint8_t*)block; // rewind heap pointer
     }
+}
+
+void free(void* user_ptr) {
+    if (!user_ptr) return;
+
+    uintptr_t block_ptr = (uintptr_t)user_ptr;
+    size_t size = *((size_t*)(block_ptr - sizeof(size_t)));
+    uintptr_t block_start = block_ptr - sizeof(size_t);
+
+    sfree((void*)block_start, size + sizeof(size_t));
 }
 
 void* zalloc(size_t size) {
