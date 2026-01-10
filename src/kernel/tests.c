@@ -4,6 +4,9 @@
 #include "arch/x86.h"
 #include "string.h"
 
+#include "kernel.h"
+#include "drivers/serial.h"
+
 #define CRC32C_UWU 0xEC416DF0
 
 void memory_test(struct writeout_t *wo) {
@@ -11,15 +14,16 @@ void memory_test(struct writeout_t *wo) {
     char* block1 = zalloc(size);
     if (!block1) {
         bwrite(wo, FAIL_LOG_STR " zalloc returned NULL\n");
-        return;
+        nl_serial_write("kernel panic!\nzalloc returned NULL\n");
+        panic();
     }
 
     // verify zeroed memory
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != 0) {
             bwrite(wo, FAIL_LOG_STR " zalloc did not zero memory\n");
-            free(block1);
-            return;
+            nl_serial_write("kernel panic!\nzalloc did not zero memory\n");
+            panic();
         }
     }
 
@@ -32,8 +36,8 @@ void memory_test(struct writeout_t *wo) {
     for (size_t i = 0; i < size; i++) {
         if (block1[i] != (char)(i + 1)) {
             bwrite(wo, FAIL_LOG_STR " memory write/read mismatch\n");
-            free(block1);
-            return;
+            nl_serial_write("kernel panic!\nmemory write/read mismatch\n");
+            panic();
         }
     }
 
@@ -43,8 +47,8 @@ void memory_test(struct writeout_t *wo) {
     char* block2 = zalloc(size);
     if (block2 != block1) {
         bwrite(wo, FAIL_LOG_STR " free did not rewind heap pointer\n");
-        free(block2);
-        return;
+        nl_serial_write("kernel panic!\nfree did not rewind heap pointer\n");
+        panic();
     }
 
     free(block2);
@@ -66,6 +70,8 @@ void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *)) {
                 *hash = crc32c_swhash;
             } else {
                 bwrite(wo, FAIL_LOG_STR " Both HW and SW crc32c checks failed!\n");
+                nl_serial_write("kernel panic!\nBoth HW and SW crc32c checks failed!\n");
+                panic();
             }
         }
 

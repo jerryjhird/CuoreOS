@@ -49,7 +49,7 @@ void pma_init(void) {
     pma_bitmap_bytes = (pma_total_pages + 7) / 8;
 
     if (pma_bitmap_bytes > PMA_BITMAP_MAX_BYTES) {
-        serial_write("pma_bitmap_bytes > PMA_BITMAP_MAX_BYTES", 39);
+        nl_serial_write("kernel panic!\npma_bitmap_bytes > PMA_BITMAP_MAX_BYTES\n");
         panic();
     }
 

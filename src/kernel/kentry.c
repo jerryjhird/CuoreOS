@@ -58,11 +58,13 @@ void serial_write_adapter(const char *msg, size_t len, void *ctx) {
 }
 
 void panic(void) {
-    size_t bmp_size;
-    void *bmp_data = cpio_read_file(initramfs_mod->address, "panic.bmp", &bmp_size);
+    void *bmp_data = cpio_read_file(initramfs_mod->address, "panic.bmp", NULL);
 
-    bmp_render(bmp_data, fb_req.response->framebuffers[0], 100, 100);
-    free(bmp_data); // freeing dosent matter here but fuck it
+    if (initramfs_mod != NULL) {
+        bmp_render(bmp_data, fb_req.response->framebuffers[0], 100, 100);
+        free(bmp_data); // freeing dosent matter here but fuck it
+    }
+
     halt();
 }
 
@@ -99,6 +101,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
         }
 
         case 0xB160F2BE: // "panic"
+            nl_serial_write("kernel panic!\npanic executed in shell\n");
             panic();
             break;
 
@@ -173,7 +176,6 @@ void exec(struct writeout_t *wo, const char *cmd) {
 }
 
 void kernel_main(void) {
-    struct limine_module_response *resp = module_request.response;
     struct limine_framebuffer *fb = fb_req.response->framebuffers[0];
 
     cuoreterm_init(
@@ -235,16 +237,6 @@ void kernel_main(void) {
     printf(&term_wo, INFO_LOG_STR " (CPU) Brand: %s\n", brand);
     free(brand);
 
-    if (resp == NULL || resp->module_count == 0 || resp->modules == NULL) {
-        bwrite(&term_wo, WARN_LOG_STR " (MOD) No Limine Modules Detected\n");
-    } else {
-        if (resp->modules[0] != NULL) {
-            initramfs_mod = resp->modules[0];
-        } else {
-            bwrite(&term_wo, WARN_LOG_STR " (MOD) first module pointer is NULL\n");
-        }
-    }
-
     // shell
     char line[256];
     while (1) {
@@ -259,6 +251,23 @@ void _start(void) {
     serial_init();
     gdt_init();
     idt_init();
+
+    // have initramfs module ready for pma_init in case it throws a panic
+    struct limine_module_response *resp = module_request.response;
+    if (resp == NULL || resp->module_count == 0 || resp->modules == NULL) {
+        initramfs_mod = NULL;
+    } else {
+        if (resp->modules[0] != NULL) {
+            initramfs_mod = resp->modules[0];
+        } else {
+            initramfs_mod = NULL;
+        }
+    }
+
+    if (initramfs_mod == NULL) {
+        nl_serial_write("kernel panic!\nNo initramfs module found\n");
+        panic();
+    }
 
     pma_init();
 
