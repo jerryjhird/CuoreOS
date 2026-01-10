@@ -5,7 +5,7 @@
 #include "stdio.h"
 #include "string.h"
 
-#include "arch/x86_64.h"
+#include "arch/x86.h"
 #include "memory.h"
 
 #include "drivers/ps2.h"
@@ -13,6 +13,8 @@
 #include "fs/cpio_newc.h"
 #include "cuoreterm.h"
 #include "kfont.h"
+
+#include "bmp_render.h"
 
 struct limine_file *initramfs_mod = NULL;
 uint32_t (*hash)(const char *s);
@@ -55,6 +57,16 @@ void serial_write_adapter(const char *msg, size_t len, void *ctx) {
     serial_write(msg, len);
 }
 
+void panic(void) {
+    size_t bmp_size;
+    void *bmp_data = cpio_read_file(initramfs_mod->address, "panic.bmp", &bmp_size);
+
+    bmp_render(bmp_data, fb_req.response->framebuffers[0], 100, 100);
+    free(bmp_data); // freeing dosent matter here but fuck it
+    halt();
+}
+
+
 void exec(struct writeout_t *wo, const char *cmd) {
     while (*cmd == ' ') cmd++;
 
@@ -74,7 +86,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
     switch (hash(command)) {
 
         case 0xB5E3B64C: // "help"
-            bwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls, div0, dumpreg\n");
+            bwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls, div0, dumpreg, panic\n");
             break;
 
         case 0x5AE561ED: // "div0" (divide by zero)
@@ -85,6 +97,10 @@ void exec(struct writeout_t *wo, const char *cmd) {
             (void)c;
             break;
         }
+
+        case 0xB160F2BE: // "panic"
+            panic();
+            break;
 
         case 0x214CE06B: // "dumpreg" dump registers
         {

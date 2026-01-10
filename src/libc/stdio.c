@@ -3,7 +3,7 @@
 #include "stdint.h"
 #include "stdarg.h"
 
-#include "arch/x86_64.h"
+#include "arch/x86.h"
 #include "drivers/ps2.h"
 #include "time.h"
 #include "memory.h"

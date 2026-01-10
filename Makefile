@@ -49,24 +49,24 @@ build/kernel.elf: src/kernel/kentry.c
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/kentry.c -o build/kernel_kentry.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/tests.c -o build/kernel_tests.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/pma.c -o build/kernel_pma.o
+	$(MAKE_CC) $(COMMON_CFLAGS) -c src/other/bmp_render.c -o build/other_bmp_render.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/ps2.c -o build/drivers_ps2.o
 	$(MAKE_CC) $(COMMON_CFLAGS) -c src/kernel/serial.c -o build/drivers_serial.o
 
-	$(MAKE_LD) -r -o build/libc.o \
+	$(MAKE_LD) -r -o build/kernel.o \
 		build/libc_mem.o \
 	    build/libc_string.o \
 	    build/libc_stdio.o \
 		build/other_x86.o \
-		build/other_cpio_newc.o
-
-	$(MAKE_LD) -r -o build/kernel.o \
+		build/other_cpio_newc.o \
 		build/kernel_kentry.o \
 	    build/kernel_tests.o \
 		build/kernel_pma.o \
 		build/drivers_ps2.o \
-		build/drivers_serial.o 
+		build/drivers_serial.o \
+		build/other_bmp_render.o \
 
-	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/libc.o build/cuoreterm.o -o build/kernel.elf
+	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/cuoreterm.o -o build/kernel.elf
 
 uefi: build/uefi.img
 
@@ -94,6 +94,7 @@ build/uefi.img: build/kernel.elf limine.conf
 initramfs:
 	mkdir -p build/initramfs
 	echo "hello world" > build/initramfs/hworld.txt
+	cp resources/panic.bmp build/initramfs/
 	cd build/initramfs && find . -type f -print0 \
 		| cpio --null -ov --format=newc \
 		> ../initramfs.img

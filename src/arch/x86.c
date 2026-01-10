@@ -1,7 +1,7 @@
 #include "stdint.h"
 #include "stdio.h"
 #include "time.h"
-#include "arch/x86_64.h"
+#include "arch/x86.h"
 #include "string.h"
 #include "memory.h"
 
@@ -183,6 +183,7 @@ static void idt_set_gate(int n, uint64_t handler, uint16_t sel, uint8_t flags, u
     idt[n].zero        = 0;
 }
 
+// helper for printing registers to serial
 __attribute__((unused))
 void regtserial(uint64_t *regs) {
     char buf[32];
@@ -200,6 +201,35 @@ void regtserial(uint64_t *regs) {
         serial_write(buf, sizeof(void*)*2);
         serial_write("\n", 1);
     }
+}
+
+// register dumping for c environment
+void dumpreg(void) {
+    uint64_t regs[15];
+    __asm__ volatile(
+        "mov %%rax, %0\n\t"
+        "mov %%rbx, %1\n\t"
+        "mov %%rcx, %2\n\t"
+        "mov %%rdx, %3\n\t"
+        "mov %%rsi, %4\n\t"
+        "mov %%rdi, %5\n\t"
+        "mov %%rbp, %6\n\t"
+        "mov %%r8,  %7\n\t"
+        "mov %%r9,  %8\n\t"
+        "mov %%r10, %9\n\t"
+        "mov %%r11, %10\n\t"
+        "mov %%r12, %11\n\t"
+        "mov %%r13, %12\n\t"
+        "mov %%r14, %13\n\t"
+        "mov %%r15, %14\n\t"
+        : "=m"(regs[0]), "=m"(regs[1]), "=m"(regs[2]), "=m"(regs[3]),
+          "=m"(regs[4]), "=m"(regs[5]), "=m"(regs[6]), "=m"(regs[7]),
+          "=m"(regs[8]), "=m"(regs[9]), "=m"(regs[10]), "=m"(regs[11]),
+          "=m"(regs[12]), "=m"(regs[13]), "=m"(regs[14])
+        :
+        : "memory"
+    );
+    regtserial(regs);
 }
 
 __attribute__((naked))

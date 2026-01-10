@@ -24,14 +24,11 @@ Hobby x86-64 ELF Kernel
 - qemu-system-x86_64
 - OVMF UEFI firmware
 
-### Other make modes:
-- make clean (removes compiled files)
-- make fullclean (removes compiled files and the downloaded git repos / requirements (limine))
-- make buildutils (compiles src/buildutils/hash.c for linux userspace so you can generate command hashes if you wanted to expand on the command parser)
+### other make recipes:
+- clean (removes compiled files)
 
-- make initramfs (rebuilds initramfs image)
-- make mount (mounts the initramfs image)
-- make umount (unmounts the initramfs)
+- fullclean (removes compiled files and the downloaded git repos / requirements (limine,cuoreterm,etc))
 
+- buildutils (sets up helper scripts in src/buildutils for the developer (not a runtime, buildtime etc dependency))
 
-### the source code of this project is released under the MIT license granting permission to use copy modify merge publish distribute sublicense and or sell copies of the software. the projects fetched externally specifcally from the makefile will follow different licenses please check and follow these before attempting to do something with them
+### This Repo and all of its code is subject to the terms of the Mozilla Public License, v. 2.0. the license can be found in the {Project root}/LICENSE or at https://mozilla.org/MPL/2.0/

@@ -25,40 +25,27 @@ static uintptr_t align4(uintptr_t x) {
 }
 
 void *cpio_read_file(void *archive, const char *filename, size_t *out_size) {
-    uint8_t *p = (uint8_t *)archive;
+    uint8_t *p = archive;
 
     while (1) {
         struct cpio_newc_header *hdr = (struct cpio_newc_header *)p;
 
-        // validate magic
-        if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7') {
+        if (hdr->c_magic[0] != '0' || hdr->c_magic[1] != '7')
             return NULL;
-        }
 
         unsigned int namesize = hex_to_uint(hdr->c_namesize, 8);
-        unsigned int fsize = hex_to_uint(hdr->c_filesize, 8);
+        unsigned int fsize    = hex_to_uint(hdr->c_filesize, 8);
         char *name = (char *)(p + sizeof(*hdr));
 
-        // end of archive
-        if (namesize == 11 && !strncmp(name, "TRAILER", 7)) return NULL;
+        if (namesize == 11 && !strncmp(name, "TRAILER", 7))
+            return NULL;
 
-        // found the file?
         if (namesize - 1 == strlen(filename) && !strncmp(name, filename, namesize - 1)) {
             uint8_t *data = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
-
-            // allocate memory for file data
-            void *heap_copy = malloc(fsize);
-            if (!heap_copy) return NULL;
-
-            memcpy(heap_copy, data, fsize);
-
-            if (out_size)
-                *out_size = fsize;
-
-            return heap_copy;
+            if (out_size) *out_size = fsize;
+            return data;
         }
 
-        // move to next header
         p = (uint8_t *)align4((uintptr_t)(p + sizeof(*hdr) + namesize));
         p = (uint8_t *)align4((uintptr_t)(p + fsize));
     }

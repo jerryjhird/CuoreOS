@@ -40,6 +40,9 @@ uintptr_t pma_alloc_pages(size_t count);
 void pma_free_page(uintptr_t phys);
 void pma_free_pages(uintptr_t phys, size_t count);
 
+// kernel panic
+void panic(void);
+
 #ifdef __cplusplus
 }
 #endif

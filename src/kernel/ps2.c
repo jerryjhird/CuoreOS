@@ -1,4 +1,4 @@
-#include "arch/x86_64.h"
+#include "arch/x86.h"
 #include "drivers/ps2.h"
 
 static bool shift_state = false;

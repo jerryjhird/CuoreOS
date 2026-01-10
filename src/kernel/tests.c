@@ -1,7 +1,7 @@
 #include "memory.h"
 #include "stdio.h"
 #include "stdint.h"
-#include "arch/x86_64.h"
+#include "arch/x86.h"
 #include "string.h"
 
 #define CRC32C_UWU 0xEC416DF0

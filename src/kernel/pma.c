@@ -4,7 +4,7 @@
 #include "memory.h"
 #include "drivers/serial.h"
 #include "kernel.h"
-#include "arch/x86_64.h"
+#include "arch/x86.h"
 
 static uint8_t *pma_bitmap;
 static size_t pma_bitmap_bytes;
@@ -49,9 +49,8 @@ void pma_init(void) {
     pma_bitmap_bytes = (pma_total_pages + 7) / 8;
 
     if (pma_bitmap_bytes > PMA_BITMAP_MAX_BYTES) {
-        // continuing would corrupt memory prob idk (TODO: Panic function to replace with)
         serial_write("pma_bitmap_bytes > PMA_BITMAP_MAX_BYTES", 39);
-        while (1) { }
+        panic();
     }
 
     pma_bitmap = pma_bitmap_storage;

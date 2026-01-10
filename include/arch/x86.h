@@ -63,6 +63,7 @@ void idt_init(void);
 
 // high level abstractions
 char* cpu_brand(void);
+void regtserial(uint64_t *regs); // dump registers to serial
 
 // SSE
 int sse_init(void);
@@ -70,9 +71,6 @@ uint32_t crc32c_hwhash(const char *s);
 
 // stack
 void swstack_jmp(void *new_sp, void (*entry)(void));
-
-// dump refgisters to serial
-void regtserial(uint64_t *regs);
 
 #endif // X86_64_H
 
