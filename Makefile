@@ -38,7 +38,7 @@ define git_clone
 	)
 endef
 
-OBJ_FILES := $(foreach f,$(KERNEL_SRC_FILES),build/$(subst /,_,$(basename $(patsubst src/%,%,$f))).o)
+OBJ_FILES := $(patsubst src/%.c,build/%.o,$(KERNEL_SRC_FILES))
 
 ifeq ($(HOST_ARCH),x86_64)
 	MAKE_CC := gcc
@@ -54,11 +54,9 @@ main: build/bootimg-$(IMAGE_FORMAT).img
 all: clean main
 
 # compile kernel sources
-build/%.o:
-	@mkdir -p build
-	@srcfile=$$(echo $* | sed -E 's/_/\//'); \
-	srcfile=src/$${srcfile}.c; \
-	$(MAKE_CC) $(COMMON_CFLAGS) -c $$srcfile -o $@
+build/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(MAKE_CC) $(COMMON_CFLAGS) -c $< -o $@
 
 # compile (and download if needed) cuoreterm
 build/cuoreterm.o:
@@ -78,10 +76,10 @@ build/bootimg-disk.img: build/kernel.elf build/initramfs.img
 	mkdir -p build $(DL)/Limine
 	$(call git_clone,$(LIMINE_URL),$(DL)/Limine)
 
-	dd if=/dev/zero of=build/bootimg-disk.img bs=1M count=64
+	dd if=/dev/zero of=build/bootimg-disk.img bs=1M count=16
 
 	parted -s build/bootimg-disk.img mklabel gpt
-	parted -s build/bootimg-disk.img mkpart ESP fat32 1MiB 100%
+	parted -s build/bootimg-disk.img mkpart ESP fat16 1MiB 6MiB
 	parted -s build/bootimg-disk.img set 1 esp on
 
 	mformat -i build/bootimg-disk.img ::/

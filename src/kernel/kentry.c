@@ -35,6 +35,10 @@ struct terminal fb_term;
 uint8_t *KHEAP_START = NULL;
 uint8_t *KHEAP_END   = NULL;
 
+struct writeout_t *stdio;
+struct writeout_t serial_wo;
+struct writeout_t term_wo;
+
 // limine requests
 
 volatile struct limine_framebuffer_request fb_req = {
@@ -82,7 +86,7 @@ void panic(void) {
     halt();
 }
 
-void exec(struct writeout_t *wo, const char *cmd) {
+void exec(const char *cmd) {
     while (*cmd == ' ') cmd++;
 
     const char *space = cmd;
@@ -101,7 +105,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
     switch (hash(command)) {
 
         case 0xB5E3B64C: // "help"
-            bwrite(wo, "commands: ls, readf, memtest, pma_state, clear, cls, div0, dumpreg, panic\n");
+            bwrite(stdio, "commands: setout, ls, readf, memtest, pma_state, clear, cls, div0, dumpreg, panic\n");
             break;
 
         case 0x5AE561ED: // "div0" (divide by zero)
@@ -149,13 +153,13 @@ void exec(struct writeout_t *wo, const char *cmd) {
         }
 
         case 0xED1ABDF6: // "memtest"
-            memory_test(wo);
+            memory_test(stdio);
             break;
 
         case 0x31CA209B: // "ls" (for cpio initramfs limine module)
         {
             char *cpio_filelist = cpio_list_files(initramfs_mod->address);
-            bwrite(wo, cpio_filelist);
+            bwrite(stdio, cpio_filelist);
             free(cpio_filelist);
             break;
         }
@@ -165,14 +169,27 @@ void exec(struct writeout_t *wo, const char *cmd) {
             void *file_data = cpio_read_file(initramfs_mod->address, arg, &size);
 
             if (!file_data) {
-                printf(wo, "%s not found\n", arg);
+                printf(stdio, "%s not found\n", arg);
                 break; // exit and dont free because nothing gets allocated at this point in cpio_read_file i thunk
             }
             
-            lbwrite(wo, file_data, size);
+            lbwrite(stdio, file_data, size);
             free(file_data);
             break;
         }
+
+        case 0x5BDBBC9A: // "setout [<term|serial>]" changes exec output
+            uint32_t arg_hash = hash(arg);
+            if (arg_hash == 0xB589BDD3) { // "term"
+                stdio = &term_wo;
+                bwrite(stdio, "now outputting over terminal\n");
+            } else if (arg_hash == 0xA5E75702) { // "serial"
+                stdio = &serial_wo;
+                bwrite(stdio, "now outputting over serial\n");
+            } else {
+                bwrite(stdio, "usage: setout [term|serial]\n");
+            }
+            break;
 
         case 0xFDC59B25: // "cls" Windows style clear command
             cuoreterm_clear(&fb_term);
@@ -183,7 +200,7 @@ void exec(struct writeout_t *wo, const char *cmd) {
             break;
 
         case 0x57C5E155: // "pma_state" (gets the current state of the physical memory allocator)
-            printf(wo, "(PMA) total pages: %u\n(PMA) used pages: %u\n(PMA) free pages: %u\n", pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
+            printf(stdio, "(PMA) total pages: %u\n(PMA) used pages: %u\n(PMA) free pages: %u\n", pma_total_pages, pma_used_pages, pma_total_pages - pma_used_pages);
             break;
     }
 }
@@ -209,12 +226,19 @@ void kernel_main(void) {
          14
     );
 
+    // register serial as a writeable interface
+    serial_wo.len = 0;
+    serial_wo.buf[0] = '\0';
+    serial_wo.write = serial_write_adapter;
+    serial_wo.ctx = NULL;
+
     // register the framebuffer terminal as a writeable interface
-    struct writeout_t term_wo;
     term_wo.len = 0;
     term_wo.buf[0] = '\0';
     term_wo.write = term_write_adapter;
     term_wo.ctx = &fb_term;
+
+    stdio = &term_wo;
 
     printf(&term_wo, TIME_LOG_STR" [%u]\n", get_epoch());
 
@@ -254,9 +278,10 @@ void kernel_main(void) {
     char line[256];
     while (1) {
         flush(&term_wo);
+        flush(&serial_wo);
         write(&term_wo, "> ", 2);
         readline(&term_wo, line, 256);
-        exec(&term_wo, line);
+        exec(line);
     }
 }
 
