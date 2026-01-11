@@ -4,24 +4,19 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
-#ifndef KERNEL_H
-#define KERNEL_H
+#ifndef STDBOOL_H
+#define STDBOOL_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "stdio.h"
-
-// global hashing function
-extern uint32_t (*hash)(const char *s);
-
-// kernel tests
-void memory_test(struct writeout_t *wo);
-void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *));
+#define bool _Bool
+#define true 1
+#define false 0
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // KERNEL_H
+#endif // STDBOOL_H

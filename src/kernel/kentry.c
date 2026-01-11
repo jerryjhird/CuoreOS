@@ -1,20 +1,29 @@
-#include "arch/limine.h"
+/*
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at 
+https://mozilla.org/MPL/2.0/.
+*/
+
+#include "limine.h"
 #include "kernel.h"
 
 #include "stdint.h"
 #include "stdio.h"
 #include "string.h"
 
-#include "arch/x86.h"
+#include "x86.h"
 #include "memory.h"
 
-#include "drivers/ps2.h"
-#include "drivers/serial.h"
-#include "fs/cpio_newc.h"
+#include "ps2.h"
+#include "serial.h"
+#include "cpio_newc.h"
 #include "cuoreterm.h"
 #include "kfont.h"
 
 #include "bmp_render.h"
+#include "liminereq.h"
+#include "GDT.h"
+#include "PMA.h"
 
 struct limine_file *initramfs_mod = NULL;
 uint32_t (*hash)(const char *s);
@@ -48,6 +57,11 @@ volatile struct limine_hhdm_request hhdm_req = {
     .revision = 0
 };
 
+volatile struct limine_efi_system_table_request efi_req = {
+    .id = LIMINE_EFI_SYSTEM_TABLE_REQUEST_ID,
+    .revision = 0
+};
+
 void term_write_adapter(const char *msg, size_t len, void *ctx) {
     cuoreterm_write(ctx, msg, len);
 }
@@ -67,7 +81,6 @@ void panic(void) {
 
     halt();
 }
-
 
 void exec(struct writeout_t *wo, const char *cmd) {
     while (*cmd == ' ') cmd++;

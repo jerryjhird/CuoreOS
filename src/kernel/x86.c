@@ -1,11 +1,18 @@
+/*
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at 
+https://mozilla.org/MPL/2.0/.
+*/
+
 #include "stdint.h"
 #include "stdio.h"
 #include "time.h"
-#include "arch/x86.h"
+#include "x86.h"
 #include "string.h"
 #include "memory.h"
 
-#include "drivers/serial.h"
+#include "serial.h"
+#include "GDT.h"
 
 uint8_t cmos_read(uint8_t reg) {
     outb(0x70, reg);

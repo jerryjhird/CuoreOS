@@ -1,11 +1,17 @@
+/*
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at 
+https://mozilla.org/MPL/2.0/.
+*/
+
 #include "memory.h"
 #include "stdio.h"
 #include "stdint.h"
-#include "arch/x86.h"
+#include "x86.h"
 #include "string.h"
 
 #include "kernel.h"
-#include "drivers/serial.h"
+#include "panic.h"
 
 #define CRC32C_UWU 0xEC416DF0
 

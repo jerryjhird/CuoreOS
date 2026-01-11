@@ -1,6 +1,12 @@
+/*
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at 
+https://mozilla.org/MPL/2.0/.
+*/
+
 #include "stdint.h"
-#include "arch/x86.h"
-#include "drivers/serial.h"
+#include "x86.h"
+#include "serial.h"
 
 void serial_init(void) {
     outb(SERIAL_COM1 + 1, 0x00);    // disable interrupts

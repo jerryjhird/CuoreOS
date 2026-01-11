@@ -1,3 +1,9 @@
+/*
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at 
+https://mozilla.org/MPL/2.0/.
+*/
+
 #ifndef PS2_H
 #define PS2_H
 
@@ -5,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "arch/x86.h"
+#include "x86.h"
 #include "stdbool.h"
 
 #define KBD_DATA_PORT   0x60
