@@ -9,7 +9,6 @@ https://mozilla.org/MPL/2.0/.
 #include "stdint.h"
 #include "stdarg.h"
 
-#include "x86.h"
 #include "ps2.h"
 #include "time.h"
 #include "memory.h"

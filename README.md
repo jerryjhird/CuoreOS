@@ -9,7 +9,6 @@ Hobby x86-64 ELF Kernel
 - mtools
 - Git
 - ar
-- cpio
 - DD
 - Parted
 - echo 

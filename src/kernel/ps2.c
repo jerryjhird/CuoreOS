@@ -10,6 +10,9 @@ https://mozilla.org/MPL/2.0/.
 static bool shift_state = false;
 static bool caps_lock_state = false;
 
+#define KBD_DATA_PORT   0x60
+#define KBD_STATUS_PORT 0x64
+
 const char scta_uk[128] = {
     0, 27, '1','2','3','4','5','6','7','8','9','0','-','=','\b','\t',
     'q','w','e','r','t','y','u','i','o','p','[',']','\n', 0,

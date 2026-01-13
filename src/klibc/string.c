@@ -5,7 +5,6 @@ https://mozilla.org/MPL/2.0/.
 */
 
 #include "string.h"
-#include "stdbool.h"
 #include "stdio.h"
 
 size_t strlen(const char* s) {

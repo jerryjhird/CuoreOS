@@ -40,9 +40,6 @@ typedef int64_t            intmax_t;
 #define NULL ((void*)0)
 #endif
 
-#define MAX_INT_STR_SIZE 21  // 19 digits + 1 sign + 1 null terminator
-#define MAX_UINT_STR_SIZE 21  // 20 digits + 1 null terminator
-
 #ifdef __cplusplus
 }
 #endif

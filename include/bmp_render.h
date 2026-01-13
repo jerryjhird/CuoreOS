@@ -11,11 +11,12 @@ https://mozilla.org/MPL/2.0/.
 extern "C" {
 #endif
 
+#include "stdint.h"
 #include "limine.h"
 
 #pragma pack(push, 1)
 typedef struct {
-    uint16_t bfType;      // 'BM'
+    uint16_t bfType; // 'BM'
     uint32_t bfSize;
     uint16_t bfReserved1;
     uint16_t bfReserved2;

@@ -11,11 +11,8 @@ https://mozilla.org/MPL/2.0/.
 extern "C" {
 #endif
 
-#include "x86.h"
+#include "stdint.h"
 #include "stdbool.h"
-
-#define KBD_DATA_PORT   0x60
-#define KBD_STATUS_PORT 0x64
 
 extern const char scta_uk[128];
 extern const char scta_uk_shift[128];

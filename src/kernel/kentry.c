@@ -14,7 +14,6 @@ https://mozilla.org/MPL/2.0/.
 #include "x86.h"
 #include "memory.h"
 
-#include "ps2.h"
 #include "serial.h"
 #include "cpio_newc.h"
 #include "cuoreterm.h"
@@ -179,6 +178,7 @@ void exec(const char *cmd) {
         }
 
         case 0x5BDBBC9A: // "setout [<term|serial>]" changes exec output
+        {
             uint32_t arg_hash = hash(arg);
             if (arg_hash == 0xB589BDD3) { // "term"
                 stdio = &term_wo;
@@ -190,7 +190,8 @@ void exec(const char *cmd) {
                 bwrite(stdio, "usage: setout [term|serial]\n");
             }
             break;
-
+        }
+        
         case 0xFDC59B25: // "cls" Windows style clear command
             cuoreterm_clear(&fb_term);
             break;

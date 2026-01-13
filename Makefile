@@ -14,7 +14,6 @@ QEMU_MEM ?= -m 4G
 IMAGE_FORMAT ?= disk
 
 ENABLED_WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wstrict-prototypes -Wunused-macros
-3PS_ENABLED_WARNINGS = -Wall -Wextra
 COMMON_INCLUDES = -Iinclude -I$(DL)/Cuoreterm/src
 COMMON_CFLAGS = -mno-red-zone -ffreestanding -mcmodel=large -nostdinc -fno-pie -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
 
@@ -48,20 +47,21 @@ else
 	MAKE_LD := x86_64-elf-ld
 endif
 
-.PHONY: main build/bootimg-disk.img clean fullclean run run-kvm buildutils cloc
+.PHONY: main build/bootimg-disk.img clean fullclean run run-kvm buildutils cloc cc_commands deps
 main: build/bootimg-$(IMAGE_FORMAT).img
+all: clean main buildutils
 
-all: clean main
+deps:
+	mkdir -p $(DL)/Cuoreterm $(DL)/Limine
+	$(call git_clone,$(CUORETERM_URL),$(DL)/Cuoreterm)
+	$(call git_clone,$(LIMINE_URL),$(DL)/Limine)
 
-# compile kernel sources
-build/%.o: src/%.c
+build/%.o: src/%.c deps
 	@mkdir -p $(dir $@)
 	$(MAKE_CC) $(COMMON_CFLAGS) -c $< -o $@
 
 # compile (and download if needed) cuoreterm
 build/cuoreterm.o:
-	@mkdir -p build $(DL)/Cuoreterm
-	$(call git_clone,$(CUORETERM_URL),$(DL)/Cuoreterm)
 	$(MAKE_CC) $(COMMON_CFLAGS) -c $(DL)/Cuoreterm/src/term.c -o build/cuoreterm.o
 
 
@@ -70,12 +70,8 @@ build/kernel.elf: $(OBJ_FILES) build/cuoreterm.o
 	$(MAKE_LD) -r -o build/kernel.o $(OBJ_FILES)
 	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/cuoreterm.o -o build/kernel.elf
 
-
 # fat32 uefi limine disk image
 build/bootimg-disk.img: build/kernel.elf build/initramfs.img
-	mkdir -p build $(DL)/Limine
-	$(call git_clone,$(LIMINE_URL),$(DL)/Limine)
-
 	dd if=/dev/zero of=build/bootimg-disk.img bs=1M count=16
 
 	parted -s build/bootimg-disk.img mklabel gpt
@@ -96,12 +92,14 @@ build/bootimg-disk.img: build/kernel.elf build/initramfs.img
 
 # put initramfs together
 build/initramfs.img:
-	mkdir -p build/initramfs
-	echo "hello world" > build/initramfs/hworld.txt
-	cp resources/panic.bmp build/initramfs/
-	cd build/initramfs && find . -type f -print0 \
-		| cpio --null -ov --format=newc \
-		> ../initramfs.img
+	mkdir -p build/initramfs-dump
+	echo "hello world" > build/initramfs-dump/hworld.txt
+	cp resources/panic.bmp build/initramfs-dump/
+
+	rm -f build/archiver build/initramfs.img
+	$(MAKE_CC) src/buildutils/archiver.c -o build/archiver -Wall -Wextra -O2 -std=c99
+
+	build/archiver build/initramfs-dump > build/initramfs.img
 
 # run qemu with 
 # $(QEMU_CPU) default: max
@@ -143,3 +141,7 @@ fullclean:
 # loc counter (may need to be installed)
 cloc:
 	cloc . --exclude-list-file=exclude.cloc
+
+# generate compile_commands.json for clangd
+cc_commands:
+	bear -- make all

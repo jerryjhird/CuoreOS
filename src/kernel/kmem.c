@@ -9,7 +9,6 @@ https://mozilla.org/MPL/2.0/.
 #include "limine.h"
 #include "memory.h"
 #include "serial.h"
-#include "x86.h"
 #include "liminereq.h"
 #include "panic.h"
 #include "PMA.h"
@@ -176,6 +175,18 @@ void *memcpy(void *dest, const void *src, size_t n) {
     const unsigned char *s = src;
     while (n--) *d++ = *s++;
     return dest;
+}
+
+int memcmp(const void *s1, const void *s2, size_t n) {
+    const uint8_t *a = (const uint8_t *)s1;
+    const uint8_t *b = (const uint8_t *)s2;
+
+    for (size_t i = 0; i < n; i++) {
+        if (a[i] != b[i])
+            return (int)a[i] - (int)b[i];
+    }
+
+    return 0;
 }
 
 void ptrhex(char *buf, void *ptr) {

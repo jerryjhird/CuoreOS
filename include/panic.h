@@ -11,6 +11,8 @@ https://mozilla.org/MPL/2.0/.
 extern "C" {
 #endif
 
+#include "stdint.h"
+
 #ifndef nl_serial_write
 void serial_write(const char *msg, size_t len);
 #define nl_serial_write(str) serial_write(str, sizeof(str)-1)
