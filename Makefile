@@ -22,7 +22,7 @@ KERNEL_SRC_FILES := \
     src/klibc/string.c \
     src/klibc/stdio.c \
     src/kernel/x86.c \
-    src/kernel/cpio_newc.c \
+    src/kernel/cpir.c \
     src/kernel/kentry.c \
     src/kernel/ktests.c \
     src/kernel/bmp_render.c \

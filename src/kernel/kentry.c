@@ -15,7 +15,7 @@ https://mozilla.org/MPL/2.0/.
 #include "memory.h"
 
 #include "serial.h"
-#include "cpio_newc.h"
+#include "cpir.h"
 #include "cuoreterm.h"
 #include "kfont.h"
 
@@ -75,7 +75,7 @@ void serial_write_adapter(const char *msg, size_t len, void *ctx) {
 }
 
 void panic(void) {
-    void *bmp_data = cpio_read_file(initramfs_mod->address, "panic.bmp", NULL);
+    void *bmp_data = cpir_read_file(initramfs_mod->address, "panic.bmp", NULL);
 
     if (initramfs_mod != NULL) {
         bmp_render(bmp_data, fb_req.response->framebuffers[0], 100, 100);
@@ -155,21 +155,21 @@ void exec(const char *cmd) {
             memory_test(stdio);
             break;
 
-        case 0x31CA209B: // "ls" (for cpio initramfs limine module)
+        case 0x31CA209B: // "ls" (for cpir initramfs limine module)
         {
-            char *cpio_filelist = cpio_list_files(initramfs_mod->address);
-            bwrite(stdio, cpio_filelist);
-            free(cpio_filelist);
+            char *cpir_filelist = cpir_list_files(initramfs_mod->address);
+            bwrite(stdio, cpir_filelist);
+            free(cpir_filelist);
             break;
         }
-        case 0x030C68B6: // "readf [filename]" (cpio)
+        case 0x030C68B6: // "readf [filename]" (cpir)
         {
             size_t size;
-            void *file_data = cpio_read_file(initramfs_mod->address, arg, &size);
+            void *file_data = cpir_read_file(initramfs_mod->address, arg, &size);
 
             if (!file_data) {
                 printf(stdio, "%s not found\n", arg);
-                break; // exit and dont free because nothing gets allocated at this point in cpio_read_file i thunk
+                break; // exit and dont free because nothing gets allocated at this point in cpir_read_file i thunk
             }
             
             lbwrite(stdio, file_data, size);
@@ -275,7 +275,7 @@ void kernel_main(void) {
     printf(&term_wo, INFO_LOG_STR " (CPU) Brand: %s\n", brand);
     free(brand);
 
-    // shell
+    // shell   
     char line[256];
     while (1) {
         flush(&term_wo);

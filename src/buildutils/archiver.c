@@ -4,6 +4,9 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
+// this is for a custom format i wrote adapting cpio newc
+// CPIR (copy in and read) archiver
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -11,38 +14,49 @@ https://mozilla.org/MPL/2.0/.
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <time.h>
 #include <errno.h>
 
-static void pad4(size_t n) {
-    static const char zero[4] = {0};
-    size_t p = (4 - (n % 4)) % 4;
-    if(p) fwrite(zero, 1, p, stdout);
+#define ARCHIVE_MAGIC 0x43504952  // C P I R 
+#define ARCHIVE_VERSION 2
+
+struct archive_hdr {
+    uint32_t magic;
+    uint16_t version;
+    uint16_t flags;
+
+    uint64_t inode;
+    uint64_t mode;
+    uint64_t nlink;
+    uint64_t mtime;
+    uint64_t filesize;
+    uint64_t namesize;
+};
+
+static void pad8(uint64_t n) {
+    uint8_t zero[8] = {0};
+    uint64_t p = (8 - (n % 8)) % 8;
+    if (p)
+        fwrite(zero, 1, p, stdout);
 }
 
-static void write_hex(uint32_t v) {
-    fprintf(stdout, "%08X", v);
-}
+static void write_header(const char *name, struct stat *st) {
+    struct archive_hdr h = {
+        .magic    = ARCHIVE_MAGIC,
+        .version  = ARCHIVE_VERSION,
+        .flags    = 0,
 
-static void write_header(
-    const char *name,
-    struct stat *st
-) {
-    fwrite("070701", 1, 6, stdout); // c_magic
-    write_hex(1); // c_ino
-    write_hex(st->st_mode); // c_mode
-    write_hex(st->st_uid); // c_uid
-    write_hex(st->st_gid); // c_gid
-    write_hex(1); // c_nlink
-    write_hex(st->st_mtime); // c_mtime
-    write_hex(st->st_size); // c_filesize
-    write_hex(0); write_hex(0); // devmajor/minor
-    write_hex(0); write_hex(0); // rdevmajor/minor
-    write_hex(strlen(name) + 1); // c_namesize
-    write_hex(0); // c_check
+        .inode    = (uint64_t)st->st_ino,
+        .mode     = (uint64_t)st->st_mode,
+        .nlink    = (uint64_t)st->st_nlink,
+        .mtime    = (uint64_t)st->st_mtime,
+        .filesize = (uint64_t)st->st_size,
+        .namesize = (uint64_t)strlen(name) + 1
+    };
 
-    fwrite(name, 1, strlen(name) + 1, stdout);
-    pad4(110 + strlen(name) + 1);
+    fwrite(&h, sizeof(h), 1, stdout);
+    fwrite(name, 1, h.namesize, stdout);
+
+    pad8(sizeof(h) + h.namesize);
 }
 
 int main(int argc, char **argv) {
@@ -71,13 +85,8 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        if (S_ISDIR(st.st_mode)) {
-            fprintf(stderr, "warn: subdirectory '%s' skipped\n", ent->d_name);
-            continue;
-        }
-
         if (!S_ISREG(st.st_mode)) {
-            fprintf(stderr, "warn: unsupported file '%s' skipped\n", ent->d_name);
+            fprintf(stderr, "warn: skipping '%s'\n", ent->d_name);
             continue;
         }
 
@@ -89,20 +98,20 @@ int main(int argc, char **argv) {
 
         write_header(ent->d_name, &st);
 
-        char buf[4096];
+        uint8_t buf[8192];
         size_t r;
         while ((r = fread(buf, 1, sizeof(buf), f)))
             fwrite(buf, 1, r, stdout);
 
-        pad4(st.st_size);
+        pad8((uint64_t)st.st_size);
         fclose(f);
     }
 
     closedir(d);
 
     /* trailer */
-    struct stat st = {0};
-    write_header("TRAILER!!!", &st);
+    struct stat zero = {0};
+    write_header("TRAILER!!!", &zero);
 
     return 0;
 }
