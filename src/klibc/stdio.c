@@ -232,6 +232,6 @@ void readline(struct writeout_t *wo, char *buf, size_t size) {
 }
 
 uint32_t get_epoch(void) {
-    datetime_t now = getdatetime();
-    return dttepoch(now);
+    struct tm now = gettm();
+    return tm_to_epoch(&now);
 }

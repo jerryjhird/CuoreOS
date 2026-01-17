@@ -62,7 +62,7 @@ void memory_test(struct writeout_t *wo) {
     bwrite(wo, PASS_LOG_STR " memory_test successful\n");
 }
 
-void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *)) {
+void hash_test(struct writeout_t *wo) {
     if (*hash == crc32c_hwhash) {
         uint32_t hw = crc32c_hwhash("uwu");
         uint32_t sw = crc32c_swhash("uwu");
@@ -73,7 +73,7 @@ void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *)) {
             bwrite(wo, FAIL_LOG_STR " crc32c_hwhash does NOT match expected hash\n");
             if (sw == CRC32C_UWU) {
                 bwrite(wo, "\x1b[#48B9D7m[ INFO ]\x1b[0m Falling back to crc32c_swhash\n");
-                *hash = crc32c_swhash;
+                hash = crc32c_swhash;
             } else {
                 bwrite(wo, FAIL_LOG_STR " Both HW and SW crc32c checks failed!\n");
                 nl_serial_write("kernel panic!\nBoth HW and SW crc32c checks failed!\n");

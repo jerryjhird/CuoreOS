@@ -53,37 +53,84 @@ void halt(void) {
     for (;;) __asm__ volatile("hlt");
 }
 
-datetime_t getdatetime(void) {
-    datetime_t dt;
+struct tm gettm(void) {
+    struct tm tm;
 
-    while (cmos_read(0x0A) & 0x80); // wait until update-in-progress clear
+    while (cmos_read(0x0A) & 0x80);
 
-    dt.sec   = bcdtbin(cmos_read(0x00));
-    dt.min   = bcdtbin(cmos_read(0x02));
-    dt.hour  = bcdtbin(cmos_read(0x04));
-    dt.day   = bcdtbin(cmos_read(0x07));
-    dt.month = bcdtbin(cmos_read(0x08));
-    dt.year  = 2000 + bcdtbin(cmos_read(0x09));
+    int sec   = bcdtbin(cmos_read(0x00));
+    int min   = bcdtbin(cmos_read(0x02));
+    int hour  = bcdtbin(cmos_read(0x04));
+    int mday  = bcdtbin(cmos_read(0x07));
+    int mon   = bcdtbin(cmos_read(0x08)); // 1–12
+    int year  = 2000 + bcdtbin(cmos_read(0x09));
 
-    return dt;
+    tm.tm_sec  = sec;
+    tm.tm_min  = min;
+    tm.tm_hour = hour;
+    tm.tm_mday = mday;
+    tm.tm_mon  = mon - 1;          // 0–11
+    tm.tm_year = year - 1900;      // years since 1900
+    tm.tm_isdst = 0;
+
+    int y = year;
+    int m = mon;
+
+    if (m <= 2) {
+        m += 12;
+        y -= 1;
+    }
+
+    int32_t days =
+        365*y + y/4 - y/100 + y/400 +
+        (153*m + 8)/5 +
+        mday - 719469;
+
+    // 1970/01/01 was a thursday prob
+    tm.tm_wday = (days + 4) % 7;
+    if (tm.tm_wday < 0)
+        tm.tm_wday += 7;
+
+    static const int yday_tab[12] = {
+        0,   31,  59,  90, 120, 151,
+        181, 212, 243, 273, 304, 334
+    };
+
+    tm.tm_yday = yday_tab[tm.tm_mon] + (mday - 1);
+
+    // leap year correction
+    int leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    if (leap && tm.tm_mon > 1)
+        tm.tm_yday++;
+
+    return tm;
 }
 
-uint32_t dttepoch(datetime_t dt) { // time.h 
-    uint16_t year = dt.year;
-    uint8_t month = dt.month;
-    uint8_t day = dt.day;
-    uint8_t hour = dt.hour;
-    uint8_t min = dt.min;
-    uint8_t sec = dt.sec;
+uint32_t tm_to_epoch(const struct tm *tm)
+{
+    int year  = tm->tm_year + 1900;
+    int month = tm->tm_mon + 1;
+    int day   = tm->tm_mday;
+    int hour  = tm->tm_hour;
+    int min   = tm->tm_min;
+    int sec   = tm->tm_sec;
 
     if (month <= 2) {
         month += 12;
         year -= 1;
     }
 
-    int32_t days_signed = 365*year + year/4 - year/100 + year/400 + (153*month + 8)/5 + day - 719469;
-    uint32_t days = (uint32_t)days_signed;
-    return days*86400 + hour*3600 + min*60 + sec;
+    int32_t days =
+        365*year + year/4 - year/100 + year/400 +
+        (153*month + 8)/5 +
+        day - 719469;
+
+    return (uint32_t)(
+        days * 86400 +
+        hour * 3600 +
+        min * 60 +
+        sec
+    );
 }
 
 void sleep_ms(uint64_t ms, uint64_t cpu_hz) { // time.h

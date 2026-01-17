@@ -6,7 +6,6 @@ DL = build/downloads
 OVMF_PATH = /usr/share/OVMF/OVMF_CODE.fd
 
 LIMINE_URL = --branch=v10.x-binary --depth=1 https://codeberg.org/Limine/Limine.git
-CUORETERM_URL = https://codeberg.org/jerryjhird/Cuoreterm.git
 HOST_ARCH := $(shell uname -m)
 
 QEMU_CPU ?= max
@@ -14,8 +13,8 @@ QEMU_MEM ?= -m 4G
 IMAGE_FORMAT ?= disk
 
 ENABLED_WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wstrict-prototypes -Wunused-macros
-COMMON_INCLUDES = -Iinclude -I$(DL)/Cuoreterm/src
-COMMON_CFLAGS = -mno-red-zone -ffreestanding -mcmodel=large -nostdinc -fno-pie -std=c99 $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
+COMMON_INCLUDES = -Iinclude
+COMMON_CFLAGS = -mno-red-zone -ffreestanding -mcmodel=large -nostdinc -fno-pie $(ENABLED_WARNINGS) $(COMMON_INCLUDES)
 
 KERNEL_SRC_FILES := \
     src/kernel/kmem.c \
@@ -52,25 +51,18 @@ main: build/bootimg-$(IMAGE_FORMAT).img
 all: clean main buildutils
 
 deps:
-	mkdir -p $(DL)/Cuoreterm $(DL)/Limine
-	$(call git_clone,$(CUORETERM_URL),$(DL)/Cuoreterm)
+	mkdir -p $(DL)/Limine
 	$(call git_clone,$(LIMINE_URL),$(DL)/Limine)
 
 build/%.o: src/%.c deps
 	@mkdir -p $(dir $@)
 	$(MAKE_CC) $(COMMON_CFLAGS) -c $< -o $@
 
-# compile (and download if needed) cuoreterm
-build/cuoreterm.o:
-	$(MAKE_CC) $(COMMON_CFLAGS) -c $(DL)/Cuoreterm/src/term.c -o build/cuoreterm.o
+# link kernel into kernel.elf
+build/kernel.elf: $(OBJ_FILES)
+	$(MAKE_LD) -T src/kernel.ld -o build/kernel.elf $(OBJ_FILES)
 
-
-# link kernel / cuoreterm into kernel.elf
-build/kernel.elf: $(OBJ_FILES) build/cuoreterm.o
-	$(MAKE_LD) -r -o build/kernel.o $(OBJ_FILES)
-	$(MAKE_LD) -nostdlib -T src/kernel.ld build/kernel.o build/cuoreterm.o -o build/kernel.elf
-
-# fat32 uefi limine disk image
+# fat16 uefi limine disk image
 build/bootimg-disk.img: build/kernel.elf build/initramfs.img
 	dd if=/dev/zero of=build/bootimg-disk.img bs=1M count=16
 
@@ -89,7 +81,6 @@ build/bootimg-disk.img: build/kernel.elf build/initramfs.img
 
 	mcopy -i build/bootimg-disk.img build/initramfs.img ::
 
-
 # put initramfs together
 build/initramfs.img:
 	mkdir -p build/initramfs-dump
@@ -97,7 +88,7 @@ build/initramfs.img:
 	cp resources/panic.bmp build/initramfs-dump/
 
 	rm -f build/archiver build/initramfs.img
-	$(MAKE_CC) src/buildutils/archiver.c -o build/archiver -Wall -Wextra -O2 -std=c99
+	$(MAKE_CC) src/buildutils/archiver.c -o build/archiver -Wall -Wextra -O2
 
 	build/archiver build/initramfs-dump > build/initramfs.img
 
@@ -132,7 +123,9 @@ buildutils:
 
 # remove build files
 clean:
-	rm build/* 2>/dev/null || true
+	rm -rf build/kernel
+	rm -rf build/klibc
+	rm -rf build/initramfs-dump
 
 # removes downloaded files as well
 fullclean:

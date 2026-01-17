@@ -1,8 +1,8 @@
-include/arch/limine.h
+include/limine.h
 .git
 LICENSE
-build/downloads/Cuoreterm/src/kfont.h
-build/downloads/Cuoreterm/.git
+build/downloads/Cuoreterm/
+src/buildutils/colorpicker.sh
 build/downloads/Cuoreterm/LICENSE
 build/downloads/Limine
 build/initramfs

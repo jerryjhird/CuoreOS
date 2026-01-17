@@ -46,7 +46,7 @@ void bmp_render(
         int src_y = height - 1 - y;
 
         uint8_t *fb_row =
-            (uint8_t *)fb->address + (dst_y + y) * fb->pitch;
+            (uint8_t *)fb->address + (uint64_t)(dst_y + y) * fb->pitch;
 
         for (int x = 0; x < width; x++) {
             int fb_x = dst_x + x;

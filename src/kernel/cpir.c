@@ -12,7 +12,6 @@
 #include "string.h"
 
 #define ARCHIVE_MAGIC   0x43504952  // C P I R
-#define ARCHIVE_VERSION 2
 
 struct archive_hdr {
     uint32_t magic;

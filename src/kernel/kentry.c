@@ -16,7 +16,10 @@ https://mozilla.org/MPL/2.0/.
 
 #include "serial.h"
 #include "cpir.h"
-#include "cuoreterm.h"
+
+#define CUORETERM_IMPL
+#include "Cuoreterm.h"
+
 #include "kfont.h"
 
 #include "bmp_render.h"
@@ -39,7 +42,6 @@ struct writeout_t serial_wo;
 struct writeout_t term_wo;
 
 // limine requests
-
 volatile struct limine_framebuffer_request fb_req = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
     .revision = 0
@@ -65,6 +67,7 @@ volatile struct limine_efi_system_table_request efi_req = {
     .revision = 0
 };
 
+// terminal functions
 void term_write_adapter(const char *msg, size_t len, void *ctx) {
     cuoreterm_write(ctx, msg, len);
 }
@@ -74,6 +77,7 @@ void serial_write_adapter(const char *msg, size_t len, void *ctx) {
     serial_write(msg, len);
 }
 
+// kernel panic
 void panic(void) {
     void *bmp_data = cpir_read_file(initramfs_mod->address, "panic.bmp", NULL);
 
@@ -85,6 +89,7 @@ void panic(void) {
     halt();
 }
 
+// shell
 void exec(const char *cmd) {
     while (*cmd == ' ') cmd++;
 
@@ -191,7 +196,7 @@ void exec(const char *cmd) {
             }
             break;
         }
-        
+
         case 0xFDC59B25: // "cls" Windows style clear command
             cuoreterm_clear(&fb_term);
             break;
@@ -270,7 +275,7 @@ void kernel_main(void) {
         hash = crc32c_swhash; // software based hash
     }
 
-    hash_test(&term_wo, &hash);
+    hash_test(&term_wo);
 
     printf(&term_wo, INFO_LOG_STR " (CPU) Brand: %s\n", brand);
     free(brand);

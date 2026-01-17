@@ -27,6 +27,16 @@ typedef int                int32_t;
 typedef unsigned long long uint64_t;
 typedef signed long long   int64_t;
 
+// unsigned fast
+typedef unsigned int uint_fast8_t;
+typedef unsigned int uint_fast16_t;
+typedef unsigned int uint_fast32_t;
+
+// signed fast
+typedef signed int   int_fast8_t;
+typedef signed int   int_fast16_t;
+typedef signed int   int_fast32_t;
+
 // pointer-sized
 typedef unsigned long      size_t;
 typedef uint64_t           uintptr_t;

@@ -18,7 +18,7 @@ extern uint32_t (*hash)(const char *s);
 
 // kernel tests
 void memory_test(struct writeout_t *wo);
-void hash_test(struct writeout_t *wo, uint32_t (**hash)(const char *));
+void hash_test(struct writeout_t *wo);
 
 #ifdef __cplusplus
 }
