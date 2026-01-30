@@ -221,13 +221,6 @@ void kernel_main(void) {
          (uint32_t)fb->height,
          (uint32_t)fb->pitch,
          (uint32_t)fb->bpp,
-         fb->red_mask_shift,
-         fb->green_mask_shift,
-         fb->blue_mask_shift,
-         fb->red_mask_size,
-         fb->green_mask_size,
-         fb->blue_mask_size,
-         2,
          iso10_f14_psf,
          8,
          14
