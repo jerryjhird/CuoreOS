@@ -1,8 +1,6 @@
 include/limine.h
 .git
 LICENSE
-build/downloads/Cuoreterm/
+.cache
 src/buildutils/colorpicker.sh
-build/downloads/Cuoreterm/LICENSE
-build/downloads/Limine
 build/initramfs

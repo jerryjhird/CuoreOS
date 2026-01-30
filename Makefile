@@ -2,7 +2,7 @@
 # If a copy of the MPL was not distributed with this file, You can obtain one at 
 # https://mozilla.org/MPL/2.0/.
 
-DL = build/downloads
+DL = .cache/downloads
 OVMF_PATH = /usr/share/OVMF/OVMF_CODE.fd
 
 LIMINE_URL = --branch=v10.x-binary --depth=1 https://codeberg.org/Limine/Limine.git
@@ -123,13 +123,11 @@ buildutils:
 
 # remove build files
 clean:
-	rm -rf build/kernel
-	rm -rf build/klibc
-	rm -rf build/initramfs-dump
+	rm -rf build
 
-# removes downloaded files as well
-fullclean:
-	rm -rf $(DL) build
+# removes downloaded files / cache as well
+fullclean: clean
+	rm -rf .cache compile_commands.json
 
 # loc counter (may need to be installed)
 cloc:

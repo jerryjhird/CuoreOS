@@ -32,6 +32,8 @@ struct terminal {
     uint32_t font_height;
     uint32_t cols;
     uint32_t rows;
+
+    uint32_t scroll_rows; // how many rows to scroll at once
 };
 
 void cuoreterm_init(
@@ -43,6 +45,7 @@ void cuoreterm_init(
     uint32_t fb_bpp,
     uint8_t r_shift, uint8_t g_shift, uint8_t b_shift,
     uint8_t r_size,  uint8_t g_size,  uint8_t b_size,
+    uint32_t scroll_rows,
     const uint8_t *font,
     uint32_t font_w,
     uint32_t font_h
@@ -79,6 +82,7 @@ static void *h_memmove(void *dst, const void *src, uint32_t n) {
 }
 
 static uint32_t fb_pack_color(struct terminal *term, uint32_t rgb) {
+    if (term->fb_bpp == 32) return rgb;
     uint32_t r = (rgb >> 16) & 0xFF;
     uint32_t g = (rgb >> 8)  & 0xFF;
     uint32_t b =  rgb        & 0xFF;
@@ -94,27 +98,31 @@ static uint32_t fb_pack_color(struct terminal *term, uint32_t rgb) {
 
 static void fb_put_pixel(struct terminal *term, uint32_t x, uint32_t y, uint32_t color) {
     if (x >= term->fb_width || y >= term->fb_height) return;
-    uint32_t pixel = fb_pack_color(term, color);
-    uint32_t bpp = term->fb_bpp / 8;
-    uint8_t *p = (uint8_t *)term->fb_addr + y * term->fb_pitch + x * bpp;
 
-    if (bpp == 4) {
-        *(uint32_t *)p = pixel;
-    } else if (bpp == 3) {
-        p[0] = pixel & 0xFF;
-        p[1] = (pixel >> 8) & 0xFF;
-        p[2] = (pixel >> 16) & 0xFF;
+    uint32_t packed = fb_pack_color(term, color);
+    uint8_t bpp_bytes = (uint8_t)(term->fb_bpp / 8);
+    uint8_t *p = (uint8_t *)term->fb_addr + y * term->fb_pitch + x * bpp_bytes;
+
+    switch (bpp_bytes) {
+        case 4: *(uint32_t *)p = packed; break;
+        case 3:
+            p[0] = packed & 0xFF;
+            p[1] = (packed >> 8) & 0xFF;
+            p[2] = (packed >> 16) & 0xFF;
+            break;
+        case 2: *(uint16_t *)p = (uint16_t)packed; break;
+        case 1: *p = (uint8_t)packed; break;
     }
 }
 
 static void draw_glyph(struct terminal *term, uint32_t x, uint32_t y,
-                       const uint8_t *glyph, uint32_t rows,
-                       uint32_t fg) {
+                       const uint8_t *glyph, uint32_t rows, uint32_t fg) {
     for (uint32_t r = 0; r < rows; r++) {
         uint8_t bits = glyph[r];
         for (uint32_t c = 0; c < 8; c++) {
-            if (bits & (1 << (7 - c)))
+            if (bits & (1 << (7 - c))) {
                 fb_put_pixel(term, x + c, y + r, fg);
+            }
         }
     }
 }
@@ -128,6 +136,7 @@ void cuoreterm_init(
     uint32_t fb_bpp,
     uint8_t r_shift, uint8_t g_shift, uint8_t b_shift,
     uint8_t r_size,  uint8_t g_size,  uint8_t b_size,
+    uint32_t scroll_rows,
     const uint8_t *font,
     uint32_t font_w,
     uint32_t font_h
@@ -146,7 +155,7 @@ void cuoreterm_init(
     term->red_size    = r_size;
     term->green_size  = g_size;
     term->blue_size   = b_size;
-
+    
     term->cursor_x = 0;
     term->cursor_y = 0;
     term->font_data   = font;
@@ -154,19 +163,23 @@ void cuoreterm_init(
     term->font_height = font_h;
     term->cols = fb_width  / font_w;
     term->rows = fb_height / font_h;
+    term->scroll_rows = scroll_rows;
 }
 
 static void term_scroll(struct terminal *term) {
-    uint32_t row_bytes = term->fb_pitch * term->font_height;
-    uint32_t total     = term->fb_pitch * term->fb_height;
+    uint32_t nrows = term->scroll_rows;
+    if (nrows > term->rows) nrows = term->rows;
 
-    h_memmove(term->fb_addr,
-              (uint8_t *)term->fb_addr + row_bytes,
-              total - row_bytes);
+    uint32_t row_bytes = term->fb_pitch * term->font_height * nrows;
+    uint8_t *fb = (uint8_t *)term->fb_addr;
 
-    h_memset((uint8_t *)term->fb_addr + total - row_bytes, 0, row_bytes);
+    h_memmove(fb, fb + row_bytes, (term->fb_height - term->font_height * nrows) * term->fb_pitch);
+    h_memset(fb + (term->fb_height - term->font_height * nrows) * term->fb_pitch, 0x00, row_bytes);
 
-    if (term->cursor_y > 0) term->cursor_y--;
+    if (term->cursor_y >= nrows)
+        term->cursor_y -= nrows;
+    else
+        term->cursor_y = 0;
 }
 
 void cuoreterm_draw_char(struct terminal *term, char c, uint32_t fg) {
@@ -251,10 +264,9 @@ void cuoreterm_write(void *ctx, const char *msg, uint64_t len) {
             uint32_t px = term->cursor_x * term->font_width;
             uint32_t py = term->cursor_y * term->font_height;
 
-            for (uint32_t y = 0; y < term->font_height; y++) {
-                for (uint32_t x = 0; x < term->font_width; x++) {
-                    fb_put_pixel(term, px + x, py + y, 0x000000);
-                }
+            uint8_t *start = (uint8_t *)term->fb_addr + py * term->fb_pitch + px * (term->fb_bpp / 8);
+            for (uint32_t r = 0; r < term->font_height; r++) {
+                h_memset(start + r * term->fb_pitch, 0x00, term->font_width * (term->fb_bpp / 8));
             }
         }
         else if (c == '\x1b') {

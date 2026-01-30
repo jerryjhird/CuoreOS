@@ -227,6 +227,7 @@ void kernel_main(void) {
          fb->red_mask_size,
          fb->green_mask_size,
          fb->blue_mask_size,
+         2,
          iso10_f14_psf,
          8,
          14
