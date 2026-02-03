@@ -4,19 +4,22 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
-#ifndef STDBOOL_H
-#define STDBOOL_H
+#ifndef KERNEL_H
+#define KERNEL_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define bool _Bool
-#define true 1
-#define false 0
+#include "stdio.h"
+
+void kpanic(const char *msg);
+
+// kernel tests
+void memory_test(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // STDBOOL_H
+#endif // KERNEL_H

@@ -4,14 +4,16 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
-#include "stdint.h"
+#include <stdint.h>
 #include "time.h"
 #include "x86.h"
 #include "string.h"
 #include "memory.h"
 
 #include "serial.h"
-#include "GDT.h"
+
+void gdt_init(uint64_t kernel_stack_top);
+void idt_init(void);
 
 uint8_t cmos_read(uint8_t reg) {
     outb(0x70, reg);
@@ -47,6 +49,12 @@ void cpuid(uint32_t leaf, uint32_t subleaf,
                      : "=a"(*eax), "=b"(*ebx),
                        "=c"(*ecx), "=d"(*edx)
                      : "a"(leaf), "c"(subleaf));
+}
+
+uint64_t read_cr3(void) {
+    uint64_t cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+    return cr3;
 }
 
 void halt(void) {
@@ -170,9 +178,6 @@ char* cpu_brand(void) {
 
 // GDT
 
-
-#define IDT_ENTRIES 256
-
 struct idt_entry {
     uint16_t offset_low;
     uint16_t selector;
@@ -202,7 +207,7 @@ struct gdt_ptr {
     uint64_t base;
 } __attribute__((packed));
 
-static struct gdt_entry gdt[3];
+static struct gdt_entry gdt[7];
 static struct gdt_ptr   gp;
 
 // helper to fill a descriptor
@@ -218,20 +223,43 @@ static void gdt_set(
     gdt[i].base_high   = (uint8_t)((base >> 24) & 0xFF);
 }
 
-void gdt_init(void) {
+void gdt_init(uint64_t kernel_stack_top) {
     gp.limit = sizeof(gdt) - 1;
     gp.base  = (uint64_t)&gdt;
-    gdt_set(0, 0, 0, 0, 0);
-    gdt_set(1, 0, 0, 0x9A, 0xA0); // kernel code
-    gdt_set(2, 0, 0, 0x92, 0xA0); // kernel data
 
-    // load gdt
-    __asm__ volatile (
-        "lgdt %0\n\t"
-        :
-        : "m"(gp)
-        : "memory"
-    );
+    // entries
+    gdt_set(0, 0, 0, 0, 0); // NULL
+    gdt_set(1, 0, 0xFFFFFFFF, 0x9A, 0xA0); // KCODE
+    gdt_set(2, 0, 0xFFFFFFFF, 0x92, 0xA0); // KDATA
+    gdt_set(3, 0, 0xFFFFFFFF, 0xF2, 0xA0); // UDATA
+    gdt_set(4, 0, 0xFFFFFFFF, 0xFA, 0xA0); // UCODE
+
+    // TSS
+    memset(&tss, 0, sizeof(tss));
+    tss.rsp0 = kernel_stack_top;
+    tss.iomap_base = sizeof(tss);
+
+    uint64_t base  = (uint64_t)&tss;
+    uint32_t limit = sizeof(tss) - 1;
+
+    // low 64 bit
+    gdt[5].limit_low    = limit & 0xFFFF;
+    gdt[5].base_low     = base & 0xFFFF;
+    gdt[5].base_mid     = (base >> 16) & 0xFF;
+    gdt[5].access       = 0x89;
+    gdt[5].granularity  = ((limit >> 16) & 0x0F);
+    gdt[5].base_high    = (base >> 24) & 0xFF;
+
+    // high 64 bit
+    gdt[6].limit_low    = (base >> 32) & 0xFFFF; // upper 16 bits of base
+    gdt[6].base_low     = 0;
+    gdt[6].base_mid     = 0;
+    gdt[6].access       = 0;
+    gdt[6].granularity  = 0;
+    gdt[6].base_high    = 0;
+
+    __asm__ volatile ("lgdt %0" : : "m"(gp) : "memory");
+    __asm__ volatile ("ltr %0" : : "r"((uint16_t)(5*8)));
 
     __asm__ volatile (
         "mov $0x10, %%ax\n\t"
@@ -240,12 +268,6 @@ void gdt_init(void) {
         "mov %%ax, %%ss\n\t"
         "mov %%ax, %%fs\n\t"
         "mov %%ax, %%gs\n\t"
-
-        "pushq $0x08\n\t"
-        "leaq 1f(%%rip), %%rax\n\t"
-        "pushq %%rax\n\t"
-        "lretq\n\t"
-        "1:\n\t"
         :
         :
         : "rax", "memory"
@@ -253,7 +275,7 @@ void gdt_init(void) {
 }
 
 // IDT
-
+#define IDT_ENTRIES 256
 static struct idt_entry idt[IDT_ENTRIES];
 static struct idt_ptr   idtp;
 
@@ -394,16 +416,6 @@ int sse_init(void) {
     return 0;
 }
 
-__attribute__((noinline, optimize("O0")))
-uint32_t crc32c_hwhash(const char *s) {
-    unsigned int h = 0;
-    while (*s) {
-        unsigned char c = (unsigned char)(*s++);
-        __asm__ volatile ("crc32b %1, %0" : "+r"(h) : "rm"(c));
-    }
-    return h;
-}
-
 // switch stack and jmp
 __attribute__((noreturn))
 void swstack_jmp(void *new_sp, void (*entry)(void)) {
@@ -415,4 +427,29 @@ void swstack_jmp(void *new_sp, void (*entry)(void)) {
         : "memory"
     );
     __builtin_unreachable();
+}
+
+// jump to userspace
+void enter_userspace(uint64_t rip, uint64_t rsp) {
+    const uint16_t USER_CS = 0x23;
+    const uint16_t USER_SS = 0x1B;
+
+    uint64_t rflags;
+    __asm__ volatile ("pushfq; pop %0" : "=r"(rflags));
+    rflags |= (1 << 9);
+
+    __asm__ volatile(
+        "cli\n\t"
+        "push %[ss]\n\t"
+        "push %[stack]\n\t"
+        "push %[rflags]\n\t"
+        "push %[cs]\n\t"
+        "push %[ip]\n\t"
+        "iretq\n\t"
+        :
+        : [ip]"r"(rip), [stack]"r"(rsp),
+          [cs]"r"(USER_CS), [ss]"r"(USER_SS),
+          [rflags]"r"(rflags)
+        : "memory"
+    );
 }

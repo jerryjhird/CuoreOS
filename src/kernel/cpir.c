@@ -7,8 +7,7 @@
 // this is for a custom format i wrote adapting cpio newc
 // CPIR (copy in and read) reader
 
-#include "stdint.h"
-#include "memory.h" // for malloc/free
+#include "memory.h" // for malloc
 #include "string.h"
 
 #define ARCHIVE_MAGIC   0x43504952  // C P I R

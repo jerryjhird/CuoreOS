@@ -4,8 +4,8 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
-#ifndef LIMINEREQ_H
-#define LIMINEREQ_H
+#ifndef KLIMINE_H
+#define KLIMINE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,4 +20,4 @@ extern volatile struct limine_hhdm_request        hhdm_req;
 }
 #endif
 
-#endif // LIMINEREQ_H
+#endif // KLIMINE_H

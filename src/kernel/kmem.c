@@ -4,13 +4,12 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
-#include "stdint.h"
-#include "stdbool.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include "string.h"
 #include "limine.h"
-#include "memory.h"
-#include "serial.h"
-#include "liminereq.h"
-#include "panic.h"
+#include "klimine.h"
+#include "kernel.h"
 #include "PMA.h"
 
 #define ALIGN_UP(x, a) (((x) + (uintptr_t)((a)-1)) & ~((uintptr_t)((a)-1)))
@@ -58,8 +57,7 @@ void pma_init(void) {
     pma_bitmap_bytes = (pma_total_pages + 7) / 8;
 
     if (pma_bitmap_bytes > PMA_BITMAP_MAX_BYTES) {
-        nl_serial_write("kernel panic!\npma_bitmap_bytes > PMA_BITMAP_MAX_BYTES\n");
-        panic();
+        kpanic("kernel panic!\npma_bitmap_bytes > PMA_BITMAP_MAX_BYTES\n");
     }
 
     pma_bitmap = pma_bitmap_storage;
@@ -147,56 +145,6 @@ void pma_free_pages(uintptr_t phys, size_t count) {
             pma_used_pages--;
         }
     }
-}
-
-void *memset(void *s, int c, size_t n) {
-    unsigned char *p = s;
-    while (n--) *p++ = (unsigned char)c;
-    return s;
-}
-
-void *memmove(void *dest, const void *src, size_t n) {
-    unsigned char *d = dest;
-    const unsigned char *s = src;
-
-    if (d < s) {
-        while (n--) *d++ = *s++;
-    } else {
-        d += n;
-        s += n;
-        while (n--) *--d = *--s;
-    }
-
-    return dest;
-}
-
-void *memcpy(void *dest, const void *src, size_t n) {
-    unsigned char *d = dest;
-    const unsigned char *s = src;
-    while (n--) *d++ = *s++;
-    return dest;
-}
-
-int memcmp(const void *s1, const void *s2, size_t n) {
-    const uint8_t *a = (const uint8_t *)s1;
-    const uint8_t *b = (const uint8_t *)s2;
-
-    for (size_t i = 0; i < n; i++) {
-        if (a[i] != b[i])
-            return (int)a[i] - (int)b[i];
-    }
-
-    return 0;
-}
-
-void ptrhex(char *buf, void *ptr) {
-    uintptr_t val = (uintptr_t)ptr;
-    const char hex[] = "0123456789ABCDEF";
-    for (int i = (sizeof(void*)*2)-1; i >= 0; i--) {
-        buf[i] = hex[val & 0xF];
-        val >>= 4;
-    }
-    buf[sizeof(void*)*2] = 0;
 }
 
 uint8_t* heap_ptr = (uint8_t*)0x100000;  // placeholder (these are set using heapinit and no heap allocation should be done beforehand)

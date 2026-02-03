@@ -4,20 +4,25 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
-#ifndef GDT_H
-#define GDT_H
+#ifndef PS2_H
+#define PS2_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "stdint.h"
+#include <stdint.h>
+#include <stdbool.h>
 
-void gdt_init(void);
-void idt_init(void);
+extern const char scta_uk[128];
+extern const char scta_uk_shift[128];
+
+// funcs
+char ps2_getc(void);
+bool ps2_dev_exists(uint8_t port);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // GDT_H
+#endif // PS2_H

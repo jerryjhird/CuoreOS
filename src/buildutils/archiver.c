@@ -60,14 +60,24 @@ static void write_header(const char *name, struct stat *st) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s <dir>\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "usage: %s <dir> <out-file>\n", argv[0]);
         return 1;
     }
 
-    DIR *d = opendir(argv[1]);
+    const char *input_dir = argv[1];
+    const char *out_file = argv[2];
+
+    FILE *out = fopen(out_file, "wb");
+    if (!out) {
+        perror("fopen output file");
+        return 1;
+    }
+
+    DIR *d = opendir(input_dir);
     if (!d) {
         perror("opendir");
+        fclose(out);
         return 1;
     }
 
@@ -77,11 +87,13 @@ int main(int argc, char **argv) {
             continue;
 
         char path[4096];
-        snprintf(path, sizeof(path), "%s/%s", argv[1], ent->d_name);
+        snprintf(path, sizeof(path), "%s/%s", input_dir, ent->d_name);
 
         struct stat st;
         if (stat(path, &st)) {
             perror("stat");
+            fclose(out);
+            closedir(d);
             return 1;
         }
 
@@ -92,26 +104,65 @@ int main(int argc, char **argv) {
 
         FILE *f = fopen(path, "rb");
         if (!f) {
-            perror("fopen");
+            perror("fopen input file");
+            fclose(out);
+            closedir(d);
             return 1;
         }
 
-        write_header(ent->d_name, &st);
+        // write header
+        struct archive_hdr h = {
+            .magic    = ARCHIVE_MAGIC,
+            .version  = ARCHIVE_VERSION,
+            .flags    = 0,
+            .inode    = (uint64_t)st.st_ino,
+            .mode     = (uint64_t)st.st_mode,
+            .nlink    = (uint64_t)st.st_nlink,
+            .mtime    = (uint64_t)st.st_mtime,
+            .filesize = (uint64_t)st.st_size,
+            .namesize = (uint64_t)strlen(ent->d_name) + 1
+        };
 
+        fwrite(&h, sizeof(h), 1, out);
+        fwrite(ent->d_name, 1, h.namesize, out);
+
+        uint64_t pad = (8 - (sizeof(h) + h.namesize) % 8) % 8;
+        if (pad) fwrite((uint8_t[8]){0}, 1, pad, out);
+
+        // write file content
         uint8_t buf[8192];
         size_t r;
         while ((r = fread(buf, 1, sizeof(buf), f)))
-            fwrite(buf, 1, r, stdout);
+            fwrite(buf, 1, r, out);
 
-        pad8((uint64_t)st.st_size);
+        pad = (8 - (st.st_size % 8)) % 8;
+        if (pad) fwrite((uint8_t[8]){0}, 1, pad, out);
+
         fclose(f);
     }
 
     closedir(d);
 
-    /* trailer */
+    // write trailer
     struct stat zero = {0};
-    write_header("TRAILER!!!", &zero);
+    struct archive_hdr h = {
+        .magic    = ARCHIVE_MAGIC,
+        .version  = ARCHIVE_VERSION,
+        .flags    = 0,
+        .inode    = 0,
+        .mode     = 0,
+        .nlink    = 0,
+        .mtime    = 0,
+        .filesize = 0,
+        .namesize = strlen("TRAILER!!!") + 1
+    };
+    fwrite(&h, sizeof(h), 1, out);
+    fwrite("TRAILER!!!", 1, h.namesize, out);
+    uint64_t pad;
+    pad = (8 - (sizeof(h) + h.namesize) % 8) % 8;
+    if (pad) fwrite((uint8_t[8]){0}, 1, pad, out);
+
+    fclose(out);
 
     return 0;
 }

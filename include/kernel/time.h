@@ -11,7 +11,7 @@ https://mozilla.org/MPL/2.0/.
 extern "C" {
 #endif
 
-#include "stdint.h"
+#include <stdint.h>
 
 struct tm {
     int tm_sec;

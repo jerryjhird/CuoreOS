@@ -11,7 +11,8 @@ https://mozilla.org/MPL/2.0/.
 extern "C" {
 #endif
 
-#include "stdint.h"
+#include <stdint.h>
+#include <stddef.h>
 
 #define PMA_PAGE_SIZE 4096
 extern size_t pma_total_pages;

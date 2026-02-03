@@ -29,11 +29,9 @@ const char scta_uk_shift[128] = {
 
 static void wait_kbd_bit(uint8_t bit, int set) {
     if (set) {
-        // bit is set
-        while (!(inb(KBD_STATUS_PORT) & bit)) {}
+        while (!(inb(KBD_STATUS_PORT) & bit)) {} // bit is set
     } else {
-        // bit is clear
-        while (inb(KBD_STATUS_PORT) & bit) {}
+        while (inb(KBD_STATUS_PORT) & bit) {} // bit is clear
     }
 }
 

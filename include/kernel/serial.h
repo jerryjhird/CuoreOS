@@ -4,24 +4,23 @@ If a copy of the MPL was not distributed with this file, You can obtain one at
 https://mozilla.org/MPL/2.0/.
 */
 
-#ifndef KERNEL_H
-#define KERNEL_H
+#ifndef SERIAL_H
+#define SERIAL_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "stdio.h"
+#include <stddef.h>
+#include "string.h"
 
-// global hashing function
-extern uint32_t (*hash)(const char *s);
+void serial_init(void);
 
-// kernel tests
-void memory_test(struct writeout_t *wo);
-void hash_test(struct writeout_t *wo);
+void serial_write(const char *msg, size_t len);
+#define serial_print(str) serial_write(str, strlen(str))
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // KERNEL_H
+#endif // SERIAL_H
