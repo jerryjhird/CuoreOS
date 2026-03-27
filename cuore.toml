@@ -1,0 +1,4 @@
+[config]
+debug = true
+flanterm_is_debug_interface = true
+uart16550_is_debug_interface = true

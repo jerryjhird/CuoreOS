@@ -1,0 +1,10 @@
+# build output
+build/
+
+.cache/
+
+TMP.txt
+TMP/
+
+# github slop
+.github/
