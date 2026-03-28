@@ -3,7 +3,7 @@
 #include "devices.h"
 #include "kstate.h"
 #include "UART16550.h"
-#include "cpu/instruction_helpers.h"
+#include "cpu/io.h"
 #include "cpu/IRQ.h"
 
 #define UART_COM1 0x3F8

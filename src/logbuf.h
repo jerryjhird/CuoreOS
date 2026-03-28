@@ -17,6 +17,7 @@ void logbuf_putc(char c);
 void logbuf_write(const char *str);
 void logbuf_puthex(uint64_t val);
 void logbuf_flush(output_dev_t *target);
+void logbuf_clear(void);
 
 void logbuf_vwrite(char level, const char *str);
 void logbuf_vputhex(char level, uint64_t val);
