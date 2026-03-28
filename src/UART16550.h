@@ -8,6 +8,5 @@ void uart16550_postinit(void);
 
 char uart16550_getc(void);
 void uart16550_putc(char c);
-void uart16550_lwrite(const char *msg, size_t len);
 void uart16550_puthex(uint64_t val);
 void uart16550_write(const char* str);

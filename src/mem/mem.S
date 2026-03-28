@@ -1,8 +1,9 @@
 .intel_syntax noprefix
 .section .text
 
-.global memcpy
+.global memcmp
 .global memmove
+.global memcpy
 .global memset
 .global strlen 
 
@@ -47,6 +48,22 @@ memmove:
     rep movsb
     cld
     ret
+
+memcmp:
+    mov rcx, rdx
+    xor rax, rax
+    test rcx, rcx
+    jz .Ldone
+
+    cld
+    repe cmpsb
+    
+    je .Ldone
+
+    movzx rax, byte ptr [rdi - 1]
+    movzx rdx, byte ptr [rsi - 1]
+    sub rax, rdx
+
 
 .Lforward:
     cld

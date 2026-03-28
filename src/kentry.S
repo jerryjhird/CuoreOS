@@ -4,16 +4,11 @@
 _kstart:
     subq $8, %rsp
 
+    cli
+
     /* setup the stack */
     movabs $_stack_end, %rsp
     movq $0, %rbp
-
-    /* init serial port (UART) */
-    call uart16550_init
-
-    /* init GDT and IDT */
-    call gdt_init
-    call idt_init
 
     call _kstartc
 

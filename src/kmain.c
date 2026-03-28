@@ -9,6 +9,10 @@
 #include "devices.h"
 #include "fb_flanterm.h"
 #include "ansi_helpers.h"
+#include "cpu/GDT.h"
+#include "apic/lapic.h"
+#include "apic/ioapic.h"
+#include "apic/madt.h"
 
 volatile struct limine_module_request mod_req = { 
     .id = LIMINE_MODULE_REQUEST_ID, 
@@ -27,6 +31,11 @@ volatile struct limine_hhdm_request hhdm_req = {
 
 volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+    .revision = 0
+};
+
+volatile struct limine_rsdp_request rsdp_request = {
+    .id = LIMINE_RSDP_REQUEST_ID,
     .revision = 0
 };
 
@@ -118,9 +127,27 @@ void kernel_main(void) {
 void _kstartc(void) {
     hhdm_offset = hhdm_req.response->offset;
 
+    acpi_init();
+    madt_init();
+
+    gdt_init();
+    idt_init();
+
     pma_init();
+
+    uart16550_init();
+
+    lapic_init(madt_get_lapic_base() + hhdm_offset);
+    ioapic_init(madt_get_ioapic_base() + hhdm_offset);
+
+    ioapic_map_irq(4, 36, 0); // COM1 > vector 36 > cpu 0
+
     uintptr_t phys_addr = pma_alloc_pages(HEAP_PAGES); // 256 pages = 1MB
     void* virt_addr = (void*)(phys_addr + hhdm_req.response->offset);
     heap_init(virt_addr, HEAP_SIZE);
+
+    __asm__ volatile ("sti");
+
+    // start the kernel
     kernel_main();
 }

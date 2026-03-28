@@ -1,7 +1,8 @@
 #pragma once
-#include "devicetypes.h"
 
 #define MAX_DEVICES 9
+
+#include "devicetypes.h"
 
 extern output_dev_t uart16550_dev;
 extern output_dev_t flanterm_dev;
