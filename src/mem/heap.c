@@ -42,7 +42,6 @@ typedef struct BlockHeader {
 static BlockHeader *head = NULL;
 static BlockHeader *last_fit = NULL;
 static FixedPool pools[POOL_COUNT];
-static uint64_t hhdm_offset = 0;
 
 void panic(const char* header_msg, const char* msg);
 
@@ -108,8 +107,7 @@ void heap_init_pools() {
     }
 }
 
-void heap_init(void* start_address, size_t total_size, struct limine_hhdm_response *hhdm) {
-    hhdm_offset = hhdm->offset;
+void heap_init(void* start_address, size_t total_size) {
     head = (BlockHeader*)start_address;
     head->magic = HEAP_MAGIC;
     head->size = total_size - sizeof(BlockHeader);

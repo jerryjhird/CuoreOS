@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <limine.h>
+#include "kstate.h"
 #include "mem.h"
 
 #define PMA_PAGE_SIZE 4096
@@ -8,7 +9,6 @@
 static uint8_t *pma_bitmap = NULL;
 static size_t pma_total_pages = 0;
 static size_t pma_bitmap_bytes = 0;
-static uint64_t hhdm_offset = 0;
 
 static inline void bit_set(size_t bit) {
     pma_bitmap[bit / 8] |= (1 << (bit % 8));
@@ -22,20 +22,19 @@ static inline int bit_test(size_t bit) {
     return (pma_bitmap[bit / 8] >> (bit % 8)) & 1;
 }
 
-void pma_init(struct limine_memmap_response *map, struct limine_hhdm_response *hhdm) {
-    hhdm_offset = hhdm->offset;
+void pma_init(void) {
     uintptr_t max_phys = 0;
 
-    for (size_t i = 0; i < map->entry_count; i++) {
-        uintptr_t end = map->entries[i]->base + map->entries[i]->length;
+    for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
+        uintptr_t end = memmap_request.response->entries[i]->base + memmap_request.response->entries[i]->length;
         if (end > max_phys) max_phys = end;
     }
 
     pma_total_pages = max_phys / PMA_PAGE_SIZE;
     pma_bitmap_bytes = (pma_total_pages + 7) / 8;
 
-    for (size_t i = 0; i < map->entry_count; i++) {
-        struct limine_memmap_entry *e = map->entries[i];
+    for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
+        struct limine_memmap_entry *e = memmap_request.response->entries[i];
         if (e->type == LIMINE_MEMMAP_USABLE && e->length >= pma_bitmap_bytes) {
             pma_bitmap = (uint8_t *)(e->base + hhdm_offset);
             
@@ -48,8 +47,8 @@ void pma_init(struct limine_memmap_response *map, struct limine_hhdm_response *h
     }
 
     // mark usable regions as free
-    for (size_t i = 0; i < map->entry_count; i++) {
-        struct limine_memmap_entry *e = map->entries[i];
+    for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
+        struct limine_memmap_entry *e = memmap_request.response->entries[i];
         if (e->type == LIMINE_MEMMAP_USABLE) {
             for (uintptr_t addr = e->base; addr < e->base + e->length; addr += PMA_PAGE_SIZE) {
                 bit_clear(addr / PMA_PAGE_SIZE);

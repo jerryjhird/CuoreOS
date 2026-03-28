@@ -10,27 +10,28 @@
 #include "fb_flanterm.h"
 #include "ansi_helpers.h"
 
-static volatile struct limine_module_request mod_req = { 
+volatile struct limine_module_request mod_req = { 
     .id = LIMINE_MODULE_REQUEST_ID, 
     .revision = 0 
 };
 
-static volatile struct limine_memmap_request memmap_req = { 
+volatile struct limine_memmap_request memmap_request = { 
     .id = LIMINE_MEMMAP_REQUEST_ID, 
     .revision = 0 
 };
 
-static volatile struct limine_hhdm_request hhdm_req = {
+volatile struct limine_hhdm_request hhdm_req = {
     .id = LIMINE_HHDM_REQUEST_ID,
     .revision = 0
 };
 
-static volatile struct limine_framebuffer_request framebuffer_request = {
+volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
     .revision = 0
 };
 
 kernel_config_t global_kernel_config = {0};
+uint64_t hhdm_offset;
 
 #define FOUND_CONFIG      (1ULL << 0)
 #define FOUND_INITRAMFS   (1ULL << 1)
@@ -115,7 +116,9 @@ void kernel_main(void) {
 #define HEAP_SIZE (HEAP_PAGES << 12)
 
 void _kstartc(void) {
-    pma_init(memmap_req.response, hhdm_req.response);
+    hhdm_offset = hhdm_req.response->offset;
+
+    pma_init();
     uintptr_t phys_addr = pma_alloc_pages(HEAP_PAGES); // 256 pages = 1MB
     void* virt_addr = (void*)(phys_addr + hhdm_req.response->offset);
     heap_init(virt_addr, HEAP_SIZE);
