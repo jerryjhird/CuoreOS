@@ -9,7 +9,7 @@
 #include "stdio.h"
 #include "logbuf.h"
 
-#define ALIGNMENT 8
+#define ALIGNMENT 16
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~(ALIGNMENT-1))
 #define HEAP_MAGIC 0xCAFEBABE
 #define MIN_SPLIT_SIZE 16
@@ -29,19 +29,49 @@ typedef struct {
 } FixedPool;
 
 typedef struct BlockHeader {
-    uint32_t magic; 
+    uint32_t magic;         
+    uint32_t pad0;
     size_t size;
-    bool is_free;
-    bool is_pool_block; // prevents coalescing pool chunks into main heap
-    size_t bin_size;
+    uint8_t is_free;
+    uint8_t is_pool_block;  
+    uint16_t pad1;
     uint32_t used_slots;
+    
+    size_t bin_size;
+    
     struct BlockHeader *next;
     struct BlockHeader *prev;
+    
+    uint64_t reserved[2];
 } BlockHeader;
+
+_Static_assert(sizeof(BlockHeader) == 64, "BlockHeader must be exactly 64 bytes for 16-byte alignment");
 
 static BlockHeader *head = NULL;
 static BlockHeader *last_fit = NULL;
 static FixedPool pools[POOL_COUNT];
+
+#define MAX_POOL_PAGES 64
+static uintptr_t pool_page_registry[MAX_POOL_PAGES];
+static int registered_pool_pages = 0;
+
+static bool is_pool_ptr(void* ptr) {
+    uintptr_t page_base = (uintptr_t)ptr & ~0xFFF;
+    for (int i = 0; i < registered_pool_pages; i++) {
+        if (pool_page_registry[i] == page_base) return true;
+    }
+    return false;
+}
+
+static size_t get_safe_size(void* ptr) {
+    if (!ptr) return 0;
+    if (is_pool_ptr(ptr)) {
+        BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
+        return page_header->bin_size;
+    }
+    BlockHeader *bh = (BlockHeader*)ptr - 1;
+    return (bh->magic == HEAP_MAGIC) ? bh->size : 0;
+}
 
 void panic(const char* header_msg, const char* msg);
 
@@ -77,27 +107,30 @@ void heap_init_pools() {
         pools[i].block_size = pool_sizes[i];
         pools[i].free_list = NULL;
         
-        // one page per pool to start
         uintptr_t phys = pma_alloc_page();
         if (!phys) continue;
 
-        uint8_t* ptr = (uint8_t*)(phys + hhdm_offset);
+        uintptr_t virt = phys + hhdm_offset;
 
-        BlockHeader* bh = (BlockHeader*)ptr;
+        if (registered_pool_pages < MAX_POOL_PAGES) {
+            pool_page_registry[registered_pool_pages++] = virt;
+        }
+
+        BlockHeader* bh = (BlockHeader*)virt;
         bh->magic = HEAP_MAGIC;
         bh->is_pool_block = true;
         bh->is_free = false; 
         bh->bin_size = pool_sizes[i];
         bh->size = 4096 - sizeof(BlockHeader);
+        bh->used_slots = 0;
         
-        // link to main heap so we dont lose track of page
+        // link to main heap
         BlockHeader* curr = head;
         while(curr->next) curr = curr->next;
         curr->next = bh;
         bh->prev = curr;
         bh->next = NULL;
 
-        // divide the page into chunks
         uint8_t* data_start = (uint8_t*)(bh + 1);
         for (size_t j = 0; j <= (bh->size - pool_sizes[i]); j += pool_sizes[i]) {
             PoolNode* node = (PoolNode*)(data_start + j);
@@ -184,16 +217,12 @@ void* malloc(size_t size) {
 void free(void* ptr) {
     if (!ptr) return;
 
-    BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
-
-    if (page_header->magic == HEAP_MAGIC && page_header->is_pool_block) {
+    if (is_pool_ptr(ptr)) {
+        BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
         size_t bin = page_header->bin_size;
 
         for (int i = 0; i < POOL_COUNT; i++) {
             if (pools[i].block_size == bin) {
-                PoolNode* node = (PoolNode*)ptr;
-                void* caller = __builtin_return_address(0);
-
                 if (page_header->used_slots > 0) {
                     page_header->used_slots--;
                 } else {
@@ -202,13 +231,12 @@ void free(void* ptr) {
                         logbuf_vputhex(LOG_LEVEL_DEBUG, bin);
                         logbuf_vwrite(LOG_LEVEL_DEBUG, " at ");
                         logbuf_vputhex(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
-                        logbuf_vwrite(LOG_LEVEL_DEBUG, " from return address: ");
-                        logbuf_vputhex(LOG_LEVEL_DEBUG, (uintptr_t)caller);
                         logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
                     }
                     return;
                 }
 
+                PoolNode* node = (PoolNode*)ptr;
                 node->next = pools[i].free_list;
                 pools[i].free_list = node;
 
@@ -220,7 +248,7 @@ void free(void* ptr) {
                 return;
             }
         }
-        panic("MEMORY CORRUPTION", "Pool block found but bin size mismatch!");
+        panic("MEMORY CORRUPTION", "Pool block found but bin mismatch!");
     }
 
     BlockHeader *block = ((BlockHeader*)ptr) - 1;
@@ -238,14 +266,12 @@ void free(void* ptr) {
 
     block->is_free = true;
 
-    // Coalesce forward
     if (block->next && block->next->is_free && !block->next->is_pool_block) {
         block->size += sizeof(BlockHeader) + block->next->size;
         block->next = block->next->next;
         if (block->next) block->next->prev = block;
     }
 
-    // Coalesce backward
     if (block->prev && block->prev->is_free && !block->prev->is_pool_block) {
         BlockHeader *p = block->prev;
         p->size += sizeof(BlockHeader) + block->size;
@@ -259,12 +285,9 @@ void* realloc(void* ptr, size_t new_size) {
     if (new_size == 0) { free(ptr); return NULL; }
     
     new_size = ALIGN(new_size);
+    size_t old_size = get_safe_size(ptr);
 
-    BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
-    
-    if (page_header->magic == HEAP_MAGIC && page_header->is_pool_block) {
-        size_t old_size = page_header->bin_size;
-
+    if (is_pool_ptr(ptr)) {
         if (new_size <= old_size) return ptr;
 
         if (global_kernel_config.debug == 1) {
@@ -279,7 +302,6 @@ void* realloc(void* ptr, size_t new_size) {
         if (new_p) {
             memcpy(new_p, ptr, old_size);
             free(ptr);
-            ptr = NULL;
         }
         return new_p;
     }
@@ -292,9 +314,9 @@ void* realloc(void* ptr, size_t new_size) {
     if (curr->next && curr->next->is_free && !curr->next->is_pool_block &&
         (curr->size + sizeof(BlockHeader) + curr->next->size) >= new_size) {
         
-        size_t total_avail = curr->size + sizeof(BlockHeader) + curr->next->size;
         if (global_kernel_config.debug == 1) logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] In-place expansion\n");
-
+        
+        size_t total_avail = curr->size + sizeof(BlockHeader) + curr->next->size;
         if (total_avail >= (new_size + sizeof(BlockHeader) + MIN_SPLIT_SIZE)) {
             size_t leftover = total_avail - new_size - sizeof(BlockHeader);
             curr->size = new_size;
@@ -318,9 +340,8 @@ void* realloc(void* ptr, size_t new_size) {
     if (global_kernel_config.debug == 1) logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] Heap migration required\n");
     void* new_ptr = malloc(new_size);
     if (new_ptr) {
-        memcpy(new_ptr, ptr, curr->size);
+        memcpy(new_ptr, ptr, old_size);
         free(ptr);
-        ptr = NULL;
     }
     return new_ptr;
 }
@@ -333,10 +354,11 @@ void* zalloc(size_t size) {
 }
 
 void zfree(void* ptr) {
-    if(!ptr) 
-        return; 
-    BlockHeader* bh = (BlockHeader*)ptr - 1; 
-    memset(ptr, 0, bh->size); 
+    if(!ptr) return; 
+    size_t size = get_safe_size(ptr);
+    if (size > 0) {
+        memset(ptr, 0, size);
+    }
     free(ptr); 
 }
 
@@ -354,7 +376,7 @@ void szfree(void* ptr, size_t size) {
     free(ptr); 
 }
 
-void heap_dump_stats(void) {
+void dump_memory_stats(void) {
     size_t total_managed = 0;
     size_t total_user_data = 0;
     size_t total_metadata = 0;
@@ -388,10 +410,16 @@ void heap_dump_stats(void) {
         curr = curr->next;
     }
 
-    logbuf_write("\n--- CUOREOS HEAP STATS ---\n");
-    logbuf_write("Total Managed:  "); logbuf_puthex(total_managed);   logbuf_putc('\n');
-    logbuf_write("User Allocated: "); logbuf_puthex(total_user_data);  logbuf_putc('\n');
-    logbuf_write("Free Available: "); logbuf_puthex(total_free_memory); logbuf_putc('\n');
-    logbuf_write("Bookkeeping:    "); logbuf_puthex(total_metadata);   logbuf_write("\n");
-    logbuf_write("--------------------------\n\n");
+    logbuf_write("\n[HEAP] Total Managed:  "); logbuf_puthex(total_managed);   logbuf_putc('\n');
+    logbuf_write("[HEAP] User Allocated: "); logbuf_puthex(total_user_data);  logbuf_putc('\n');
+    logbuf_write("[HEAP] Free Available: "); logbuf_puthex(total_free_memory); logbuf_putc('\n');
+    logbuf_write("[HEAP] Bookkeeping:    "); logbuf_puthex(total_metadata);   logbuf_write("\n");
+
+    size_t total_p = pma_get_total_pages(); 
+    size_t free_p  = pma_get_free_pages();
+    size_t used_p  = total_p - free_p;
+
+    logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Total pages:    "); logbuf_vputhex(LOG_LEVEL_DEBUG, total_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+    logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Free pages:     "); logbuf_vputhex(LOG_LEVEL_DEBUG, free_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+    logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Used pages:     "); logbuf_vputhex(LOG_LEVEL_DEBUG, used_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 }

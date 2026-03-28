@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 void heap_init(void* start_address, size_t total_size);
-void heap_dump_stats(void);
+void dump_memory_stats(void);
 
 void* malloc(size_t size); // allocate memory
 void* zalloc(size_t size); // allocate memory and zero it

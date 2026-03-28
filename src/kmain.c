@@ -115,7 +115,7 @@ void kernel_main(void) {
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
     _c_flanterm_init(fb);
     logbuf_write("hello world!");
-    heap_dump_stats();
+    dump_memory_stats();
     logbuf_flush(&flanterm_dev);
     logbuf_flush(&uart16550_dev);
 }
