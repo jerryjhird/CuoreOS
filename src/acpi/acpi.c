@@ -1,5 +1,5 @@
 #include "acpi.h"
-#include "mem/mem.h"
+#include "mem/mem.h" // IWYU pragma: keep
 #include "kstate.h"
 
 static struct acpi_sdt_header* xsdt = NULL;

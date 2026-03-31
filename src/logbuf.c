@@ -46,7 +46,7 @@ void logbuf_puthex(uint64_t val) {
     }
 }
 
-void logbuf_flush(output_dev_t *target) {
+void logbuf_flush(kernel_dev_t *target) {
     if (!target || !target->putc) return;
 
     uint32_t curr = read_pos;

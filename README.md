@@ -9,7 +9,7 @@ meson compile -C build
 
 ### Qemu example:
 
-(replace /usr/share/OVMF/OVMF_CODE.fd with your own OVMF/UEFI firmware):
+(replace the value of QEMU_FIRMWARE in the `./runqemu` script with your own OVMF/UEFI firmware if the default is wrong (it probably is))
 ```bash
-qemu-system-x86_64 -bios /usr/share/OVMF/OVMF_CODE.fd -cdrom build/Cuore.x86-64.iso -m 256M -serial stdio
+./runqemu
 ```

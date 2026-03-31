@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdarg.h>
-#include "mem.h"
+#include "mem.h" // IWYU pragma: keep
 #include <limine.h>
 #include "pma.h"
 #include "kstate.h"

@@ -16,7 +16,7 @@ extern char logbuf_buffer[LOGBUF_SIZE];
 void logbuf_putc(char c);
 void logbuf_write(const char *str);
 void logbuf_puthex(uint64_t val);
-void logbuf_flush(output_dev_t *target);
+void logbuf_flush(kernel_dev_t *target);
 void logbuf_clear(void);
 
 void logbuf_vwrite(char level, const char *str);

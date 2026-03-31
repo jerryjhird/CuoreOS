@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "UART16550.h"
+#include "drivers/UART16550.h"
 #include "stdio.h"
 #include "apic/lapic.h"
 #include "IRQ.h"
@@ -45,38 +45,40 @@ void exception_main(struct trap_frame *tf, const char *description) {
     };
 
     for (size_t i = 0; i < output_devices_c; i++) {
-        output_dev_t* dev = output_devices[i];
+        kernel_dev_t* dev = output_devices[i];
 
-        if (DEV_CAP_HAS(dev, CAP_ON_ERROR)) {
-            dev->write("\n*** CPU EXCEPTION: ");
+        if (DEV_CAP_HAS(dev, CAP_ON_ERROR)) { 
+            dev_puts(dev, "\n*** CPU EXCEPTION: ");
             
             if (description) {
-                size_t d_len = 0;
-                while (description[d_len] != '\0' && d_len < 64) d_len++;
-                dev->write(description);
+                dev_puts(dev, description);
             } else {
-                uart16550_write("Unknown");
+                dev_puts(dev, "UNKNOWN");
             }
             
-            dev->write(" ***\n");
+            dev_puts(dev, " ***\n");
+
             uint64_t *raw_data = (uint64_t*)tf;
 
-            for (int i = 0; i < 21; i++) {
-                dev->write(labels[i]);
-                dev->write(": 0x");
+            for (int j = 0; j < 21; j++) {
+                dev_puts(dev, labels[j]);
+                dev_puts(dev, ": 0x");
 
-                ptrthex(buf, raw_data[i]);
-                dev->write(buf);
-                
-                if (i >= 15 || i % 2 == 1) {
-                    dev->write("\n");
+                ptrthex(buf, raw_data[j]);
+                dev_puts(dev, buf);
+
+                if (j >= 15 || j % 2 == 1) {
+                    dev->putc('\n');
                 } else {
-                    dev->write("  ");
+                    dev_puts(dev, "  ");
                 }
             }
         }
     }
-    for(;;) {__asm__ volatile ("hlt");}
+
+    for(;;) {
+        __asm__ volatile ("hlt");
+    }
 }
 
 #define PUSH_ERR_0 "pushq $0\n\t"

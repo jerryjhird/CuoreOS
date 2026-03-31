@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <limine.h>
 #include "kstate.h"
-#include "mem.h"
+#include "mem.h" // IWYU pragma: keep
 
 #define PMA_PAGE_SIZE 4096
 

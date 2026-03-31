@@ -2,13 +2,13 @@
 
 .section .text
 _kstart:
+    cli
+    movabs $_stack_end, %rsp
+
     subq $8, %rsp
 
-    cli
-
-    /* setup the stack */
-    movabs $_stack_end, %rsp
     movq $0, %rbp
+    call _kstartc
 
     call _kstartc
 

@@ -14,7 +14,7 @@ struct flanterm_context *ft_ctx = NULL;
 
 SETUP_OUTPUT_DEVICE(flanterm_dev, 
     CAP_ANSI_24BIT | CAP_ANSI_8BIT | CAP_ANSI_4BIT  | CAP_ON_ERROR,
-    _c_flanterm_putc, _c_flanterm_write
+    _c_flanterm_putc, NULL, NULL
 );
 
 void _c_flanterm_init(struct limine_framebuffer *fb) {
@@ -59,47 +59,5 @@ void _c_flanterm_putc(char c) {
     if (c == '\n') {
         char r = '\r';
         flanterm_write(ft_ctx, &r, 1);
-    }
-}
-
-void _c_flanterm_lwrite(const char *msg, size_t len) {
-    if (!ft_ctx || !msg) return;
-
-    size_t start = 0;
-    for (size_t i = 0; i < len; i++) {
-        if (msg[i] == '\n') {
-            flanterm_write(ft_ctx, msg + start, (i - start) + 1);
-            
-            char r = '\r';
-            flanterm_write(ft_ctx, &r, 1);
-
-            start = i + 1;
-        }
-    }
-
-    if (start < len) {
-        flanterm_write(ft_ctx, msg + start, len - start);
-    }
-}
-
-void _c_flanterm_write(const char* str) {
-    if (!str) return;
-    
-    size_t len = 0;
-    while (str[len] != '\0') {
-        len++;
-    }
-
-    _c_flanterm_lwrite(str, len);
-}
-
-void _c_flanterm_puthex(uint64_t val) {
-    const char *hex_chars = "0123456789ABCDEF";
-
-    _c_flanterm_lwrite("0x", 2);
-
-    for (int i = 15; i >= 0; i--) {
-        uint8_t nibble = (val >> (i * 4)) & 0xF;
-        _c_flanterm_putc(hex_chars[nibble]);
     }
 }
