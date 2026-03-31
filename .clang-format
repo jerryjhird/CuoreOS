@@ -1,0 +1,28 @@
+Language: Cpp
+Standard: Latest
+BasedOnStyle: LLVM
+
+# Indentation with Tabs
+UseTab: Always
+TabWidth: 4
+IndentWidth: 4
+ContinuationIndentWidth: 4
+IndentPPDirectives: AfterHash
+
+# Clean up empty lines
+MaxEmptyLinesToKeep: 1
+
+# Keep static asserts/comments tight to structs
+AllowShortBlocksOnASingleLine: true
+AlwaysBreakAfterReturnType: None
+
+# Tight spacing for tables and lists
+AlignArrayOfStructures: None
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+
+ColumnLimit: 0
+AlignTrailingComments: true
+ReflowComments: false
+SortIncludes: false

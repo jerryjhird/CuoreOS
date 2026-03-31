@@ -4,16 +4,16 @@
 #include "acpi/acpi.h"
 
 struct madt {
-    struct acpi_sdt_header header;
-    uint32_t lapic_addr;
-    uint32_t flags;
-    uint8_t entries[];
+	struct acpi_sdt_header header;
+	uint32_t lapic_addr;
+	uint32_t flags;
+	uint8_t entries[];
 } __attribute__((packed));
 
 typedef struct {
-    uint8_t bus_source;
-    uint32_t gsi;
-    uint16_t flags;
+	uint8_t bus_source;
+	uint32_t gsi;
+	uint16_t flags;
 } madt_iso_t;
 
 #define MADT_TYPE_LAPIC 0

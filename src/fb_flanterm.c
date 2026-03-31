@@ -12,52 +12,53 @@
 
 struct flanterm_context *ft_ctx = NULL;
 
-SETUP_OUTPUT_DEVICE(flanterm_dev, 
-    CAP_ANSI_24BIT | CAP_ANSI_8BIT | CAP_ANSI_4BIT  | CAP_ON_ERROR,
-    _c_flanterm_putc, NULL, NULL
-);
+SETUP_OUTPUT_DEVICE(flanterm_dev,
+	CAP_ANSI_24BIT | CAP_ANSI_8BIT | CAP_ANSI_4BIT | CAP_ON_ERROR,
+	_c_flanterm_putc, NULL, NULL);
 
 void _c_flanterm_init(struct limine_framebuffer *fb) {
-    REGISTER_OUTPUT_DEVICE(&flanterm_dev, output_devices, output_devices_c);
-    if (global_kernel_config.flanterm_is_debug_interface) {DEV_CAP_SET(&flanterm_dev, CAP_ON_DEBUG);}
+	REGISTER_OUTPUT_DEVICE(&flanterm_dev, output_devices, output_devices_c);
+	if (global_kernel_config.flanterm_is_debug_interface) {
+		DEV_CAP_SET(&flanterm_dev, CAP_ON_DEBUG);
+	}
 
-    ft_ctx = flanterm_fb_init(
-        malloc,
-        sfree,
-        fb->address,
-        fb->width,
-        fb->height,
-        fb->pitch,
-        fb->red_mask_size,
-        fb->red_mask_shift,
-        fb->green_mask_size,
-        fb->green_mask_shift,
-        fb->blue_mask_size,
-        fb->blue_mask_shift,
-        NULL,
-        NULL, NULL,
-        NULL, NULL,
-        NULL, NULL,
-        NULL,
-        0, 0,
-        1,
-        0, 0,
-        0,
-        0
-    );
+	ft_ctx = flanterm_fb_init(
+		malloc,
+		sfree,
+		fb->address,
+		fb->width,
+		fb->height,
+		fb->pitch,
+		fb->red_mask_size,
+		fb->red_mask_shift,
+		fb->green_mask_size,
+		fb->green_mask_shift,
+		fb->blue_mask_size,
+		fb->blue_mask_shift,
+		NULL,
+		NULL, NULL,
+		NULL, NULL,
+		NULL, NULL,
+		NULL,
+		0, 0,
+		1,
+		0, 0,
+		0,
+		0);
 }
 
 void _c_flanterm_free() {
-    flanterm_deinit(ft_ctx, sfree);
+	flanterm_deinit(ft_ctx, sfree);
 }
 
 void _c_flanterm_putc(char c) {
-    if (!ft_ctx) return;
+	if (!ft_ctx)
+		return;
 
-    flanterm_write(ft_ctx, &c, 1);
-    
-    if (c == '\n') {
-        char r = '\r';
-        flanterm_write(ft_ctx, &r, 1);
-    }
+	flanterm_write(ft_ctx, &c, 1);
+
+	if (c == '\n') {
+		char r = '\r';
+		flanterm_write(ft_ctx, &r, 1);
+	}
 }
