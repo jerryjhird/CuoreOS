@@ -6,7 +6,5 @@ build/
 TMP.txt
 TMP/
 
-disk.img
-
 # github slop
 .github/

@@ -6,6 +6,28 @@
 .global memcpy
 .global memset
 .global strlen 
+.global strcmp
+
+strcmp:
+    xor rax, rax
+.Lloop:
+    mov al, [rdi]
+    mov dl, [rsi]
+    cmp al, dl
+    jne .Ldiff
+    test al, al
+    jz .Lequal
+    inc rdi
+    inc rsi
+    jmp .Lloop
+.Ldiff:
+    movzx rax, al
+    movzx rdx, dl
+    sub rax, rdx
+    ret
+.Lequal:
+    xor rax, rax
+    ret
 
 strlen:
     mov rax, rdi

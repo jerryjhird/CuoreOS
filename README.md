@@ -3,13 +3,12 @@ Hobby x86-64 ELF Kernel
 
 ### Compiling:
 ```bash
-meson setup build
-meson compile -C build
+make
 ```
 
 ### Qemu example:
 
-(replace the value of QEMU_FIRMWARE in the `./runqemu` script with your own OVMF/UEFI firmware if the default is wrong (it probably is))
+(replace the value of QEMU_FIRMWARE with your own OVMF firmware)
 ```bash
-./runqemu
+QEMU_FIRMWARE=/usr/share/OVMF/OVMF_CODE.fd make run
 ```

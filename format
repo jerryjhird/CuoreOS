@@ -2,14 +2,20 @@
 
 TARGET_DIR="${1:-.}"
 
-# convert 4 space indents to tabs
-find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) | xargs -r sed -i 's/    /\t/g'
+find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) | while read -r FILE; do
+    TMP_FILE=$(mktemp)
 
-# strip trailing whitespace
-find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) | xargs -r sed -i 's/[[:space:]]*$//'
+    # convert 4 spaces to tabs
+    # strip trailing whitespace
+    # Convert CRLF to LF (dos2unix logic)
+    # ensure file ends with a single newline
+    sed 's/    /\t/g; s/[[:space:]]*$//; s/\r$//' "$FILE" > "$TMP_FILE"
+    sed -i -e '${/^$/!q;}' -e '${G;}' "$TMP_FILE"
 
-# force LF line endings
-find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) | xargs -r dos2unix
-
-# ensure file ends with a single newline
-find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i -e '${/^$/!q;}' -e '${G;}' {} \;
+    if ! cmp -s "$FILE" "$TMP_FILE"; then
+        mv "$TMP_FILE" "$FILE"
+        echo "updated: $FILE"
+    else
+        rm -f "$TMP_FILE"
+    fi
+done
