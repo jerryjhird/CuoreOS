@@ -22,7 +22,6 @@ strlen:
 memset:
     mov rax, rdi
     mov rcx, rdx
-    mov r8, rax
     mov al, sil
     cld
     rep stosb
@@ -39,7 +38,7 @@ memmove:
     mov rax, rdi
     cmp rdi, rsi
     je .Ldone
-    jb .Lforward
+    jb memcpy
 
     std
     lea rdi, [rdi + rdx - 1]
@@ -63,11 +62,7 @@ memcmp:
     movzx rax, byte ptr [rdi - 1]
     movzx rdx, byte ptr [rsi - 1]
     sub rax, rdx
+    ret
 
-
-.Lforward:
-    cld
-    mov rcx, rdx
-    rep movsb
 .Ldone:
     ret
