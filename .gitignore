@@ -1,10 +1,7 @@
 # build output
 build/
-
+compile_commands.json
 .cache/
-
-TMP.txt
-TMP/
 
 # github slop
 .github/

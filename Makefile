@@ -5,31 +5,65 @@ SRCDIR   := src
 BUILDDIR := build
 TOOLS    := tools
 
-C_SRCS   := $(shell find $(SRCDIR) -name "*.c")
+C_SRCS := $(shell find $(SRCDIR) -name "*.c")
 ASM_SRCS := $(shell find $(SRCDIR) -name "*.S")
-OBJS     := $(C_SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o) $(ASM_SRCS:$(SRCDIR)/%.S=$(BUILDDIR)/%.o)
-DEPS     := $(OBJS:.o=.d)
+TOOL_SRCS := $(wildcard $(TOOLS)/*.c)
+OBJS := $(C_SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o) $(ASM_SRCS:$(SRCDIR)/%.S=$(BUILDDIR)/%.o)
+DEPS := $(OBJS:.o=.d)
 
 KERNEL_ELF := $(BUILDDIR)/kernel.elf
-BOOT_ISO   := $(BUILDDIR)/Cuore.x86-64.iso
-ISO_ROOT   := $(BUILDDIR)/iso_root
+BOOT_ISO := $(BUILDDIR)/Cuore.x86-64.iso
+ISO_ROOT := $(BUILDDIR)/iso_root
 LIMINE_DIR := $(BUILDDIR)/limine
-INITRD     := $(BUILDDIR)/initrd.img
+INITRD := $(BUILDDIR)/initrd.img
 
-CFLAGS  := -std=c11 -O0 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(BUILDDIR)/flanterm -I. -Wall -Wextra -MMD -MP
+CFLAGS := -std=c11 -O0 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(BUILDDIR)/flanterm -I. -Wall -Wextra -MMD -MP
 LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
 
 DISK_IMG := $(BUILDDIR)/qemu-disk.img
 QEMU_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
 
-.PHONY: all clean run style format
+.PHONY: all clean run style format compile_commands
 
 all:
 	@$(MAKE) deps_setup
 	@$(MAKE) $(OBJS)
 	@$(MAKE) $(KERNEL_ELF)
+	@$(MAKE) compile_commands
 	@$(MAKE) $(INITRD)
 	@$(MAKE) $(BOOT_ISO)
+
+compile_commands:
+	@echo "Generating compile_commands.json"
+	@echo "[" > compile_commands.json
+
+	@for src in $(C_SRCS); do \
+		echo "  {" >> compile_commands.json; \
+		echo "    \"directory\": \"$(CURDIR)\"," >> compile_commands.json; \
+		echo "    \"command\": \"$(CC) $(CFLAGS) -c $$src\"," >> compile_commands.json; \
+		echo "    \"file\": \"$$src\"" >> compile_commands.json; \
+		echo "  }," >> compile_commands.json; \
+	done
+
+	@for src in $(ASM_SRCS); do \
+		echo "  {" >> compile_commands.json; \
+		echo "    \"directory\": \"$(CURDIR)\"," >> compile_commands.json; \
+		echo "    \"command\": \"$(CC) $(CFLAGS) -c $$src\"," >> compile_commands.json; \
+		echo "    \"file\": \"$$src\"" >> compile_commands.json; \
+		echo "  }," >> compile_commands.json; \
+	done
+
+	@for src in $(TOOL_SRCS); do \
+		echo "  {" >> compile_commands.json; \
+		echo "    \"directory\": \"$(CURDIR)\"," >> compile_commands.json; \
+		echo "    \"command\": \"$(HOST_CC) -std=c11 -I. -c $$src\"," >> compile_commands.json; \
+		echo "    \"file\": \"$$src\"" >> compile_commands.json; \
+		echo "  }," >> compile_commands.json; \
+	done
+
+	@sed -i '$$d' compile_commands.json
+	@echo "  }" >> compile_commands.json
+	@echo "]" >> compile_commands.json
 
 deps_setup:
 	@mkdir -p $(BUILDDIR)/flanterm $(LIMINE_DIR)
