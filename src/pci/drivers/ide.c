@@ -28,7 +28,7 @@
 static uint16_t ide_primary_base = 0;
 kernel_dev_t ide_output_dev;
 
-void ide_read_sector(uint16_t base, uint32_t lba, uint16_t* buffer) {
+uint8_t ide_read_sector(uint16_t base, uint32_t lba, uint16_t* buffer) {
     outb(base + IDE_REG_DRIVE_SEL, (IDE_SEL_MASTER | IDE_SEL_LBA) | ((lba >> 24) & 0x0F));
 
     outb(base + IDE_REG_SECTOR_CNT, 1);
@@ -41,10 +41,14 @@ void ide_read_sector(uint16_t base, uint32_t lba, uint16_t* buffer) {
     while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
     while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
 
+    uint8_t status = inb(base + IDE_REG_STATUS);
+    if (status & 0x21) return 1; 
+
     insw(base + IDE_REG_DATA, buffer, 256);
+    return 0;
 }
 
-void ide_write_sector(uint16_t base, uint32_t lba, uint16_t* buffer) {
+uint8_t ide_write_sector(uint16_t base, uint32_t lba, uint16_t* buffer) {
     outb(base + IDE_REG_DRIVE_SEL, (IDE_SEL_MASTER | IDE_SEL_LBA) | ((lba >> 24) & 0x0F));
 
     outb(base + IDE_REG_SECTOR_CNT, 1);
@@ -57,11 +61,19 @@ void ide_write_sector(uint16_t base, uint32_t lba, uint16_t* buffer) {
     while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
     while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
 
+    uint8_t status = inb(base + IDE_REG_STATUS);
+    if (status & 0x21) return 1;
+
     outsw(base + IDE_REG_DATA, buffer, 256);
+    
+    outb(base + IDE_REG_COMMAND, 0xE7);
+    while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
+
+    return 0;
 }
 
-static void ide_dev_read(uint32_t lba, uint16_t* buffer) {ide_read_sector(ide_primary_base, lba, buffer);}
-static void ide_dev_write(uint32_t lba, uint16_t* buffer) {ide_write_sector(ide_primary_base, lba, buffer);}
+static uint8_t ide_dev_read(uint32_t lba, uint16_t* buffer) {return ide_read_sector(ide_primary_base, lba, buffer);}
+static uint8_t ide_dev_write(uint32_t lba, uint16_t* buffer) {return ide_write_sector(ide_primary_base, lba, buffer);}
 
 SETUP_OUTPUT_DEVICE(ide_output_dev, CAP_IS_DISK, NULL, ide_dev_read, ide_dev_write);
 

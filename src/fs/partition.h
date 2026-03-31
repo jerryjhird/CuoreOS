@@ -15,4 +15,11 @@ typedef struct {
     struct partition_s* next;
 } partition_t;
 
+typedef struct {
+    uint8_t mbr_type;
+    uint8_t guid[16];
+    const char* name;
+} partition_type_lookup_t;
+
 void partition_register(partition_t* new_part);
+const char* partition_get_name(partition_t* p);

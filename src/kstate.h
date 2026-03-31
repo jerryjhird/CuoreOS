@@ -8,6 +8,12 @@
 #define INITRAMFS_MAGIC 0x0000000074696E69
 #define UNUSED(x) ((void)(x)) // helper macro
 
+#ifdef SERIOUS
+    #define MICROSOFT_STRING "Microsoft"
+#else
+    #define MICROSOFT_STRING "Microslop"
+#endif
+
 typedef struct {
     uint64_t magic; // 8   // should be  the same as CONFIG_MAGIC or HARDCODED_CONFIG_MAGIC
     uint64_t epoch; // 8

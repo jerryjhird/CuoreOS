@@ -8,8 +8,8 @@ typedef struct {
     uint64_t DevCAP; // capabilities bitmask
     void (*putc)(char c); // for text character output like UART16550
 
-    void (*read_sector)(uint32_t lba, uint16_t* buffer); // for disk drivers
-    void (*write_sector)(uint32_t lba, uint16_t* buffer); // for disk drivers
+    uint8_t (*read_sector)(uint32_t lba, uint16_t* buffer); // for disk drivers
+    uint8_t (*write_sector)(uint32_t lba, uint16_t* buffer); // for disk drivers
 } kernel_dev_t;
 
 #define SETUP_OUTPUT_DEVICE(name, _cap, _putc, _read_sectors, _write_sectors) \
