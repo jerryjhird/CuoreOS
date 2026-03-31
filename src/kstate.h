@@ -9,17 +9,17 @@
 #define UNUSED(x) ((void)(x)) // helper macro
 
 #ifdef SERIOUS
-    #define MICROSOFT_STRING "Microsoft"
+	#define MICROSOFT_STRING "Microsoft"
 #else
-    #define MICROSOFT_STRING "Microslop"
+	#define MICROSOFT_STRING "Microslop"
 #endif
 
 typedef struct {
-    uint64_t magic; // 8   // should be  the same as CONFIG_MAGIC or HARDCODED_CONFIG_MAGIC
-    uint64_t epoch; // 8
-    uint8_t  debug; // 1
-    uint8_t  flanterm_is_debug_interface; // 1
-    uint8_t  uart16550_is_debug_interface; // 1
+	uint64_t magic; // 8   // should be  the same as CONFIG_MAGIC or HARDCODED_CONFIG_MAGIC
+	uint64_t epoch; // 8
+	uint8_t  debug; // 1
+	uint8_t  flanterm_is_debug_interface; // 1
+	uint8_t  uart16550_is_debug_interface; // 1
 } __attribute__((packed)) kernel_config_t; _Static_assert(sizeof(kernel_config_t) == 19, "kernel_config_t struct is not expected size");
 
 void panic(const char* header_msg, const char* msg);

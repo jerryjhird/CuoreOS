@@ -1,0 +1,15 @@
+#!/bin/env bash
+
+TARGET_DIR="${1:-.}"
+
+# convert 4 space indents to tabs
+find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) | xargs -r sed -i 's/    /\t/g'
+
+# strip trailing whitespace
+find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) | xargs -r sed -i 's/[[:space:]]*$//'
+
+# force LF line endings
+find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) | xargs -r dos2unix
+
+# ensure file ends with a single newline
+find "$TARGET_DIR" -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i -e '${/^$/!q;}' -e '${G;}' {} \;
