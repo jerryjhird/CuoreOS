@@ -3,7 +3,7 @@
 #include "pci/pci.h"
 #include "cpu/io.h"
 #include "logbuf.h"
-#include "fs/diskinit.h" // for the software side of the disk initalization
+#include "disk/diskinit.h" // for the software side of the disk initalization
 
 #define IDE_REG_DATA		  0
 #define IDE_REG_FEATURES	  1

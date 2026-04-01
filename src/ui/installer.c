@@ -1,11 +1,11 @@
 #include <stdint.h>
-#include "fs/partition.h"
-#include "fs/filesystems/cuorefs.h"
+#include "disk/partition.h"
+#include "fs/cuorefs.h"
 #include "devices.h"
 #include "drivers/PS2.h"
-#include "fs/mbr.h"
-#include "fs/gpt.h"
-#include "fs/guid_list.h"
+#include "disk/mbr.h"
+#include "disk/gpt.h"
+#include "disk/guid_list.h"
 #include "kstate.h"
 #include "logbuf.h"
 

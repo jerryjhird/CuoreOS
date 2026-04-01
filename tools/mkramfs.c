@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "src/drivers/ramfs.h"
+#include "src/fs/ramfs.h"
 
 int main(int argc, char *argv[]) {
 	if (argc < 3) {

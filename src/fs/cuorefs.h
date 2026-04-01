@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #ifndef INCLUDE_AS_TOOL
-#include "fs/partition.h"
+#include "disk/partition.h"
 void cuorefs_init(partition_t* part);
 int cuorefs_format(partition_t *part, uint32_t max_files) ;
 

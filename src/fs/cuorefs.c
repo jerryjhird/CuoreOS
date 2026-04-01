@@ -2,8 +2,8 @@
 #include "logbuf.h"
 #include "mem/mem.h" // IWYU pragma: keep
 #include "mem/heap.h"
-#include "fs/partition.h"
-#include "drivers/ramfs.h"
+#include "disk/partition.h"
+#include "fs/ramfs.h"
 #include <stdarg.h>
 
 partition_t* glob_cuorefs_partition = NULL;

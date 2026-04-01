@@ -2,7 +2,7 @@
 #include "mem/mem.h" // IWYU pragma: keep
 #include "guid_list.h"
 #include "kstate.h"
-#include "filesystems/cuorefs.h"
+#include "fs/cuorefs.h"
 
 #include "mem/heap.h" // IWYU pragma: keep
 #include "mbr.h"
