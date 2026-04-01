@@ -18,6 +18,7 @@
 #include "pci/drivers/ide.h"
 #include "drivers/ramfs.h"
 #include "scheduler.h"
+#include "cpu/smp/init.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -41,6 +42,11 @@ volatile struct limine_framebuffer_request framebuffer_request = {
 
 volatile struct limine_rsdp_request rsdp_request = {
 	.id = LIMINE_RSDP_REQUEST_ID,
+	.revision = 0
+};
+
+volatile struct limine_mp_request mp_request = {
+	.id = LIMINE_MP_REQUEST_ID,
 	.revision = 0
 };
 
@@ -117,6 +123,7 @@ void panic(const char* header_msg, const char* msg) {
 
 kernel_dev_t* output_devices[MAX_DEVICES];
 size_t output_devices_c = 0;
+volatile uint64_t online_cpu_count = 1;
 ramfs_handle_t initramfs;
 
 void uart16550_console_task(void) { // example task while scheduler is in development
@@ -132,6 +139,8 @@ void idle_task(void) { // stub task while scheduler is in development
 
 void kernel_main(void) {
 	struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
+	struct limine_mp_response *mp_response = mp_request.response;
+
 	_c_flanterm_init(fb);
 
 	scheduler_init();
@@ -139,11 +148,31 @@ void kernel_main(void) {
 	scheduler_create_task(uart16550_console_task, 1);
 	scheduler_create_task(idle_task, 2);
 
+ 	if (mp_response->cpu_count < 2) {
+		logbuf_write("[ SMP  ] Only 1 CPU detected\n");
+		logbuf_write(" + [ SMP  ] Starting kernel in single-core mode\n");
+	} else {
+		logbuf_write("[ SMP  ] Multiple processor's found\n");
+
+		for (uint64_t i = 0; i < mp_response->cpu_count; i++) {
+			struct limine_mp_info *cpu = mp_response->cpus[i];
+
+			if (cpu->lapic_id == mp_response->bsp_lapic_id) {
+				continue;
+			}
+
+			cpu->goto_address = AP_kstartc;
+		}
+	}
+
+	while (online_cpu_count < mp_response->cpu_count) {
+		__asm__ volatile("pause");
+	}
+
 	logbuf_flush(&flanterm_dev);
 	logbuf_flush(&uart16550_dev);
 	logbuf_clear();
 
-	// hand off control to the scheduler
 	scheduler_start();
 
 	for(;;) { __asm__ ("hlt"); }

@@ -114,7 +114,7 @@ $(BOOT_ISO): $(KERNEL_ELF) $(INITRD)
 
 run:
 	@if [ ! -f "$(DISK_IMG)" ]; then qemu-img create -f raw "$(DISK_IMG)" 64M; fi
-	qemu-system-x86_64 -machine pc -bios $(QEMU_FIRMWARE) -drive file="$(DISK_IMG)",format=raw,index=0,media=disk -cdrom $(BOOT_ISO) -m 256M -serial stdio -device rtl8139,netdev=u1 -netdev user,id=u1
+	qemu-system-x86_64 -machine pc -smp 6 -bios $(QEMU_FIRMWARE) -drive file="$(DISK_IMG)",format=raw,index=0,media=disk -cdrom $(BOOT_ISO) -m 256M -serial stdio -device rtl8139,netdev=u1 -netdev user,id=u1
 
 format:
 	./format src/

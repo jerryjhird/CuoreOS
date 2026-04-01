@@ -38,9 +38,38 @@ void logbuf_vputhex(char level, uint64_t val) {
 	logbuf_putc('\034');
 }
 
+void logbuf_vputhex64(char level, uint64_t val) {
+	logbuf_putc('\033');
+	logbuf_putc(level);
+	logbuf_puthex64(val);
+	logbuf_putc('\034');
+}
+
 void logbuf_puthex(uint64_t val) {
 	const char *hex_chars = "0123456789ABCDEF";
-	logbuf_write("0x");
+	logbuf_putc('0');
+	logbuf_putc('x');
+
+	if (val == 0) {
+		logbuf_putc('0');
+		return;
+	}
+
+	bool started = false;
+	for (int i = 15; i >= 0; i--) {
+		uint8_t nibble = (val >> (i * 4)) & 0xF;
+		if (nibble > 0 || started) {
+			logbuf_putc(hex_chars[nibble]);
+			started = true;
+		}
+	}
+}
+
+void logbuf_puthex64(uint64_t val) {
+	const char *hex_chars = "0123456789ABCDEF";
+	logbuf_putc('0');
+	logbuf_putc('x');
+
 	for (int i = 15; i >= 0; i--) {
 		logbuf_putc(hex_chars[(val >> (i * 4)) & 0xF]);
 	}

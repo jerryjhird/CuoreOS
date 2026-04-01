@@ -160,9 +160,9 @@ void* malloc(size_t size) {
 			pools[i].free_list = pools[i].free_list->next;
 			if (global_kernel_config.debug == 1) {
 				logbuf_vwrite(LOG_LEVEL_DEBUG, "[MALLOC] Pool hit (");
-				logbuf_vputhex(LOG_LEVEL_DEBUG, pools[i].block_size);
+				logbuf_vputhex64(LOG_LEVEL_DEBUG, pools[i].block_size);
 				logbuf_vwrite(LOG_LEVEL_DEBUG, " bin) at ");
-				logbuf_vputhex(LOG_LEVEL_DEBUG, (uint64_t)ptr);
+				logbuf_vputhex64(LOG_LEVEL_DEBUG, (uint64_t)ptr);
 				logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 			}
 			BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
@@ -197,9 +197,9 @@ void* malloc(size_t size) {
 			last_fit = curr;
 			if (global_kernel_config.debug == 1) {
 				logbuf_vwrite(LOG_LEVEL_DEBUG, "[MALLOC] Allocated ");
-				logbuf_vputhex(LOG_LEVEL_DEBUG, size);
+				logbuf_vputhex64(LOG_LEVEL_DEBUG, size);
 				logbuf_vwrite(LOG_LEVEL_DEBUG, " bytes at ");
-				logbuf_vputhex(LOG_LEVEL_DEBUG, (uint64_t)(curr + 1));
+				logbuf_vputhex64(LOG_LEVEL_DEBUG, (uint64_t)(curr + 1));
 				logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 			}
 			return (void*)(curr + 1);
@@ -228,9 +228,9 @@ void free(void* ptr) {
 				} else {
 					if (global_kernel_config.debug == 1) {
 						logbuf_vwrite(LOG_LEVEL_DEBUG, "[WARN] Double free or Underflow on bin: ");
-						logbuf_vputhex(LOG_LEVEL_DEBUG, bin);
+						logbuf_vputhex64(LOG_LEVEL_DEBUG, bin);
 						logbuf_vwrite(LOG_LEVEL_DEBUG, " at ");
-						logbuf_vputhex(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
+						logbuf_vputhex64(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
 						logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 					}
 					return;
@@ -242,7 +242,7 @@ void free(void* ptr) {
 
 				if (global_kernel_config.debug == 1) {
 					logbuf_vwrite(LOG_LEVEL_DEBUG, "[FREE] Pool block (");
-					logbuf_vputhex(LOG_LEVEL_DEBUG, bin);
+					logbuf_vputhex64(LOG_LEVEL_DEBUG, bin);
 					logbuf_vwrite(LOG_LEVEL_DEBUG, " bin) returned.\n");
 				}
 				return;
@@ -254,13 +254,13 @@ void free(void* ptr) {
 	BlockHeader *block = ((BlockHeader*)ptr) - 1;
 	if (block->magic != HEAP_MAGIC) {
 		logbuf_vwrite(LOG_LEVEL_DEBUG, "Invalid free at: ");
-		logbuf_vputhex(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
+		logbuf_vputhex64(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
 		panic("MEMORY CORRUPTION", "\nHeap corruption or invalid pointer!");
 	}
 
 	if (global_kernel_config.debug == 1) {
 		logbuf_vwrite(LOG_LEVEL_DEBUG, "[FREE] Reclaiming heap block (Size: ");
-		logbuf_vputhex(LOG_LEVEL_DEBUG, block->size);
+		logbuf_vputhex64(LOG_LEVEL_DEBUG, block->size);
 		logbuf_vwrite(LOG_LEVEL_DEBUG, ")\n");
 	}
 
@@ -292,9 +292,9 @@ void* realloc(void* ptr, size_t new_size) {
 
 		if (global_kernel_config.debug == 1) {
 			logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] Pool migration: ");
-			logbuf_vputhex(LOG_LEVEL_DEBUG, old_size);
+			logbuf_vputhex64(LOG_LEVEL_DEBUG, old_size);
 			logbuf_vwrite(LOG_LEVEL_DEBUG, " -> ");
-			logbuf_vputhex(LOG_LEVEL_DEBUG, new_size);
+			logbuf_vputhex64(LOG_LEVEL_DEBUG, new_size);
 			logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 		}
 
@@ -410,16 +410,16 @@ void dump_memory_stats(void) {
 		curr = curr->next;
 	}
 
-	logbuf_write("\n[HEAP] Total Managed:  "); logbuf_puthex(total_managed);   logbuf_putc('\n');
-	logbuf_write("[HEAP] User Allocated: "); logbuf_puthex(total_user_data);  logbuf_putc('\n');
-	logbuf_write("[HEAP] Free Available: "); logbuf_puthex(total_free_memory); logbuf_putc('\n');
-	logbuf_write("[HEAP] Bookkeeping:	"); logbuf_puthex(total_metadata);   logbuf_write("\n");
+	logbuf_write("\n[HEAP] Total Managed:  "); logbuf_puthex64(total_managed);   logbuf_putc('\n');
+	logbuf_write("[HEAP] User Allocated: "); logbuf_puthex64(total_user_data);  logbuf_putc('\n');
+	logbuf_write("[HEAP] Free Available: "); logbuf_puthex64(total_free_memory); logbuf_putc('\n');
+	logbuf_write("[HEAP] Bookkeeping:	"); logbuf_puthex64(total_metadata);   logbuf_write("\n");
 
 	size_t total_p = pma_get_total_pages();
 	size_t free_p  = pma_get_free_pages();
 	size_t used_p  = total_p - free_p;
 
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Total pages:	"); logbuf_vputhex(LOG_LEVEL_DEBUG, total_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Free pages:	 "); logbuf_vputhex(LOG_LEVEL_DEBUG, free_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Used pages:	 "); logbuf_vputhex(LOG_LEVEL_DEBUG, used_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Total pages:	"); logbuf_vputhex64(LOG_LEVEL_DEBUG, total_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Free pages:	 "); logbuf_vputhex64(LOG_LEVEL_DEBUG, free_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Used pages:	 "); logbuf_vputhex64(LOG_LEVEL_DEBUG, used_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 }

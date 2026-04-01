@@ -14,12 +14,16 @@
 extern char logbuf_buffer[LOGBUF_SIZE];
 
 void logbuf_putc(char c);
+
 void logbuf_write(const char *str);
 void logbuf_puthex(uint64_t val);
-void logbuf_flush(kernel_dev_t *target);
-void logbuf_clear(void);
+void logbuf_puthex64(uint64_t val);
 
 void logbuf_vwrite(char level, const char *str);
 void logbuf_vputhex(char level, uint64_t val);
+void logbuf_vputhex64(char level, uint64_t val);
+
+void logbuf_flush(kernel_dev_t *target);
+void logbuf_clear(void);
 
 #endif

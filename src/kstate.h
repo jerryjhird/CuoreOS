@@ -28,4 +28,6 @@ extern uint64_t hhdm_offset;
 extern volatile struct limine_memmap_request memmap_request;
 extern volatile struct limine_framebuffer_request framebuffer_request;
 extern volatile struct limine_rsdp_request rsdp_request;
+extern volatile struct limine_mp_request mp_request;
 extern kernel_config_t global_kernel_config;
+extern volatile uint64_t online_cpu_count;
