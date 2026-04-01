@@ -1,12 +1,45 @@
 .intel_syntax noprefix
 .section .text
 
+.global strncmp
 .global memcmp
 .global memmove
 .global memcpy
 .global memset
 .global strlen 
 .global strcmp
+
+strncmp:
+    xor rax, rax
+    test rdx, rdx
+    jz .Lstrncmp_equal
+
+.Lstrncmp_loop:
+    mov al, [rdi]
+    mov cl, [rsi]
+
+    cmp al, cl
+    jne .Lstrncmp_diff
+
+    test al, al
+    jz .Lstrncmp_equal
+
+    dec rdx
+    jz .Lstrncmp_equal
+
+    inc rdi
+    inc rsi
+    jmp .Lstrncmp_loop
+
+.Lstrncmp_diff:
+    movzx rax, al
+    movzx rcx, cl
+    sub rax, rcx
+    ret
+
+.Lstrncmp_equal:
+    xor rax, rax
+    ret
 
 strcmp:
     xor rax, rax

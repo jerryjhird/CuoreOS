@@ -38,12 +38,7 @@ typedef struct {
 // what to feed the device
 #define CAP_ON_ERROR (1ULL << 0) // device should be used to display unrecoverable error's (e.g cpu exceptions)
 #define CAP_ON_DEBUG (1ULL << 1) // device should be used to display debug messages
-#define CAP_IS_DISK (1ULL << 5) // device is a disk
-
-// color capabilities
-#define CAP_ANSI_4BIT (1ULL << 2) // device supports ANSI X3.64
-#define CAP_ANSI_8BIT (1ULL << 3) // device supports ANSI 256-color
-#define CAP_ANSI_24BIT (1ULL << 4) // device supports ANSI TrueColor
+#define CAP_IS_DISK (1ULL << 2) // device is a disk
 
 #define DEV_CAP_SET(dev_ptr, cap) ((dev_ptr)->DevCAP |= (cap))
 #define DEV_CAP_CLEAR(dev_ptr, cap) ((dev_ptr)->DevCAP &= ~(cap))

@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+int strncmp(const char *s1, const char *s2, size_t n);
 int strcmp(const char *s1, const char *s2);
 size_t strlen(const char* s);
 void* memset(void* s, int c, size_t n);

@@ -37,7 +37,7 @@ struct trap_frame* uart16550_irq_handler(struct trap_frame *tf) {
 }
 
 SETUP_OUTPUT_DEVICE(uart16550_dev,
-	CAP_ANSI_4BIT | CAP_ON_ERROR,
+	CAP_ON_ERROR,
 	uart16550_putc, NULL, NULL
 );
 

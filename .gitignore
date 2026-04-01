@@ -3,5 +3,8 @@ build/
 compile_commands.json
 .cache/
 
+# temp dev stuff
+*tmp*
+
 # github slop
 .github/

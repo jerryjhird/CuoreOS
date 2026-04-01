@@ -13,7 +13,7 @@
 struct flanterm_context *ft_ctx = NULL;
 
 SETUP_OUTPUT_DEVICE(flanterm_dev,
-	CAP_ANSI_24BIT | CAP_ANSI_8BIT | CAP_ANSI_4BIT  | CAP_ON_ERROR,
+	CAP_ON_ERROR,
 	_c_flanterm_putc, NULL, NULL
 );
 
