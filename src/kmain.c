@@ -17,6 +17,7 @@
 #include "pci/drivers/rtl8139.h"
 #include "pci/drivers/ide.h"
 #include "drivers/ramfs.h"
+#include "scheduler.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -118,13 +119,32 @@ kernel_dev_t* output_devices[MAX_DEVICES];
 size_t output_devices_c = 0;
 ramfs_handle_t initramfs;
 
+void uart16550_console_task(void) { // example task while scheduler is in development
+	while (1) {
+		char c =uart16550_getc();
+		dev_puts(&uart16550_dev, &c);
+	}
+}
+
+void idle_task(void) { // stub task while scheduler is in development
+	while (1) {}
+}
+
 void kernel_main(void) {
 	struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
 	_c_flanterm_init(fb);
 
+	scheduler_init();
+
+	scheduler_create_task(uart16550_console_task, 1);
+	scheduler_create_task(idle_task, 2);
+
 	logbuf_flush(&flanterm_dev);
 	logbuf_flush(&uart16550_dev);
 	logbuf_clear();
+
+	// hand off control to the scheduler
+	scheduler_start();
 
 	for(;;) { __asm__ ("hlt"); }
 }

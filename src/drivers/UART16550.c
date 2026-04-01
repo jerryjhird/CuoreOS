@@ -23,9 +23,7 @@ static char rx_buffer[RX_BUF_SIZE];
 static volatile uint32_t rx_read_ptr = 0;
 static volatile uint32_t rx_write_ptr = 0;
 
-void uart16550_irq_handler(struct trap_frame *tf) {
-	UNUSED(tf);
-
+struct trap_frame* uart16550_irq_handler(struct trap_frame *tf) {
 	while (inb(UART_COM1 + UART_LSR) & UART_LSR_RX_READY) {
 		char c = (char)inb(UART_COM1 + UART_DATA);
 
@@ -35,6 +33,7 @@ void uart16550_irq_handler(struct trap_frame *tf) {
 			rx_write_ptr = next;
 		}
 	}
+	return tf;
 }
 
 SETUP_OUTPUT_DEVICE(uart16550_dev,

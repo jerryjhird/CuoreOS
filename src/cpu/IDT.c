@@ -108,11 +108,13 @@ void exception_main(struct trap_frame *tf, const char *description) {
 			"pushq %%rsi\n\t pushq %%rdi\n\t pushq %%rbp\n\t pushq %%r8\n\t"  \
 			"pushq %%r9\n\t  pushq %%r10\n\t pushq %%r11\n\t pushq %%r12\n\t" \
 			"pushq %%r13\n\t pushq %%r14\n\t pushq %%r15\n\t" \
+			\
 			"movq %%rsp, %%rdi\n\t" /* pass trap_frame* */ \
 			"movq %0, %%rax\n\t" /* load target */ \
-			"subq $8, %%rsp\n\t" /* align stack */ \
 			"call *%%rax\n\t" /* call dispatcher */ \
-			"addq $8, %%rsp\n\t" /* restore stack */ \
+			\
+			"movq %%rax, %%rsp\n\t" \
+			\
 			"popq %%r15\n\t popq %%r14\n\t popq %%r13\n\t popq %%r12\n\t" \
 			"popq %%r11\n\t popq %%r10\n\t popq %%r9\n\t  popq %%r8\n\t"  \
 			"popq %%rbp\n\t popq %%rdi\n\t popq %%rsi\n\t popq %%rdx\n\t" \
@@ -165,14 +167,18 @@ void irq_install_handler(uint8_t vector, irq_handler_t handler) {
 	irq_routines[vector] = handler;
 }
 
-void irq_dispatch(struct trap_frame *tf) {
+struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
 
+	struct trap_frame* next_tf = tf;
+
 	if (irq_routines[vector]) {
-		irq_routines[vector](tf);
+		next_tf = irq_routines[vector](tf);
 	}
 
 	lapic_eoi();
+
+	return next_tf;
 }
 
 // for interrupt 255
