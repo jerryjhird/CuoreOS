@@ -12,8 +12,13 @@ typedef struct {
 	kernel_dev_t* disk; // device this partition belongs to
 	bool	 is_gpt;
 
+	void* fs_metadata;
+	bool is_cuorefs;
+
 	struct partition_s* next;
 } partition_t;
+
+extern partition_t* head;
 
 typedef struct {
 	uint8_t mbr_type;
@@ -23,3 +28,4 @@ typedef struct {
 
 void partition_register(partition_t* new_part);
 const char* partition_get_name(partition_t* p);
+void partition_refresh(kernel_dev_t* dev);

@@ -13,6 +13,7 @@ DEPS := $(OBJS:.o=.d)
 
 KERNEL_ELF := $(BUILDDIR)/kernel.elf
 BOOT_ISO := $(BUILDDIR)/Cuore.x86-64.iso
+CONFIG_BIN := $(BUILDDIR)/cuore.conf.bin
 ISO_ROOT := $(BUILDDIR)/iso_root
 LIMINE_DIR := $(BUILDDIR)/limine
 INITRD := $(BUILDDIR)/initrd.img
@@ -30,6 +31,7 @@ all:
 	@$(MAKE) $(OBJS)
 	@$(MAKE) $(KERNEL_ELF)
 	@$(MAKE) compile_commands
+	@$(MAKE) $(DISK_IMG)
 	@$(MAKE) $(INITRD)
 	@$(MAKE) $(BOOT_ISO)
 
@@ -82,6 +84,10 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# tools {
+
+# / compiling
+
 $(BUILDDIR)/$(TOOLS)/mkramfs: $(TOOLS)/mkramfs.c
 	@mkdir -p $(dir $@)
 	$(HOST_CC) -std=c11 -I./ $< -o $@
@@ -90,11 +96,24 @@ $(BUILDDIR)/$(TOOLS)/mkconfig: $(TOOLS)/mkconfig.c
 	@mkdir -p $(dir $@)
 	$(HOST_CC) -std=c11 -I./ $< -o $@
 
-$(BUILDDIR)/cuore.conf.bin: $(BUILDDIR)/$(TOOLS)/mkconfig
+# / running
+
+$(CONFIG_BIN): $(BUILDDIR)/$(TOOLS)/mkconfig
 	$(BUILDDIR)/$(TOOLS)/mkconfig cuore.conf $@
 
-$(INITRD): $(BUILDDIR)/cuore.conf.bin $(BUILDDIR)/$(TOOLS)/mkramfs
-	$(BUILDDIR)/$(TOOLS)/mkramfs $@ $(BUILDDIR)/cuore.conf.bin
+$(INITRD): $(CONFIG_BIN) $(BUILDDIR)/$(TOOLS)/mkramfs
+	$(BUILDDIR)/$(TOOLS)/mkramfs $@ $(CONFIG_BIN)
+
+DISK_SIZE_MB      := 1024
+PART_START_SECTOR := 2048
+
+DISK_FILES := $(CONFIG_BIN) cuore.conf
+
+$(DISK_IMG):
+	@echo " [ DISK ] Creating Empty $(DISK_SIZE_MB)MB image..."
+	@qemu-img create -f raw $(DISK_IMG) $(DISK_SIZE_MB)M > /dev/null
+
+# }
 
 $(KERNEL_ELF): $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -o $@
@@ -113,7 +132,6 @@ $(BOOT_ISO): $(KERNEL_ELF) $(INITRD)
 -include $(DEPS)
 
 run:
-	@if [ ! -f "$(DISK_IMG)" ]; then qemu-img create -f raw "$(DISK_IMG)" 64M; fi
 	qemu-system-x86_64 -machine pc -smp 6 -bios $(QEMU_FIRMWARE) -drive file="$(DISK_IMG)",format=raw,index=0,media=disk -cdrom $(BOOT_ISO) -m 256M -serial stdio -device rtl8139,netdev=u1 -netdev user,id=u1
 
 format:
@@ -124,3 +142,6 @@ style: format
 
 clean:
 	rm -rf $(BUILDDIR)
+
+cleand:
+	rm -f build/qemu-disk.img

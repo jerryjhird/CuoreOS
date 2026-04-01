@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include "logbuf.h"
-#include "ansi_helpers.h"
 
 char logbuf_buffer[LOGBUF_SIZE];
 
@@ -75,48 +74,55 @@ void logbuf_puthex64(uint64_t val) {
 	}
 }
 
+void logbuf_putint(uint64_t n) {
+	if (n == 0) {
+		logbuf_write("0");
+		return;
+	}
+
+	char buf[21];
+	int i = 20;
+	buf[i--] = '\0';
+
+	while (n > 0) {
+		buf[i--] = (n % 10) + '0';
+		n /= 10;
+	}
+
+	logbuf_write(&buf[i + 1]);
+}
+
+void logbuf_vputint(char level, uint64_t n) {
+	logbuf_putc('\033');
+	logbuf_putc(level);
+	logbuf_putint(n);
+	logbuf_putc('\034');
+}
+
 void logbuf_flush(kernel_dev_t *target) {
 	if (!target || !target->putc) return;
 
 	uint32_t curr = read_pos;
 	bool skipping = false;
-	const char *active_style = NULL;
 
 	while (curr != write_pos) {
 		char c = logbuf_buffer[curr];
 
-		switch (c) {
-			case '\033': { // metadata start
-				curr = (curr + 1) % LOGBUF_SIZE;
-				char level = logbuf_buffer[curr];
+		if (c == '\033') { // metadata start
+			uint32_t next = (curr + 1) % LOGBUF_SIZE;
+			if (next == write_pos) break;
 
-				bool is_debug = (level == '0');
-				skipping = (is_debug && !DEV_CAP_HAS(target, CAP_ON_DEBUG));
+			char level = logbuf_buffer[next];
+			skipping = (level == '0' && !DEV_CAP_HAS(target, CAP_ON_DEBUG));
 
-				if (!skipping && is_debug) {
-					active_style = GET_ANSI_STYLE(target, ANSI_4B_DEBUG, ANSI_8B_DEBUG, ANSI_24B_DEBUG);
-					if (active_style) {
-						const char *s = active_style;
-						while (*s) target->putc(*s++);
-					}
-				}
-				break;
-			}
-
-			case '\034': // metadata end
-				if (active_style) {
-					const char *r = ANSI_RESET;
-					while (*r) target->putc(*r++);
-					active_style = NULL;
-				}
-				skipping = false;
-				break;
-
-			default:
-				if (!skipping) {
-					target->putc(c);
-				}
-				break;
+			curr = (next + 1) % LOGBUF_SIZE;
+			continue;
+		}
+		else if (c == '\034') {
+			skipping = false;
+		}
+		else if (!skipping) {
+			target->putc(c);
 		}
 
 		curr = (curr + 1) % LOGBUF_SIZE;

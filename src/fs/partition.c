@@ -2,8 +2,13 @@
 #include "mem/mem.h" // IWYU pragma: keep
 #include "guid_list.h"
 #include "kstate.h"
+#include "filesystems/cuorefs.h"
 
-static partition_t* head = NULL;
+#include "mem/heap.h" // IWYU pragma: keep
+#include "mbr.h"
+#include "gpt.h"
+
+partition_t* head = NULL;
 
 typedef struct {
 	uint8_t guid[16];
@@ -12,6 +17,7 @@ typedef struct {
 
 static const partition_type_lookup_t partition_lookup_table[] = {
 	{0x00, GUID_EMPTY, "Empty"},
+	{0x7F, GUID_CUORE_BASIC_DATA, "Cuore Basic Data"},
 	{0x06, GUID_MS_BASIC_DATA, "FAT16"},
 	{0x0B, GUID_MS_BASIC_DATA, "FAT32 (CHS)"},
 	{0x0C, GUID_MS_BASIC_DATA, "FAT32 (LBA)"},
@@ -27,6 +33,7 @@ static const gpt_name_lookup_t guid_name_table[] = {
 	{GUID_EMPTY, "Empty/Unknown"},
 	{GUID_EFI_SYSTEM, "EFI System Partition"},
 	{GUID_BIOS_BOOT, "BIOS Boot Partition"},
+	{GUID_CUORE_BASIC_DATA, "Cuore Basic Data"},
 	{GUID_MS_BASIC_DATA, MICROSOFT_STRING " Basic Data"},
 	{GUID_LINUX_SWAP, "Linux Swap"},
 	{GUID_LINUX_FILESYSTEM, "Linux Filesystem"},
@@ -79,5 +86,44 @@ void partition_register(partition_t* new_part) {
 			current = (partition_t*)current->next;
 		}
 		current->next = (struct partition_s*)new_part;
+	}
+	cuorefs_init(new_part);
+}
+
+void partition_refresh(kernel_dev_t* dev) {
+	partition_t* prev = NULL;
+	partition_t* current = head;
+
+	while (current != NULL) {
+		if (current->disk == dev) {
+			partition_t* to_free = current;
+
+			if (prev == NULL) {
+				head = (partition_t*)current->next;
+				current = head;
+			} else {
+				prev->next = current->next;
+				current = (partition_t*)current->next;
+			}
+
+			if (to_free->fs_metadata) {
+				free(to_free->fs_metadata);
+			}
+			free(to_free);
+		} else {
+			prev = current;
+			current = (partition_t*)current->next;
+		}
+	}
+
+	uint8_t buffer[512];
+	if (dev->read_sector(0, (uint16_t*)buffer) != 0) return;
+
+	if (buffer[510] == 0x55 && buffer[511] == 0xAA) {
+		if (buffer[450] == 0xEE) {
+			gpt_parse(dev);
+		} else {
+			mbr_parse(dev);
+		}
 	}
 }

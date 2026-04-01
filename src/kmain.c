@@ -8,7 +8,6 @@
 #include "kstate.h"
 #include "devices.h"
 #include "fb_flanterm.h"
-#include "ansi_helpers.h"
 #include "cpu/GDT.h"
 #include "apic/lapic.h"
 #include "apic/ioapic.h"
@@ -19,6 +18,10 @@
 #include "drivers/ramfs.h"
 #include "scheduler.h"
 #include "cpu/smp/init.h"
+#include "fs/filesystems/cuorefs.h"
+#include "stdio.h"
+#include "ui/installer.h"
+#include "_time.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -93,17 +96,11 @@ void panic(const char* header_msg, const char* msg) {
 			kernel_dev_t* dev = output_devices[i];
 
 			if (DEV_CAP_HAS(dev, CAP_ON_ERROR)) {
-				const char *style = GET_ANSI_STYLE(dev, ANSI_4B_PANIC, ANSI_8B_PANIC, ANSI_24B_PANIC);
-
-				if (style) dev_puts(dev, style);
-
 				dev_puts(dev, "\n*** KERNEL PANIC: ");
 				dev_puts(dev, header_msg);
 				dev_puts(dev, " ***\n");
 				dev_puts(dev, msg);
 				dev_puts(dev, "\n\n");
-
-				if (style) dev_puts(dev, ANSI_RESET);
 			}
 		}
 	} else { // fallback to serial for early boot panic's
@@ -125,6 +122,7 @@ kernel_dev_t* output_devices[MAX_DEVICES];
 size_t output_devices_c = 0;
 volatile uint64_t online_cpu_count = 1;
 ramfs_handle_t initramfs;
+kernel_dev_t active_disk_device;
 
 void uart16550_console_task(void) { // example task while scheduler is in development
 	while (1) {
@@ -138,10 +136,7 @@ void idle_task(void) { // stub task while scheduler is in development
 }
 
 void kernel_main(void) {
-	struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
 	struct limine_mp_response *mp_response = mp_request.response;
-
-	_c_flanterm_init(fb);
 
 	scheduler_init();
 
@@ -168,6 +163,25 @@ void kernel_main(void) {
 	while (online_cpu_count < mp_response->cpu_count) {
 		__asm__ volatile("pause");
 	}
+
+	time_t current_boot = get_epoch();
+	cuorefs_file_t* existing = cuorefs_find_file("boottime");
+
+	if (existing) {
+		if (existing->size >= sizeof(time_t)) {
+			time_t old_epoch = *(time_t*)existing->data;
+			logbuf_write("[ BOOT ] last logged in: ");
+			logbuf_putint(old_epoch);
+			logbuf_write("\n");
+		}
+
+		free(existing->data);
+		free(existing);
+
+		cuorefs_delete_file("boottime");
+	}
+
+	cuorefs_add_file("boottime", &current_boot, sizeof(time_t));
 
 	logbuf_flush(&flanterm_dev);
 	logbuf_flush(&uart16550_dev);
@@ -227,6 +241,16 @@ void _kstartc(void) {
 	heap_init(virt_addr, HEAP_SIZE);
 
 	pci_init();
+	logbuf_flush(&uart16550_dev);
+
+	_c_flanterm_init(framebuffer_request.response->framebuffers[0]);
+
+	if (glob_cuorefs_partition == NULL) {
+		installer_show_menu();
+	}
+
+	logbuf_flush(&flanterm_dev);
+	logbuf_clear();
 
 	__asm__ volatile ("sti");
 

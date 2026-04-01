@@ -23,6 +23,9 @@ void logbuf_vwrite(char level, const char *str);
 void logbuf_vputhex(char level, uint64_t val);
 void logbuf_vputhex64(char level, uint64_t val);
 
+void logbuf_putint(uint64_t n);
+void logbuf_vputint(char level, uint64_t n);
+
 void logbuf_flush(kernel_dev_t *target);
 void logbuf_clear(void);
 

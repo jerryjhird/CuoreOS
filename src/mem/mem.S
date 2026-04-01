@@ -1,6 +1,7 @@
 .intel_syntax noprefix
 .section .text
 
+.global strncpy
 .global strncmp
 .global memcmp
 .global memmove
@@ -8,6 +9,37 @@
 .global memset
 .global strlen 
 .global strcmp
+
+strncpy:
+    mov rax, rdi
+    test rdx, rdx
+    jz .Lstrncpy_done
+
+.Lstrncpy_copy:
+    movzx rcx, byte ptr [rsi]
+    mov [rdi], cl
+    
+    test rcx, rcx
+    jz .Lstrncpy_pad
+    
+    inc rdi
+    inc rsi
+    dec rdx
+    jnz .Lstrncpy_copy
+    jmp .Lstrncpy_done
+
+.Lstrncpy_pad:
+    dec rdx
+    jz .Lstrncpy_done
+    inc rdi
+.Lstrncpy_pad_loop:
+    mov byte ptr [rdi], 0
+    inc rdi
+    dec rdx
+    jnz .Lstrncpy_pad_loop
+
+.Lstrncpy_done:
+    ret
 
 strncmp:
     xor rax, rax

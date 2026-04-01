@@ -30,3 +30,4 @@ typedef struct {
 } __attribute__((packed)) gpt_entry_t;
 
 void gpt_parse(kernel_dev_t* dev);
+void gpt_install(kernel_dev_t* dev, const char* fs_name, uint8_t* type_guid);
