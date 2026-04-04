@@ -45,3 +45,4 @@ typedef struct {
 #define DEV_CAP_HAS(dev_ptr, cap) (((dev_ptr)->DevCAP & (cap)) == (cap))
 
 void dev_puts(kernel_dev_t* dev, const char* s);
+void dev_putint(kernel_dev_t* dev, uint64_t n);
