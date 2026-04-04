@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "devicetypes.h"
 #include "drivers/UART16550.h"
 #include "logbuf.h"
 #include "mem/heap.h"
@@ -126,7 +127,7 @@ kernel_dev_t active_disk_device;
 
 void uart16550_console_task(void) { // example task while scheduler is in development
 	while (1) {
-		char c =uart16550_getc();
+		char c = uart16550_getc();
 		dev_puts(&uart16550_dev, &c);
 	}
 }
@@ -137,11 +138,6 @@ void idle_task(void) { // stub task while scheduler is in development
 
 void kernel_main(void) {
 	struct limine_mp_response *mp_response = mp_request.response;
-
-	scheduler_init();
-
-	scheduler_create_task(uart16550_console_task, 1);
-	scheduler_create_task(idle_task, 2);
 
  	if (mp_response->cpu_count < 2) {
 		logbuf_write("[ SMP  ] Only 1 CPU detected\n");
@@ -158,10 +154,10 @@ void kernel_main(void) {
 
 			cpu->goto_address = AP_kstartc;
 		}
-	}
 
-	while (online_cpu_count < mp_response->cpu_count) {
-		__asm__ volatile("pause");
+		while (online_cpu_count < mp_response->cpu_count) {
+			__asm__ volatile("pause");
+		}
 	}
 
 	time_t current_boot = get_epoch();
@@ -181,12 +177,16 @@ void kernel_main(void) {
 		cuorefs_delete_file("boottime");
 	}
 
+	// save the current boot time to filesystem
 	cuorefs_add_file("boottime", &current_boot, sizeof(time_t));
 
-	logbuf_flush(&flanterm_dev);
 	logbuf_flush(&uart16550_dev);
+	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
 
+	scheduler_init();
+	scheduler_create_task(uart16550_console_task, 1);
+	scheduler_create_task(idle_task, 2);
 	scheduler_start();
 
 	for(;;) { __asm__ ("hlt"); }

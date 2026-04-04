@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct {
 	void *data;
-	size_t size;
+	uint64_t size;
 } ramfs_file_t;
 
 ramfs_handle_t ramfs_init(void *ptr);
