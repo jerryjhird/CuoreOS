@@ -125,12 +125,19 @@ volatile uint64_t online_cpu_count = 1;
 ramfs_handle_t initramfs;
 kernel_dev_t active_disk_device;
 
-void uart16550_console_task(void) { // example task while scheduler is in development
+void uart16550_console_task(void) {
 	while (1) {
 		char c = uart16550_getc();
 		dev_puts(&uart16550_dev, &c);
 	}
 }
+
+// void test_multicore_task(void *unused) {
+// 	UNUSED(unused);
+// 	while (1) {
+// 		dev_puts(&uart16550_dev, "Multicore test\n");
+// 	}
+// }
 
 void idle_task(void) { // stub task while scheduler is in development
 	while (1) {}
@@ -187,6 +194,9 @@ void kernel_main(void) {
 	scheduler_init();
 	scheduler_create_task(uart16550_console_task, 1);
 	scheduler_create_task(idle_task, 2);
+
+	// mailbox_send((uint8_t)get_idle_core(), test_multicore_task, NULL);
+
 	scheduler_start();
 
 	for(;;) { __asm__ ("hlt"); }

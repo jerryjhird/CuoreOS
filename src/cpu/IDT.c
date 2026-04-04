@@ -103,17 +103,20 @@ void exception_main(struct trap_frame *tf, const char *description) {
 #define DEF_IRQ_HANDLER(index, target) \
 	__attribute__((naked)) void irq_handler_##index(void) { \
 		__asm__ volatile ( \
-			"pushq %1\n\t" /* push vector index to error_code */ \
+			"pushq %1\n\t" \
 			"pushq %%rax\n\t pushq %%rbx\n\t pushq %%rcx\n\t pushq %%rdx\n\t" \
 			"pushq %%rsi\n\t pushq %%rdi\n\t pushq %%rbp\n\t pushq %%r8\n\t"  \
 			"pushq %%r9\n\t  pushq %%r10\n\t pushq %%r11\n\t pushq %%r12\n\t" \
 			"pushq %%r13\n\t pushq %%r14\n\t pushq %%r15\n\t" \
 			\
-			"movq %%rsp, %%rdi\n\t" /* pass trap_frame* */ \
-			"movq %0, %%rax\n\t" /* load target */ \
-			"call *%%rax\n\t" /* call dispatcher */ \
+			"movq %%rsp, %%rdi\n\t"	/* pass trap_frame* */ \
+			"movq %%rsp, %%rbp\n\t" \
+			"andq $-16, %%rsp\n\t" \
 			\
-			"movq %%rax, %%rsp\n\t" \
+			"movq %0, %%rax\n\t" \
+			"call *%%rax\n\t" \
+			\
+			"movq %%rbp, %%rsp\n\t" \
 			\
 			"popq %%r15\n\t popq %%r14\n\t popq %%r13\n\t popq %%r12\n\t" \
 			"popq %%r11\n\t popq %%r10\n\t popq %%r9\n\t  popq %%r8\n\t"  \
@@ -121,7 +124,7 @@ void exception_main(struct trap_frame *tf, const char *description) {
 			"popq %%rcx\n\t popq %%rbx\n\t popq %%rax\n\t" \
 			"addq $8, %%rsp\n\t" \
 			"iretq\n\t" \
-			: : "r"((uintptr_t)target), "i"((uint64_t)index) \
+			: : "r"((uintptr_t)irq_dispatch), "i"((uint64_t)index) \
 		); \
 	}
 
@@ -170,13 +173,13 @@ void irq_install_handler(uint8_t vector, irq_handler_t handler) {
 struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
 
+	lapic_eoi();
+
 	struct trap_frame* next_tf = tf;
 
 	if (irq_routines[vector]) {
 		next_tf = irq_routines[vector](tf);
 	}
-
-	lapic_eoi();
 
 	return next_tf;
 }
