@@ -7,27 +7,49 @@
 #include "disk/gpt.h"
 #include "disk/guid_list.h"
 #include "kstate.h"
-#include "logbuf.h"
 
 void installer_show_menu(void) {
-	dev_puts(&flanterm_dev, "\n--- CUORE OS INSTALLER ---\n");
+	wants_to_install_prompt:
+	dev_puts(&flanterm_dev,"\nCuoreFS has not been detected\n");
+	dev_puts(&flanterm_dev,"Would you Like to Install CuoreFS? (y/n): ");
 
-	dev_puts(&flanterm_dev, "Select table: (m=MBR, g=GPT): ");
-	char type = 0;
-	while (type != 'm' && type != 'g') {
-		type = ps2_getc();
+	char wants_to_install = ps2_getc_blocking();
+
+	switch(wants_to_install) {
+		case 'y':
+			dev_puts(&flanterm_dev, "\x1b[H\x1b[J"); // clear screen
+			break;
+		case 'n':
+			dev_puts(&flanterm_dev, "\x1b[H\x1b[J"); // clear screen
+			return;
+		default: // account for hooman error
+			dev_puts(&flanterm_dev, "\x1b[H\x1b[J"); // clear screen
+			dev_puts(&flanterm_dev, "Invalid selection. Please try again.\n");
+			goto wants_to_install_prompt;
 	}
+
+	boot_table_type_prompt:
+	dev_puts(&flanterm_dev, "\n--- CUORE OS INSTALLER ---\n");
+	dev_puts(&flanterm_dev, "Select table: (m=MBR, g=GPT): ");
+
+	char type = ps2_getc_blocking();
+
 	dev_puts(&flanterm_dev, (char[]){type, '\n', '\0'});
 
-	if (type == 'g') {
-		gpt_install(&active_disk_device, "CUORE-FS", (uint8_t[])GUID_CUORE_BASIC_DATA);
-		logbuf_write("[ GPT  ] GPT installed\n");
-		partition_refresh(&active_disk_device);
-	} else if (type == 'm') {
-		mbr_install(&active_disk_device, 0x7F);
-		logbuf_write("[ MBR  ] MBR installed\n");
-		partition_refresh(&active_disk_device);
+	switch (type) {
+		case 'g':
+			gpt_install(&active_disk_device, "CUORE-FS", (uint8_t[])GUID_CUORE_BASIC_DATA);
+			break;
+		case 'm':
+			mbr_install(&active_disk_device, 0x7F);
+			break;
+		default: // account for hooman error
+			dev_puts(&flanterm_dev, "\x1b[H\x1b[J"); // clear screen
+			dev_puts(&flanterm_dev, "Invalid selection. Please try again.\n\n");
+			goto boot_table_type_prompt;
 	}
+
+	partition_refresh(&active_disk_device);
 
 	partition_t* p_iter = head;
 	int count = 0;
@@ -36,15 +58,13 @@ void installer_show_menu(void) {
 		p_iter = (partition_t*)p_iter->next;
 	}
 
-	if (count == 0) {
-		dev_puts(&flanterm_dev, "Error: No partitions found.\n");
-		return;
-	}
+	dev_puts(&flanterm_dev, "Select partition (1-");
+	dev_putint(&flanterm_dev, count);
+	dev_puts(&flanterm_dev, "): ");
 
-	dev_puts(&flanterm_dev, "Select partition (1-9): ");
 	partition_t* selected = NULL;
 	while (!selected) {
-		char c = ps2_getc();
+		char c = ps2_getc_blocking();
 		if (c >= '1' && c <= ('0' + count)) {
 			int target = c - '0';
 			partition_t* s = head;
@@ -65,11 +85,11 @@ void installer_show_menu(void) {
 
 	dev_puts(&flanterm_dev, "\x1b[H\x1b[J"); // clear screen
 
-	dev_puts(&flanterm_dev, "[  FS  ] Formatting...");
+	dev_puts(&flanterm_dev, "[  FS  ] Formatting CuoreFS... ");
 	if (cuorefs_format(selected, 128) == 0) {
-		dev_puts(&flanterm_dev, " SUCCESS\n");
+		dev_puts(&flanterm_dev, "SUCCESS\n");
 	} else {
-		dev_puts(&flanterm_dev, " FAILED\n");
+		dev_puts(&flanterm_dev, "FAILED\n");
 		panic("INSTALLER", "Failed to install");
 	}
 }
