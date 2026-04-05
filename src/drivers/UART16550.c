@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
+#include "bitmask.h"
 #include "devices.h"
 #include "kstate.h"
 #include "drivers/UART16550.h"
@@ -37,14 +38,14 @@ struct trap_frame* uart16550_irq_handler(struct trap_frame *tf) {
 	return tf;
 }
 
-SETUP_OUTPUT_DEVICE(uart16550_dev,
-	CAP_ON_ERROR,
-	uart16550_putc, NULL, NULL
-);
+kernel_char_dev_t uart16550_dev = {
+	CHAR_DEV_CAP_ON_ERROR,
+	uart16550_putc
+};
 
 void uart16550_init(void) {
-	REGISTER_OUTPUT_DEVICE(&uart16550_dev, output_devices, output_devices_c);
-	if (global_kernel_config.uart16550_is_debug_interface) {DEV_CAP_SET(&uart16550_dev, CAP_ON_DEBUG);}
+	char_devices[char_devices_c++] = &uart16550_dev;
+	if (global_kernel_config.uart16550_is_debug_interface) {BIT_SET(uart16550_dev.DevCAP, CHAR_DEV_CAP_ON_DEBUG);}
 
 	rx_read_ptr = 0; rx_write_ptr = 0;
 	irq_install_handler(lapic_get_id(), 36, uart16550_irq_handler);

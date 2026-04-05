@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "devicetypes.h"
 #include "limine.h"
 #include "cpu/smp/init.h"
 

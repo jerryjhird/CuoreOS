@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "bitmask.h"
 #include "drivers/UART16550.h"
 #include "stdio.h"
 #include "apic/lapic.h"
@@ -45,10 +46,10 @@ void exception_main(struct trap_frame *tf, const char *description) {
 		"ERR", "RIP", "CS ", "FLG", "RSP", "SS "
 	};
 
-	for (size_t i = 0; i < output_devices_c; i++) {
-		kernel_dev_t* dev = output_devices[i];
+	for (size_t i = 0; i < char_devices_c; i++) {
+		kernel_char_dev_t* dev = char_devices[i];
 
-		if (DEV_CAP_HAS(dev, CAP_ON_ERROR)) {
+		if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR)) {
 			dev_puts(dev, "\n*** CPU EXCEPTION: ");
 
 			if (description) {

@@ -2,12 +2,6 @@
 
 #include "pci/pci.h"
 
-typedef struct {
-	uint16_t port_base;
-	uint64_t total_sectors;
-	char model[41];
-} ide_ctx_t;
-
 #define IDE_REG_DATA 0
 #define IDE_REG_FEATURES 1
 #define IDE_REG_SECTOR_CNT 2

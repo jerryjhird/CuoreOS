@@ -77,7 +77,7 @@ int cuorefs_format(partition_t *part, uint32_t max_files) {
 
 int cuorefs_add_file(const char *name, void *data, uint64_t size) {
 	if (!glob_cuorefs_partition) return -1;
-	kernel_dev_t *disk = glob_cuorefs_partition->disk;
+	kernel_disk_dev_t *disk = glob_cuorefs_partition->disk;
 	uint64_t part_lba = glob_cuorefs_partition->start_lba;
 	cuorefs_header_t *header = (cuorefs_header_t*)glob_cuorefs_partition->fs_metadata;
 
@@ -140,7 +140,7 @@ int cuorefs_add_file(const char *name, void *data, uint64_t size) {
 
 int cuorefs_delete_file(const char* name) {
 	if (!glob_cuorefs_partition || !glob_cuorefs_partition->fs_metadata) return -1;
-	kernel_dev_t *disk = glob_cuorefs_partition->disk;
+	kernel_disk_dev_t *disk = glob_cuorefs_partition->disk;
 	uint64_t part_lba = glob_cuorefs_partition->start_lba;
 	cuorefs_header_t *header = (cuorefs_header_t*)glob_cuorefs_partition->fs_metadata;
 
@@ -185,7 +185,7 @@ int cuorefs_delete_file(const char* name) {
 
 int cuorefs_wipe_file(const char* name) {
 	if (!glob_cuorefs_partition || !glob_cuorefs_partition->fs_metadata) return -1;
-	kernel_dev_t *disk = glob_cuorefs_partition->disk;
+	kernel_disk_dev_t *disk = glob_cuorefs_partition->disk;
 	uint64_t part_lba = glob_cuorefs_partition->start_lba;
 	cuorefs_header_t *header = (cuorefs_header_t*)glob_cuorefs_partition->fs_metadata;
 
@@ -237,7 +237,7 @@ int cuorefs_wipe_file(const char* name) {
 
 cuorefs_file_t* cuorefs_find_file(const char* name) {
 	if (!glob_cuorefs_partition || !glob_cuorefs_partition->fs_metadata) return NULL;
-	kernel_dev_t *disk = glob_cuorefs_partition->disk;
+	kernel_disk_dev_t *disk = glob_cuorefs_partition->disk;
 	uint64_t part_lba = glob_cuorefs_partition->start_lba;
 	cuorefs_header_t *header = (cuorefs_header_t*)glob_cuorefs_partition->fs_metadata;
 

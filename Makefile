@@ -18,7 +18,7 @@ ISO_ROOT := $(BUILDDIR)/iso_root
 LIMINE_DIR := $(BUILDDIR)/limine
 INITRD := $(BUILDDIR)/initrd.img
 
-CFLAGS := -std=c11 -O0 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(BUILDDIR)/flanterm -I. -Wall -Wextra -MMD -MP
+CFLAGS := -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(BUILDDIR)/flanterm -I. -Wall -Wextra -MMD -MP
 LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
 
 DISK_IMG := $(BUILDDIR)/qemu-disk.img

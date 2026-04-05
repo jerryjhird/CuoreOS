@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "devicetypes.h"
+#include "devices.h"
 
 typedef struct {
 	uint8_t  signature[8];
@@ -29,5 +29,5 @@ typedef struct {
 	uint16_t partition_name[36]; // UTF-16
 } __attribute__((packed)) gpt_entry_t;
 
-void gpt_parse(kernel_dev_t* dev);
-void gpt_install(kernel_dev_t* dev, const char* fs_name, uint8_t* type_guid);
+void gpt_parse(kernel_disk_dev_t* dev);
+void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid);

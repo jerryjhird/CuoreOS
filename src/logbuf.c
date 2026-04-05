@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include "logbuf.h"
+#include "devices.h"
+#include "bitmask.h"
 
 char logbuf_buffer[LOGBUF_SIZE];
 
@@ -99,7 +101,7 @@ void logbuf_vputint(char level, uint64_t n) {
 	logbuf_putc('\034');
 }
 
-void logbuf_flush(kernel_dev_t *target) {
+void logbuf_flush(kernel_char_dev_t *target) {
 	if (!target || !target->putc) return;
 
 	uint32_t curr = read_pos;
@@ -113,7 +115,7 @@ void logbuf_flush(kernel_dev_t *target) {
 			if (next == write_pos) break;
 
 			char level = logbuf_buffer[next];
-			skipping = (level == '0' && !DEV_CAP_HAS(target, CAP_ON_DEBUG));
+			skipping = (level == '0' && !BIT_CHECK(target->DevCAP, CHAR_DEV_CAP_ON_DEBUG));
 
 			curr = (next + 1) % LOGBUF_SIZE;
 			continue;

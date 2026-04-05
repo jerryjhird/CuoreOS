@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include "devicetypes.h"
 #include "drivers/HPET.h"
 #include "drivers/UART16550.h"
 #include "logbuf.h"
@@ -26,6 +25,7 @@
 #include "ui/installer.h"
 #include "_time.h"
 #include "cpu/thermal.h"
+#include "bitmask.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -100,11 +100,11 @@ pci_driver_entry_t pci_discovery_table[] = {
 };
 
 void panic(const char* header_msg, const char* msg) {
-	if (output_devices_c > 0) {
-		for (size_t i = 0; i < output_devices_c; i++) {
-			kernel_dev_t* dev = output_devices[i];
+	if (char_devices_c > 0) {
+		for (size_t i = 0; i < char_devices_c; i++) {
+			kernel_char_dev_t* dev = char_devices[i];
 
-			if (DEV_CAP_HAS(dev, CAP_ON_ERROR)) {
+			if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR)) {
 				dev_puts(dev, "\n*** KERNEL PANIC: ");
 				dev_puts(dev, header_msg);
 				dev_puts(dev, " ***\n");
@@ -127,8 +127,12 @@ void panic(const char* header_msg, const char* msg) {
 	for(;;) { __asm__ ("hlt"); }
 }
 
-kernel_dev_t* output_devices[MAX_DEVICES];
-size_t output_devices_c = 0;
+kernel_char_dev_t* char_devices[MAX_CHAR_DEVICES];
+size_t char_devices_c = 0;
+
+kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
+size_t disk_devices_c = 0;
+
 ramfs_handle_t initramfs;
 spinlock_t uart_spinlock = SPINLOCK_INIT;
 bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true

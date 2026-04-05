@@ -1,4 +1,5 @@
 #include "gpt.h"
+#include "devices.h"
 #include "guid_list.h"
 #include "partition.h"
 #include "../logbuf.h"
@@ -6,7 +7,7 @@
 #include "mem/mem.h" // IWYU pragma: keep
 #include "crc32.h"
 
-void gpt_parse(kernel_dev_t* dev) {
+void gpt_parse(kernel_disk_dev_t* dev) {
 	uint8_t buffer[512];
 
 	if (dev->read_sector(dev, 1, (uint16_t*)buffer) != 0) return;
@@ -66,7 +67,7 @@ void gpt_parse(kernel_dev_t* dev) {
 	free(array_buffer);
 }
 
-void gpt_install(kernel_dev_t* dev, const char* fs_name, uint8_t* type_guid) {
+void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid) {
 	uint64_t disk_sectors = dev->total_sectors;
 	if (disk_sectors < 68) return;
 

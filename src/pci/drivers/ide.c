@@ -1,16 +1,15 @@
-#include "devicetypes.h"
+#include "devices.h"
 #include "devices.h"
 #include "pci/pci.h"
 #include "cpu/io.h"
 #include "logbuf.h"
 #include "disk/diskinit.h"
-#include "mem/pma.h"
+#include "mem/mem.h" // IWYU pragma: keep
 #include "stdio.h"
 #include "ide.h"
 
-static uint8_t ide_read_sector(kernel_dev_t* dev, uint32_t lba, uint16_t* buffer) {
-	ide_ctx_t* ctx = (ide_ctx_t*)dev->ctx;
-	uint16_t base = ctx->port_base;
+static uint8_t ide_read_sector(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer) {
+	uint16_t base = dev->port_base;
 
 	outb(base + IDE_REG_DRIVE_SEL, (IDE_SEL_MASTER | IDE_SEL_LBA) | ((lba >> 24) & 0x0F));
 	outb(base + IDE_REG_SECTOR_CNT, 1);
@@ -28,9 +27,8 @@ static uint8_t ide_read_sector(kernel_dev_t* dev, uint32_t lba, uint16_t* buffer
 	return 0;
 }
 
-static uint8_t ide_write_sector(kernel_dev_t* dev, uint32_t lba, uint16_t* buffer) {
-	ide_ctx_t* ctx = (ide_ctx_t*)dev->ctx;
-	uint16_t base = ctx->port_base;
+static uint8_t ide_write_sector(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer) {
+	uint16_t base = dev->port_base;
 
 	outb(base + IDE_REG_DRIVE_SEL, (IDE_SEL_MASTER | IDE_SEL_LBA) | ((lba >> 24) & 0x0F));
 	outb(base + IDE_REG_SECTOR_CNT, 1);
@@ -51,8 +49,8 @@ static uint8_t ide_write_sector(kernel_dev_t* dev, uint32_t lba, uint16_t* buffe
 	return 0;
 }
 
-void ide_identify_drive(ide_ctx_t* ide_ctx) {
-	uint16_t base = ide_ctx->port_base;
+void ide_identify_drive(kernel_disk_dev_t* dev) {
+	uint16_t base = dev->port_base;
 	uint16_t temp_buffer[256];
 
 	outb(base + IDE_REG_DRIVE_SEL, IDE_SEL_MASTER);
@@ -67,25 +65,27 @@ void ide_identify_drive(ide_ctx_t* ide_ctx) {
 
 	// get total sectors
 	if (temp_buffer[83] & (1 << 10)) {
-		ide_ctx->total_sectors = *(uint64_t*)&temp_buffer[100];
+		memcpy(&dev->total_sectors, &temp_buffer[100], sizeof(uint64_t));
 	} else {
-		ide_ctx->total_sectors = *(uint32_t*)&temp_buffer[60];
+		uint32_t lba28_sectors = 0;
+		memcpy(&lba28_sectors, &temp_buffer[60], sizeof(uint32_t));
+		dev->total_sectors = (uint64_t)lba28_sectors;
 	}
 
 	// get model name
 	char* model_raw = (char*)&temp_buffer[27];
 	for (int i = 0; i < 40; i++) {
-		ide_ctx->model[i] = model_raw[i];
+		dev->model[i] = model_raw[i];
 	}
-	ide_ctx->model[40] = '\0';
-	byteswap_str(ide_ctx->model, 40);
+	dev->model[40] = '\0';
+	byteswap_str(dev->model, 40);
 
-	for (int i = 39; i >= 0 && ide_ctx->model[i] == ' '; i--) {
-		ide_ctx->model[i] = '\0';
+	for (int i = 39; i >= 0 && dev->model[i] == ' '; i--) {
+		dev->model[i] = '\0';
 	}
 }
 
-SETUP_OUTPUT_DEVICE(ide_output_dev, CAP_IS_DISK, NULL, ide_read_sector, ide_write_sector);
+kernel_disk_dev_t ide_output_dev = {0};
 
 void ide_init(pci_dev_t pdev) {
 	uint16_t base;
@@ -102,22 +102,17 @@ void ide_init(pci_dev_t pdev) {
 		return;
 	}
 
-	ide_ctx_t* ctx = (ide_ctx_t*)pma_alloc_page();
-	ctx->port_base = base;
+	ide_output_dev.port_base = base;
 
-	ide_identify_drive(ctx);
+	ide_identify_drive(&ide_output_dev);
 
-	kernel_dev_t* dev = (kernel_dev_t*)pma_alloc_page();
-	dev->DevCAP = CAP_IS_DISK;
-	dev->ctx = ctx;
-	dev->total_sectors = ctx->total_sectors;
-	dev->read_sector = ide_read_sector;
-	dev->write_sector = ide_write_sector;
+	ide_output_dev.read_sector = ide_read_sector;
+	ide_output_dev.write_sector = ide_write_sector;
 
 	logbuf_write("+ [ IDE  ] Initialized controller at: ");
 	logbuf_puthex(base);
 	logbuf_write("\n");
 
-	REGISTER_OUTPUT_DEVICE(dev, output_devices, output_devices_c);
-	generic_disk_init(dev);
+	disk_devices[disk_devices_c++] = &ide_output_dev;
+	generic_disk_init(&ide_output_dev);
 }

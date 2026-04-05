@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "devicetypes.h"
+#include "devices.h"
 
 #define LOGBUF_SIZE 16384
 
@@ -26,7 +26,7 @@ void logbuf_vputhex64(char level, uint64_t val);
 void logbuf_putint(uint64_t n);
 void logbuf_vputint(char level, uint64_t n);
 
-void logbuf_flush(kernel_dev_t *target);
+void logbuf_flush(kernel_char_dev_t *target);
 void logbuf_clear(void);
 
 #endif

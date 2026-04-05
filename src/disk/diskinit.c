@@ -1,10 +1,11 @@
 #include "diskinit.h"
+#include "devices.h"
 #include "mbr.h"
 #include "gpt.h"
 #include "logbuf.h"
 #include "kstate.h"
 
-void generic_disk_init(kernel_dev_t* dev) {
+void generic_disk_init(kernel_disk_dev_t* dev) {
 	if (!dev || !dev->read_sector) return;
 	supported_disk_exists = true;
 

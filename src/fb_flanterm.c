@@ -2,8 +2,8 @@
 #include "../../build/flanterm/src/flanterm_backends/fb.c"
 #include "../../build/flanterm/src/flanterm.h"
 #include "../../build/flanterm/src/flanterm_backends/fb.h"
+#include "bitmask.h"
 #include "limine.h"
-#include "devicetypes.h"
 #include "devices.h"
 #include "fb_flanterm.h"
 #include "mem/heap.h"
@@ -12,14 +12,14 @@
 
 struct flanterm_context *ft_ctx = NULL;
 
-SETUP_OUTPUT_DEVICE(flanterm_dev,
-	CAP_ON_ERROR,
-	_c_flanterm_putc, NULL, NULL
-);
+kernel_char_dev_t flanterm_dev = {
+	CHAR_DEV_CAP_ON_ERROR,
+	_c_flanterm_putc,
+};
 
 void _c_flanterm_init(struct limine_framebuffer *fb) {
-	REGISTER_OUTPUT_DEVICE(&flanterm_dev, output_devices, output_devices_c);
-	if (global_kernel_config.flanterm_is_debug_interface) {DEV_CAP_SET(&flanterm_dev, CAP_ON_DEBUG);}
+	char_devices[char_devices_c++] = &flanterm_dev;
+	if (global_kernel_config.flanterm_is_debug_interface) {BIT_SET(flanterm_dev.DevCAP, CHAR_DEV_CAP_ON_DEBUG);}
 
 	ft_ctx = flanterm_fb_init(
 		malloc,

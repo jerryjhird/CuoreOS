@@ -1,6 +1,6 @@
 #pragma once
 
-#include "devicetypes.h"
+#include "devices.h"
 #include <stdbool.h>
 
 typedef struct {
@@ -9,7 +9,7 @@ typedef struct {
 	uint32_t partition_id; // index
 	uint8_t  type_id; // legacy MBR type (0x0C, etc)
 	uint8_t  guid[16]; // for GPT systems (0 for MBR)
-	kernel_dev_t* disk; // device this partition belongs to
+	kernel_disk_dev_t* disk; // device this partition belongs to
 	bool	 is_gpt;
 
 	void* fs_metadata;
@@ -28,4 +28,4 @@ typedef struct {
 
 void partition_register(partition_t* new_part);
 const char* partition_get_name(partition_t* p);
-void partition_refresh(kernel_dev_t* dev);
+void partition_refresh(kernel_disk_dev_t* dev);

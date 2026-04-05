@@ -9,7 +9,7 @@ typedef struct {
 	const char* name;
 } partition_type_t;
 
-uint8_t mbr_parse(kernel_dev_t* dev) {
+uint8_t mbr_parse(kernel_disk_dev_t* dev) {
 	uint8_t sector_buffer[512];
 
 	if (dev->read_sector(dev, 0, (uint16_t*)sector_buffer) != 0) {
@@ -46,7 +46,7 @@ uint8_t mbr_parse(kernel_dev_t* dev) {
 	return 0;
 }
 
-void mbr_install(kernel_dev_t* dev, uint8_t type_id) {
+void mbr_install(kernel_disk_dev_t* dev, uint8_t type_id) {
 	uint8_t sector[512];
 	memset(sector, 0, 512);
 

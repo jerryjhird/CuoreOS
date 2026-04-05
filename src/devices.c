@@ -1,12 +1,12 @@
 #include "devices.h"
 
-void dev_puts(kernel_dev_t* dev, const char* s) {
+void dev_puts(kernel_char_dev_t* dev, const char* s) {
 	while (*s) {
 		dev->putc(*s++);
 	}
 }
 
-void dev_putint(kernel_dev_t* dev, uint64_t n) {
+void dev_putint(kernel_char_dev_t* dev, uint64_t n) {
 	if (n == 0) {
 		dev_puts(dev, "0");
 		return;

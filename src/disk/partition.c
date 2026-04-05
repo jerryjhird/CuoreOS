@@ -76,7 +76,7 @@ const char* partition_get_name(partition_t* part) {
 void partition_register(partition_t* new_part) {
 	if (!new_part || !new_part->disk) return;
 
-	kernel_dev_t* dev = new_part->disk;
+	kernel_disk_dev_t* dev = new_part->disk;
 
 	if (dev->partitions == NULL) {
 		dev->partitions = (struct partition_s*)new_part;
@@ -91,7 +91,7 @@ void partition_register(partition_t* new_part) {
 	cuorefs_init(new_part);
 }
 
-void partition_refresh(kernel_dev_t* dev) {
+void partition_refresh(kernel_disk_dev_t* dev) {
 	partition_t* current = (partition_t*)dev->partitions;
 
 	while (current != NULL) {
