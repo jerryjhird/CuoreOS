@@ -107,11 +107,12 @@ strlen:
     ret
 
 memset:
-    mov rax, rdi
+    push rdi
+    mov rax, rsi
     mov rcx, rdx
-    mov al, sil
     cld
     rep stosb
+    pop rax
     ret
 
 memcpy:
