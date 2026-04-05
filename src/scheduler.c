@@ -37,8 +37,7 @@ task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid
 		panic("SCHEDULER", "UPID COLLISION");
 	}
 
-	task_t* new_task = (task_t*)malloc(sizeof(task_t));
-	memset(new_task, 0, sizeof(task_t));
+	task_t* new_task = (task_t*)zalloc(sizeof(task_t));
 	new_task->upid = requested_upid;
 
 	uint64_t stack_phys = pma_alloc_pages(4);
@@ -88,8 +87,7 @@ void scheduler_yield(void) {
 }
 
 void scheduler_init() {
-	task_t* ktask = (task_t*)malloc(sizeof(task_t));
-	memset(ktask, 0, sizeof(task_t));
+	task_t* ktask = (task_t*)zalloc(sizeof(task_t));
 
 	current_task = ktask;
 	ktask->next = ktask;
