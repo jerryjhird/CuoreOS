@@ -41,5 +41,4 @@ extern volatile struct limine_executable_address_request executable_request;
 extern kernel_config_t global_kernel_config;
 extern cpu_control_block_t* online_cpus[256];
 extern volatile uint64_t online_cpu_index;
-extern kernel_dev_t active_disk_device;
 extern bool supported_disk_exists;

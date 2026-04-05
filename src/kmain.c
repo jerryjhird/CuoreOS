@@ -130,7 +130,6 @@ void panic(const char* header_msg, const char* msg) {
 kernel_dev_t* output_devices[MAX_DEVICES];
 size_t output_devices_c = 0;
 ramfs_handle_t initramfs;
-kernel_dev_t active_disk_device;
 spinlock_t uart_spinlock = SPINLOCK_INIT;
 bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 

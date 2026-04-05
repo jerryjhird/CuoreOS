@@ -23,11 +23,19 @@ void u64tstr(char* buf, uint64_t val) {
 	buf[j] = '\0';
 }
 
+void byteswap_str(char* str, size_t len) {
+	for (size_t i = 0; i < len; i += 2) {
+		char tmp = str[i];
+		str[i] = str[i + 1];
+		str[i + 1] = tmp;
+	}
+}
+
 /**
  * @param getc_func  pointer to a blocking getc
  * @param putc_func  pointer to putc (to echo back characters) if NULL echo is disabled.
  * @param buffer	 where to return the string to
- * @param limit	  max length of the string including NULL terminator
+ * @param limit		 max length of the string including NULL terminator
  */
 void readline(char (*getc_func)(void), void (*putc_func)(char), char* buffer, size_t limit) {
 	size_t index = 0;

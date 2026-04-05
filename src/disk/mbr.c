@@ -1,6 +1,5 @@
 #include "mbr.h"
 #include "partition.h"
-#include "../logbuf.h"
 #include "mem/heap.h" // IWYU pragma: keep
 #include "mem/mem.h" // IWYU pragma: keep
 #include "partition.h"
@@ -13,7 +12,7 @@ typedef struct {
 uint8_t mbr_parse(kernel_dev_t* dev) {
 	uint8_t sector_buffer[512];
 
-	if (dev->read_sector(0, (uint16_t*)sector_buffer) != 0) {
+	if (dev->read_sector(dev, 0, (uint16_t*)sector_buffer) != 0) {
 		return 1;
 	}
 
@@ -73,8 +72,8 @@ void mbr_install(kernel_dev_t* dev, uint8_t type_id) {
 	sector[510] = 0x55;
 	sector[511] = 0xAA;
 
-	dev->write_sector(0, (uint16_t*)sector);
+	dev->write_sector(dev, 0, (uint16_t*)sector);
 
 	memset(sector, 0, 512);
-	dev->write_sector(2048, (uint16_t*)sector);
+	dev->write_sector(dev, 2048, (uint16_t*)sector);
 }

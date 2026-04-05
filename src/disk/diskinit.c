@@ -8,11 +8,9 @@ void generic_disk_init(kernel_dev_t* dev) {
 	if (!dev || !dev->read_sector) return;
 	supported_disk_exists = true;
 
-	active_disk_device = *dev;
-
 	uint8_t return_code = mbr_parse(dev);
 	if (return_code == 2) {
-		logbuf_write("[ MBR  ] GPT Protective MBR detected Initializing GPT...\n");
+		logbuf_write("[ GPT  ] Initializing GPT\n");
 		gpt_parse(dev);
 	}
 }

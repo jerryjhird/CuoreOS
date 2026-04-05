@@ -3,13 +3,23 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// generic device type
-typedef struct {
-	uint64_t DevCAP; // capabilities bitmask
-	void (*putc)(char c); // for text character output like UART16550
+struct kernel_dev_t;
+typedef struct kernel_dev_t kernel_dev_t;
 
-	uint8_t (*read_sector)(uint32_t lba, uint16_t* buffer); // for disk drivers
-	uint8_t (*write_sector)(uint32_t lba, uint16_t* buffer); // for disk drivers
+// generic device type
+typedef struct kernel_dev_t {
+	uint64_t DevCAP;
+	void* ctx; // device specific context
+
+	// text output
+	void (*putc)(char c);
+
+	// disk stuff
+	struct partition_s* partitions;
+	uint64_t total_sectors;
+	uint8_t (*read_sector)(struct kernel_dev_t* dev, uint32_t lba, uint16_t* buffer);
+	uint8_t (*write_sector)(struct kernel_dev_t* dev, uint32_t lba, uint16_t* buffer);
+
 } kernel_dev_t;
 
 #define SETUP_OUTPUT_DEVICE(name, _cap, _putc, _read_sectors, _write_sectors) \

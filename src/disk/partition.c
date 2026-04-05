@@ -8,8 +8,6 @@
 #include "mbr.h"
 #include "gpt.h"
 
-partition_t* head = NULL;
-
 typedef struct {
 	uint8_t guid[16];
 	const char* name;
@@ -76,48 +74,44 @@ const char* partition_get_name(partition_t* part) {
 }
 
 void partition_register(partition_t* new_part) {
-	if (!new_part) return;
+	if (!new_part || !new_part->disk) return;
 
-	if (head == NULL) {
-		head = new_part;
+	kernel_dev_t* dev = new_part->disk;
+
+	if (dev->partitions == NULL) {
+		dev->partitions = (struct partition_s*)new_part;
 	} else {
-		partition_t* current = head;
+		partition_t* current = (partition_t*)dev->partitions;
 		while (current->next != NULL) {
 			current = (partition_t*)current->next;
 		}
 		current->next = (struct partition_s*)new_part;
 	}
+
 	cuorefs_init(new_part);
 }
 
 void partition_refresh(kernel_dev_t* dev) {
-	partition_t* prev = NULL;
-	partition_t* current = head;
+	partition_t* current = (partition_t*)dev->partitions;
 
 	while (current != NULL) {
-		if (current->disk == dev) {
-			partition_t* to_free = current;
+		partition_t* next = (partition_t*)current->next;
 
-			if (prev == NULL) {
-				head = (partition_t*)current->next;
-				current = head;
-			} else {
-				prev->next = current->next;
-				current = (partition_t*)current->next;
-			}
-
-			if (to_free->fs_metadata) {
-				free(to_free->fs_metadata);
-			}
-			free(to_free);
-		} else {
-			prev = current;
-			current = (partition_t*)current->next;
+		if (current->fs_metadata) {
+			free(current->fs_metadata);
 		}
+		free(current);
+
+		current = next;
 	}
+	dev->partitions = NULL;
 
 	uint8_t buffer[512];
-	if (dev->read_sector(0, (uint16_t*)buffer) != 0) return;
+	for (int i = 0; i < 512; i++) buffer[i] = 0;
+
+	if (dev->read_sector(dev, 0, (uint16_t*)buffer) != 0) {
+		return;
+	}
 
 	if (buffer[510] == 0x55 && buffer[511] == 0xAA) {
 		if (buffer[450] == 0xEE) {
