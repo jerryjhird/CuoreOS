@@ -36,6 +36,7 @@ extern volatile struct limine_memmap_request memmap_request;
 extern volatile struct limine_framebuffer_request framebuffer_request;
 extern volatile struct limine_rsdp_request rsdp_request;
 extern volatile struct limine_mp_request mp_request;
+extern volatile struct limine_executable_address_request executable_request;
 
 extern kernel_config_t global_kernel_config;
 extern cpu_control_block_t* online_cpus[256];

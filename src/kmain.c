@@ -37,6 +37,11 @@ volatile struct limine_memmap_request memmap_request = {
 	.revision = 0
 };
 
+volatile struct limine_executable_address_request executable_request = {
+	.id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
+	.revision = 0
+};
+
 volatile struct limine_hhdm_request hhdm_req = {
 	.id = LIMINE_HHDM_REQUEST_ID,
 	.revision = 0
