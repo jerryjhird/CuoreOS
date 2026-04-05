@@ -142,6 +142,16 @@ run:
 	-device rtl8139,netdev=u1 \
 	-netdev user,id=u1
 
+runsc:
+	qemu-system-x86_64 -machine pc \
+	-bios $(QEMU_FIRMWARE) \
+	-drive file="$(DISK_IMG)",format=raw,index=0,media=disk \
+	-cdrom $(BOOT_ISO) \
+	-m 256M \
+	-serial stdio \
+	-device rtl8139,netdev=u1 \
+	-netdev user,id=u1
+
 format:
 	./format src/
 	./format tools/

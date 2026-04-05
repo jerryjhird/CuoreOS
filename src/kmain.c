@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "devicetypes.h"
+#include "drivers/HPET.h"
 #include "drivers/UART16550.h"
 #include "logbuf.h"
 #include "mem/heap.h"
@@ -21,6 +22,7 @@
 #include "cpu/smp/init.h"
 #include "fs/cuorefs.h"
 #include "stdio.h"
+#include "sync.h"
 #include "ui/installer.h"
 #include "_time.h"
 #include "cpu/thermal.h"
@@ -124,32 +126,29 @@ kernel_dev_t* output_devices[MAX_DEVICES];
 size_t output_devices_c = 0;
 ramfs_handle_t initramfs;
 kernel_dev_t active_disk_device;
+spinlock_t uart_spinlock = SPINLOCK_INIT;
 bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 
-void uart16550_console_task(void) { // example task while scheduler is in development
+void uart16550_console_task(void) {
 	while (1) {
 		char c =uart16550_getc();
 		dev_puts(&uart16550_dev, &c);
 	}
 }
 
-// void test_multicore_task(void *unused) {
-// 	UNUSED(unused);
-// 	while (1) {
-// 		dev_puts(&uart16550_dev, "Multicore test\n");
-// 	}
-// }
 
-void idle_task(void) { // stub task while scheduler is in development
+void idle_task(void) {
 	while (1) {}
 }
 
 void kernel_main(void) {
 	struct limine_mp_response *mp_response = mp_request.response;
 
+	time_init(mp_response->cpu_count < 2); // if single core sync now
+
  	if (mp_response->cpu_count < 2) {
-		logbuf_write("[ SMP  ] Only 1 CPU detected\n");
-		logbuf_write(" + [ SMP  ] Starting kernel in single-core mode\n");
+		logbuf_write("[ CPU  ] Only 1 CPU detected\n");
+		logbuf_write(" + [ CPU  ] Starting kernel in single-core mode\n\n");
 	} else {
 		logbuf_write("[ SMP  ] Multiple processor's found\n");
 
@@ -169,6 +168,10 @@ void kernel_main(void) {
 	}
 
 	time_t current_boot = get_epoch();
+
+	// adjust time as needed (can be heavy so we offload it)
+	mailbox_send(get_idle_core(), time_sync, NULL);
+
 	cuorefs_file_t* existing = cuorefs_find_file("boottime");
 
 	if (existing) {
@@ -188,15 +191,18 @@ void kernel_main(void) {
 	// save the current boot time to filesystem
 	cuorefs_add_file("boottime", &current_boot, sizeof(time_t));
 
+	logbuf_write("[ BOOT ] Time it took to boot (ms): "); logbuf_putint(hpet_get_ms()); logbuf_write("\n");
+
+	SPIN_LOCK(&uart_spinlock);
 	logbuf_flush(&uart16550_dev);
+	SPIN_UNLOCK(&uart_spinlock);
+
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
 
 	scheduler_init();
 	scheduler_create_task(uart16550_console_task, 1);
 	scheduler_create_task(idle_task, 2);
-
-	// mailbox_send((uint8_t)get_idle_core(), test_multicore_task, NULL);
 
 	scheduler_start();
 
@@ -212,6 +218,8 @@ void _kstartc(void) {
 
 	acpi_init();
 	madt_init();
+	hpet_init();
+
 	lapic_init(madt_get_lapic_base() + hhdm_offset);
 
 	uint8_t my_id = (uint8_t)lapic_get_id();

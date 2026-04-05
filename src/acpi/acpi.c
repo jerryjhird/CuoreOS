@@ -5,13 +5,14 @@
 static struct acpi_sdt_header* xsdt = NULL;
 
 void acpi_init(void) {
-	struct limine_rsdp_response* rsdp = rsdp_request.response;
-	if (!rsdp || !rsdp->address) {
-		panic("ACPI", "RSDP not found! Is ACPI enabled in firmware?");
-	}
+	struct limine_rsdp_response* resp = rsdp_request.response;
+	struct rsdp_v2* rsdp = (struct rsdp_v2*)resp->address;
 
-	uint64_t* xsdt_phys_ptr = (uint64_t*)((uint8_t*)rsdp->address + 24);
-	xsdt = (struct acpi_sdt_header*)(*xsdt_phys_ptr + hhdm_offset);
+	if (rsdp->revision >= 2) {
+		xsdt = (struct acpi_sdt_header*)(rsdp->xsdt_address + hhdm_offset);
+	} else {
+		xsdt = (struct acpi_sdt_header*)((uint64_t)rsdp->rsdt_address + hhdm_offset);
+	}
 }
 
 void* acpi_find_sdt(const char* signature) {
