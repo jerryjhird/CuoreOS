@@ -5,7 +5,19 @@
 #include <stdbool.h>
 #include <time.h>
 
-#include "src/kstate.h"
+// kernel defines: {
+
+typedef struct {
+	uint64_t magic; // 8   // should be  the same as CONFIG_MAGIC or HARDCODED_CONFIG_MAGIC
+	uint64_t epoch; // 8
+	uint8_t  debug; // 1
+	uint8_t  flanterm_is_debug_interface; // 1
+	uint8_t  uart16550_is_debug_interface; // 1
+} __attribute__((packed)) kernel_config_t; _Static_assert(sizeof(kernel_config_t) == 19, "kernel_config_t struct is not expected size");
+
+#define CONFIG_MAGIC 0x00000000666E6F63
+
+// }
 
 bool find_in_line(const char* start, size_t limit, const char* target) {
 	size_t target_len = strlen(target);
