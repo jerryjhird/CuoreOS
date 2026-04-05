@@ -1,4 +1,5 @@
 #include "scheduler.h"
+#include "apic/lapic.h"
 #include "cpu/IRQ.h"
 #include <stddef.h>
 #include "mem/pma.h"
@@ -94,5 +95,5 @@ void scheduler_init() {
 	ktask->next = ktask;
 	ktask->prev = ktask;
 
-	irq_install_handler(32, scheduler_timer_handler);
+	irq_install_handler(lapic_get_id(), 32, scheduler_timer_handler);
 }

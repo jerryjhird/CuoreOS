@@ -166,9 +166,8 @@ DEF_EXCEPTION_HANDLER(31, "Reserved", 0)
 
 // irq's
 
-void irq_install_handler(uint8_t vector, irq_handler_t handler) {
-	uint8_t my_id = (uint8_t)lapic_get_id();
-	cpu_control_block_t *my_cpu = &cpus[my_id];
+void irq_install_handler(uint8_t lapic_id, uint8_t vector, irq_handler_t handler) {
+	cpu_control_block_t *my_cpu = &cpus[lapic_id];
 	my_cpu->routines[vector] = handler;
 }
 

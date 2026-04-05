@@ -41,8 +41,8 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	lapic_init(madt_get_lapic_base() + hhdm_offset);
 	uint8_t my_id = (uint8_t)mp->lapic_id;
 
-	irq_install_handler(40, ipi_wakeup_irq);
-	irq_install_handler(32, clock_tick_irq);
+	irq_install_handler(my_id, 40, ipi_wakeup_irq);
+	irq_install_handler(my_id, 32, clock_tick_irq);
 
 	cpu_control_block_t *my_cpu = &cpus[my_id];
 	my_cpu->lapic_id = my_id;

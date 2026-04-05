@@ -5,6 +5,7 @@
 #include "drivers/UART16550.h"
 #include "cpu/io.h"
 #include "cpu/IRQ.h"
+#include "apic/lapic.h"
 
 #define UART_COM1 0x3F8
 
@@ -46,7 +47,7 @@ void uart16550_init(void) {
 	if (global_kernel_config.uart16550_is_debug_interface) {DEV_CAP_SET(&uart16550_dev, CAP_ON_DEBUG);}
 
 	rx_read_ptr = 0; rx_write_ptr = 0;
-	irq_install_handler(36, uart16550_irq_handler);
+	irq_install_handler(lapic_get_id(), 36, uart16550_irq_handler);
 
 	outb(UART_COM1 + UART_IER, 0x00);
 	outb(UART_COM1 + UART_LCR, 0x80);
