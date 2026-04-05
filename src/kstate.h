@@ -1,8 +1,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "devicetypes.h"
 #include "limine.h"
+#include "cpu/smp/init.h"
 
 #define CONFIG_MAGIC 0x00000000666E6F63
 #define HARDCODED_CONFIG_MAGIC 0x464E4F4344524148 // if no config is provided the system will default to a hardcoded config which uses this magic number
@@ -36,5 +38,7 @@ extern volatile struct limine_rsdp_request rsdp_request;
 extern volatile struct limine_mp_request mp_request;
 
 extern kernel_config_t global_kernel_config;
-extern volatile uint64_t online_cpu_count;
+extern cpu_control_block_t* online_cpus[256];
+extern volatile uint64_t online_cpu_index;
 extern kernel_dev_t active_disk_device;
+extern bool supported_disk_exists;

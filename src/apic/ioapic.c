@@ -27,4 +27,6 @@ void ioapic_init(uintptr_t base_addr) {
 	}
 
 	ioapic_virt_base = base_addr;
+	ioapic_map_irq(2, 32, 0, 0);
+	ioapic_map_irq(4, 36, 0, IOAPIC_TRIGGER_EDGE | IOAPIC_POLARITY_HIGH); // COM1 > vector 36 > cpu 0
 }

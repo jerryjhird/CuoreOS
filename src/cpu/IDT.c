@@ -5,6 +5,7 @@
 #include "IRQ.h"
 #include "devices.h"
 #include "kstate.h"
+#include "cpu/smp/init.h"
 
 struct idt_entry {
 	uint16_t offset_low;
@@ -109,14 +110,15 @@ void exception_main(struct trap_frame *tf, const char *description) {
 			"pushq %%r9\n\t  pushq %%r10\n\t pushq %%r11\n\t pushq %%r12\n\t" \
 			"pushq %%r13\n\t pushq %%r14\n\t pushq %%r15\n\t" \
 			\
-			"movq %%rsp, %%rdi\n\t"	/* pass trap_frame* */ \
+			"movq %%rsp, %%rdi\n\t" /* pass trap_frame* */ \
 			"movq %%rsp, %%rbp\n\t" \
 			"andq $-16, %%rsp\n\t" \
+			"subq $8, %%rsp\n\t" \
 			\
 			"movq %0, %%rax\n\t" \
 			"call *%%rax\n\t" \
 			\
-			"movq %%rbp, %%rsp\n\t" \
+			"movq %%rax, %%rsp\n\t" \
 			\
 			"popq %%r15\n\t popq %%r14\n\t popq %%r13\n\t popq %%r12\n\t" \
 			"popq %%r11\n\t popq %%r10\n\t popq %%r9\n\t  popq %%r8\n\t"  \
@@ -124,7 +126,7 @@ void exception_main(struct trap_frame *tf, const char *description) {
 			"popq %%rcx\n\t popq %%rbx\n\t popq %%rax\n\t" \
 			"addq $8, %%rsp\n\t" \
 			"iretq\n\t" \
-			: : "r"((uintptr_t)irq_dispatch), "i"((uint64_t)index) \
+			: : "r"((uintptr_t)target), "i"((uint64_t)index) \
 		); \
 	}
 
@@ -164,24 +166,24 @@ DEF_EXCEPTION_HANDLER(31, "Reserved", 0)
 
 // irq's
 
-static irq_handler_t irq_routines[256];
-
 void irq_install_handler(uint8_t vector, irq_handler_t handler) {
-	irq_routines[vector] = handler;
+	uint8_t my_id = (uint8_t)lapic_get_id();
+	cpu_control_block_t *my_cpu = &cpus[my_id];
+	my_cpu->routines[vector] = handler;
 }
 
 struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
+	uint8_t my_id = (uint8_t)lapic_get_id();
+	cpu_control_block_t *my_cpu = &cpus[my_id];
 
 	lapic_eoi();
 
-	struct trap_frame* next_tf = tf;
-
-	if (irq_routines[vector]) {
-		next_tf = irq_routines[vector](tf);
+	if (my_cpu->routines[vector]) {
+		return my_cpu->routines[vector](tf);
 	}
 
-	return next_tf;
+	return tf;
 }
 
 // for interrupt 255

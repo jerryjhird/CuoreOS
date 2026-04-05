@@ -21,7 +21,7 @@ void mailbox_send(uint8_t cpu_id, mailbox_func_t func, void *data) {
 
 // send to everyone
 void mailman_send(mailbox_func_t func, void *data) {
-	for (uint8_t i = 0; i < online_cpu_count; i++) {
+	for (uint8_t i = 0; i < online_cpu_index; i++) {
 		if (i == (uint8_t)lapic_get_id()) continue;
 		mailbox_send(i, func, data);
 	}

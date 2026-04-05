@@ -6,6 +6,7 @@
 
 void generic_disk_init(kernel_dev_t* dev) {
 	if (!dev || !dev->read_sector) return;
+	supported_disk_exists = true;
 
 	active_disk_device = *dev;
 

@@ -23,6 +23,7 @@
 #include "stdio.h"
 #include "ui/installer.h"
 #include "_time.h"
+#include "cpu/thermal.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -121,13 +122,13 @@ void panic(const char* header_msg, const char* msg) {
 
 kernel_dev_t* output_devices[MAX_DEVICES];
 size_t output_devices_c = 0;
-volatile uint64_t online_cpu_count = 1;
 ramfs_handle_t initramfs;
 kernel_dev_t active_disk_device;
+bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 
-void uart16550_console_task(void) {
+void uart16550_console_task(void) { // example task while scheduler is in development
 	while (1) {
-		char c = uart16550_getc();
+		char c =uart16550_getc();
 		dev_puts(&uart16550_dev, &c);
 	}
 }
@@ -162,7 +163,7 @@ void kernel_main(void) {
 			cpu->goto_address = AP_kstartc;
 		}
 
-		while (online_cpu_count < mp_response->cpu_count) {
+		while (online_cpu_index < mp_response->cpu_count) {
 			__asm__ volatile("pause");
 		}
 	}
@@ -211,6 +212,22 @@ void _kstartc(void) {
 
 	acpi_init();
 	madt_init();
+	lapic_init(madt_get_lapic_base() + hhdm_offset);
+
+	uint8_t my_id = (uint8_t)lapic_get_id();
+	cpu_control_block_t *my_cpu = &cpus[my_id];
+
+	my_cpu->dts_support = does_cpu_support_dts();
+	my_cpu->lapic_id = my_id;
+
+	if (my_cpu->dts_support) {
+		my_cpu->thermal = thermal_read();
+	}
+
+	my_cpu->status = CPU_BUSY; // bsp is always busy
+
+	online_cpus[online_cpu_index] = my_cpu;
+	__atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
 
 	gdt_init();
 	idt_init();
@@ -238,13 +255,9 @@ void _kstartc(void) {
 	}
 
 	pma_init();
-
 	uart16550_init();
 
-	lapic_init(madt_get_lapic_base() + hhdm_offset);
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
-
-	ioapic_map_irq(4, 36, 0, IOAPIC_TRIGGER_EDGE | IOAPIC_POLARITY_HIGH); // COM1 > vector 36 > cpu 0
 
 	uintptr_t phys_addr = pma_alloc_pages(HEAP_PAGES); // 256 pages = 1MB
 	void* virt_addr = (void*)(phys_addr + hhdm_req.response->offset);
@@ -255,7 +268,7 @@ void _kstartc(void) {
 
 	_c_flanterm_init(framebuffer_request.response->framebuffers[0]);
 
-	if (glob_cuorefs_partition == NULL) {
+	if (glob_cuorefs_partition == NULL && supported_disk_exists) {
 		installer_show_menu();
 	}
 

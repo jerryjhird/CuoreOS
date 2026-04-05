@@ -1,4 +1,3 @@
-#include "devices.h"
 #include "logbuf.h"
 #include "kstate.h"
 #include "sync.h"
@@ -6,16 +5,32 @@
 #include "apic/lapic.h"
 #include "cpu/GDT.h"
 #include "cpu/IRQ.h"
+#include "cpu/thermal.h"
 #include "apic/madt.h"
 #include <stdint.h>
 #include "init.h"
 
 static spinlock_t temp_spinlock = SPINLOCK_INIT;
 cpu_control_block_t cpus[256];
+cpu_control_block_t* online_cpus[256];
+volatile uint64_t online_cpu_index = 0;
 
 struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
 	   // (dispatcher will call lapic_eoi for us)
 	   return tf;
+}
+
+struct trap_frame* clock_tick_irq(struct trap_frame *tf) {
+	uint8_t my_id = (uint8_t)lapic_get_id();
+	cpu_control_block_t *my_cpu = &cpus[my_id];
+
+	my_cpu->ticks++;
+
+	if (my_cpu->ticks % 100 == 0 && my_cpu->dts_support) {
+	   my_cpu->thermal = thermal_read();
+	}
+
+	return tf;
 }
 
 __attribute__((noinline))
@@ -26,10 +41,13 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	lapic_init(madt_get_lapic_base() + hhdm_offset);
 	uint8_t my_id = (uint8_t)mp->lapic_id;
 
-	irq_install_handler(0x40, ipi_wakeup_irq);
+	irq_install_handler(40, ipi_wakeup_irq);
+	irq_install_handler(32, clock_tick_irq);
 
 	cpu_control_block_t *my_cpu = &cpus[my_id];
 	my_cpu->lapic_id = my_id;
+	my_cpu->ticks = 1;
+	my_cpu->dts_support = does_cpu_support_dts();
 
 	SPIN_LOCK(&temp_spinlock);
 	logbuf_write("+ [ SMP  ] CPU ");
@@ -37,7 +55,8 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	logbuf_write(" Online\n");
 	SPIN_UNLOCK(&temp_spinlock);
 
-	__atomic_fetch_add(&online_cpu_count, 1, __ATOMIC_SEQ_CST);
+	int idx = __atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
+	online_cpus[idx] = my_cpu;
 
 	while (1) {
 		wait_for_work:
@@ -60,14 +79,17 @@ void AP_kstartc(struct limine_mp_info *mp) {
 // find a free cpu
 int get_idle_core(void) {
 	uint8_t self = (uint8_t)lapic_get_id();
+	uint64_t count = __atomic_load_n(&online_cpu_index, __ATOMIC_ACQUIRE);
 
-	for (uint8_t i = 0; i < online_cpu_count; i++) {
-		if (i == 0) continue;
-		if (i == self) continue;
+	for (uint64_t i = 0; i < count; i++) {
+		cpu_control_block_t* cpu = online_cpus[i];
 
-		if (cpus[i].status == CPU_IDLE && !cpus[i].mailbox.pending) {
-			return (int)i;
+		if (cpu == NULL) continue;
+		if (cpu->lapic_id == self) continue;
+
+		if (cpu->status == CPU_IDLE && !cpu->mailbox.pending) {
+			return (int)cpu->lapic_id;
 		}
 	}
-	return -1; // all cores are busy
+	return -1;
 }
