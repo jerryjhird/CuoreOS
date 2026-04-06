@@ -1,4 +1,5 @@
 #include "scheduler.h"
+
 #include "apic/lapic.h"
 #include "cpu/IRQ.h"
 #include <stddef.h>
@@ -9,7 +10,7 @@
 
 task_t *current_task = NULL;
 
-struct trap_frame* scheduler_timer_handler(struct trap_frame* tf) {
+static struct trap_frame* scheduler_timer_handler(struct trap_frame* tf) {
 	if (current_task != NULL) {
 		current_task->rsp = (uint64_t)tf;
 	}

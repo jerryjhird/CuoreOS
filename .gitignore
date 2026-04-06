@@ -1,6 +1,9 @@
 # build output
 build/
 compile_commands.json
+cache
+
+# clangd (other software might use this idrk)
 .cache/
 
 # temp dev stuff

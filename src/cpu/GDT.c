@@ -1,3 +1,5 @@
+#include "GDT.h"
+
 #include <stdint.h>
 
 struct gdt_entry {

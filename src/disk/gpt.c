@@ -2,7 +2,7 @@
 #include "devices.h"
 #include "guid_list.h"
 #include "partition.h"
-#include "../logbuf.h"
+#include "logbuf.h"
 #include "mem/heap.h" // IWYU pragma: keep
 #include "mem/mem.h" // IWYU pragma: keep
 #include "crc32.h"

@@ -1,3 +1,6 @@
+typedef int make_iso_compiler_happy;
+#ifdef KERNEL_MODULE_ENABLED_RTL8139
+
 #include "rtl8139.h"
 #include "cpu/IRQ.h"
 
@@ -9,3 +12,5 @@ void rtl8139_init(pci_dev_t dev) {
 	// uintptr_t io_base = dev.bars[0].base;
 	// stub (work in progress)
 }
+
+#endif

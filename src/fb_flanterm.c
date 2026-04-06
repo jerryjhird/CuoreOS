@@ -1,11 +1,13 @@
-#include "../../build/flanterm/src/flanterm.c"
-#include "../../build/flanterm/src/flanterm_backends/fb.c"
-#include "../../build/flanterm/src/flanterm.h"
-#include "../../build/flanterm/src/flanterm_backends/fb.h"
+#include "flanterm.c"
+#include "flanterm_backends/fb.c"
+#include "flanterm.h"
+#include "flanterm_backends/fb.h"
+
+#include "fb_flanterm.h"
+
 #include "bitmask.h"
 #include "limine.h"
 #include "devices.h"
-#include "fb_flanterm.h"
 #include "mem/heap.h"
 #include <stdint.h>
 #include "kstate.h"
@@ -47,7 +49,7 @@ void _c_flanterm_init(struct limine_framebuffer *fb) {
 	);
 }
 
-void _c_flanterm_free() {
+void _c_flanterm_free(void) {
 	flanterm_deinit(ft_ctx, sfree);
 }
 

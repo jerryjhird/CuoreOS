@@ -15,12 +15,12 @@ cpu_control_block_t cpus[256];
 cpu_control_block_t* online_cpus[256];
 volatile uint64_t online_cpu_index = 0;
 
-struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
+static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
 	   // (dispatcher will call lapic_eoi for us)
 	   return tf;
 }
 
-struct trap_frame* clock_tick_irq(struct trap_frame *tf) {
+static struct trap_frame* clock_tick_irq(struct trap_frame *tf) {
 	uint8_t my_id = (uint8_t)lapic_get_id();
 	cpu_control_block_t *my_cpu = &cpus[my_id];
 

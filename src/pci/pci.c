@@ -1,9 +1,9 @@
 #include "pci.h"
-#include "../cpu/io.h"
+#include "cpu/io.h"
 #include "logbuf.h"
 #include <stddef.h>
 
-uint32_t pci_read_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
+static uint32_t pci_read_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
 	uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
 					   (((uint32_t)slot) << 11) |
 					   (((uint32_t)func) << 8) |
@@ -12,7 +12,7 @@ uint32_t pci_read_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offs
 	return inl(PCI_CONFIG_DATA);
 }
 
-void pci_write_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint32_t data) {
+static void pci_write_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint32_t data) {
 	uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
 					   (((uint32_t)slot) << 11) |
 					   (((uint32_t)func) << 8) |
@@ -23,7 +23,7 @@ void pci_write_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset,
 
 extern pci_driver_entry_t pci_discovery_table[];
 
-pci_bar_t pci_get_bar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t bar_index) {
+static pci_bar_t pci_get_bar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t bar_index) {
 	pci_bar_t bar = {0};
 	uint32_t offset = 0x10 + (bar_index * 4);
 
@@ -52,7 +52,7 @@ pci_bar_t pci_get_bar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t bar_index
 	return bar;
 }
 
-void pci_probe_device(pci_dev_t dev) {
+static void pci_probe_device(pci_dev_t dev) {
 	for (int i = 0; pci_discovery_table[i].name != NULL; i++) {
 		pci_driver_entry_t* entry = &pci_discovery_table[i];
 		bool match = false;
@@ -90,7 +90,7 @@ void pci_probe_device(pci_dev_t dev) {
 	}
 }
 
-void pci_init() {
+void pci_init(void) {
 	for (uint16_t bus = 0; bus < 256; bus++) {
 		for (uint16_t slot = 0; slot < 32; slot++) {
 			uint32_t id_reg = pci_read_word(bus, slot, 0, 0x00);

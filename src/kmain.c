@@ -14,7 +14,11 @@
 #include "apic/ioapic.h"
 #include "apic/madt.h"
 #include "pci/pci.h"
-#include "pci/drivers/rtl8139.h"
+
+#ifdef KERNEL_MODULE_ENABLED_RTL8139
+	#include "pci/drivers/rtl8139.h"
+#endif
+
 #include "pci/drivers/ide.h"
 #include "fs/ramfs.h"
 #include "scheduler.h"
@@ -69,15 +73,6 @@ uint64_t hhdm_offset;
 #define FOUND_INITRAMFS (1ULL << 1)
 
 pci_driver_entry_t pci_discovery_table[] = {
-	// Realtek : RTL8139 (0x8139)
-	{
-		.vendor_id = PCI_VENDOR_REALTEK,
-		.device_id = PCI_DEVICE_RTL8139,
-		.class_id = 0, .subclass_id = 0,
-		.name = "Realtek RTL8139 Ethernet",
-		.init = rtl8139_init
-	},
-
 	// Intel : i440FX Host Bridge (0x1237)
 	{
 		.vendor_id = PCI_VENDOR_INTEL,
@@ -95,6 +90,16 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.name = "Generic IDE Controller",
 		.init = ide_init
 	},
+	#ifdef KERNEL_MODULE_ENABLED_RTL8139
+		// Realtek : RTL8139 (0x8139)
+		{
+			.vendor_id = PCI_VENDOR_REALTEK,
+			.device_id = PCI_DEVICE_RTL8139,
+			.class_id = 0, .subclass_id = 0,
+			.name = "Realtek RTL8139 Ethernet",
+			.init = rtl8139_init
+		},
+	#endif
 
 	{ .vendor_id = 0, .device_id = 0, .name = NULL, .init = NULL }
 };
@@ -137,7 +142,7 @@ ramfs_handle_t initramfs;
 spinlock_t uart_spinlock = SPINLOCK_INIT;
 bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 
-void uart16550_console_task(void) {
+static void uart16550_console_task(void) {
 	while (1) {
 		char c =uart16550_getc();
 		dev_puts(&uart16550_dev, &c);
@@ -145,11 +150,11 @@ void uart16550_console_task(void) {
 }
 
 
-void idle_task(void) {
+static void idle_task(void) {
 	while (1) {}
 }
 
-void kernel_main(void) {
+static void kernel_main(void) {
 	struct limine_mp_response *mp_response = mp_request.response;
 
 	time_init(mp_response->cpu_count < 2); // if single core sync now
@@ -221,6 +226,9 @@ void kernel_main(void) {
 #define HEAP_PAGES 256
 #define HEAP_SIZE (HEAP_PAGES << 12)
 
+void _kstartc(void);
+
+__attribute__((used))
 void _kstartc(void) {
 	hhdm_offset = hhdm_req.response->offset;
 

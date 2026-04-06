@@ -13,7 +13,7 @@ static const int days_before_month[] = {
 	0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
 };
 
-static time_t get_epoch_rtc() {
+static time_t get_epoch_rtc(void) {
 	int s, m, h, d, mo, y;
 	int s2, m2, h2, d2, mo2, y2;
 

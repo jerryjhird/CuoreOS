@@ -9,7 +9,7 @@ static uint8_t get_rtc_register(int reg) {
 	return inb(CMOS_DATA);
 }
 
-static int is_updating() {
+static int is_updating(void) {
 	outb(CMOS_ADDR, 0x0A);
 	return (inb(CMOS_DATA) & 0x80);
 }

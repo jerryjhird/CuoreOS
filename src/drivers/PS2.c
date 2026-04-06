@@ -1,3 +1,4 @@
+#include "PS2.h"
 #include "cpu/io.h"
 #include "kbd_layouts.h"
 #include <stdbool.h>
@@ -43,7 +44,7 @@ char ps2_getc(void) {
 	return c;
 }
 
-void io_wait(void) {
+static void io_wait(void) {
 	outb(0x80, 0);
 }
 

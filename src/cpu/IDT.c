@@ -1,3 +1,5 @@
+#include "GDT.h"
+
 #include <stdint.h>
 #include "bitmask.h"
 #include "drivers/UART16550.h"
@@ -36,6 +38,9 @@ static void idt_set_gate(int n, uint64_t handler, uint16_t sel, uint8_t flags) {
 	idt[n].zero		= 0;
 }
 
+void exception_main(struct trap_frame *tf, const char *description);
+
+__attribute__((used))
 void exception_main(struct trap_frame *tf, const char *description) {
 	__asm__ volatile ("cli");
 
@@ -132,6 +137,40 @@ void exception_main(struct trap_frame *tf, const char *description) {
 	}
 
 // exceptions
+
+void handler_0(void);
+void handler_1(void);
+void handler_2(void);
+void handler_3(void);
+void handler_4(void);
+void handler_5(void);
+void handler_6(void);
+void handler_7(void);
+void handler_8(void);
+void handler_9(void);
+void handler_10(void);
+void handler_11(void);
+void handler_12(void);
+void handler_13(void);
+void handler_14(void);
+void handler_15(void);
+void handler_16(void);
+void handler_17(void);
+void handler_18(void);
+void handler_19(void);
+void handler_20(void);
+void handler_21(void);
+void handler_22(void);
+void handler_23(void);
+void handler_24(void);
+void handler_25(void);
+void handler_26(void);
+void handler_27(void);
+void handler_28(void);
+void handler_29(void);
+void handler_30(void);
+void handler_31(void);
+
 DEF_EXCEPTION_HANDLER(0,  "Divide By Zero", 0)
 DEF_EXCEPTION_HANDLER(1,  "Debug", 0)
 DEF_EXCEPTION_HANDLER(2,  "Non-Maskable Interrupt", 0)
@@ -172,7 +211,7 @@ void irq_install_handler(uint8_t lapic_id, uint8_t vector, irq_handler_t handler
 	my_cpu->routines[vector] = handler;
 }
 
-struct trap_frame* irq_dispatch(struct trap_frame *tf) {
+static struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
 	uint8_t my_id = (uint8_t)lapic_get_id();
 	cpu_control_block_t *my_cpu = &cpus[my_id];
@@ -187,7 +226,7 @@ struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 }
 
 // for interrupt 255
-void irq_drunk_handler(struct trap_frame *tf) {
+static void irq_drunk_handler(struct trap_frame *tf) {
 	UNUSED(tf);
 }
 

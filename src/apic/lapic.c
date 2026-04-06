@@ -3,15 +3,15 @@
 
 static uintptr_t lapic_base = 0;
 
-void lapic_write(uint32_t reg, uint32_t data) {
+static void lapic_write(uint32_t reg, uint32_t data) {
 	*(volatile uint32_t*)(lapic_base + reg) = data;
 }
 
-uint32_t lapic_read(uint32_t reg) {
+static uint32_t lapic_read(uint32_t reg) {
 	return *(volatile uint32_t*)(lapic_base + reg);
 }
 
-void lapic_wait_for_delivery(void) {
+static void lapic_wait_for_delivery(void) {
 	while (lapic_read(LAPIC_REG_ICR_LOW) & ICR_SEND_PENDING) {
 		__asm__ volatile ("pause");
 	}

@@ -1,3 +1,5 @@
+#include "heap.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -102,7 +104,7 @@ static bool heap_grow(size_t size_needed) {
 	return true;
 }
 
-void heap_init_pools() {
+static void heap_init_pools(void) {
 	for (int i = 0; i < POOL_COUNT; i++) {
 		pools[i].block_size = pool_sizes[i];
 		pools[i].free_list = NULL;

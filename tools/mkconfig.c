@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 
 	fwrite(&config, sizeof(kernel_config_t), 1, out);
 
-	printf("config baked: %s (%zu bytes)\n", argv[2], sizeof(kernel_config_t));
+	printf("[MKCONF] %s\n", argv[2]);
 
 	fclose(out);
 	free(buffer);

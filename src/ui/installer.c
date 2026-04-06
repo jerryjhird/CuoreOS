@@ -1,3 +1,5 @@
+#include "installer.h"
+
 #include <stdint.h>
 #include "disk/partition.h"
 #include "fs/cuorefs.h"

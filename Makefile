@@ -1,8 +1,14 @@
+# CuoreOS Build System
+
+# change QEMU_FIRMWARE if needed
+QEMU_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
+
 CC      := gcc
 HOST_CC := gcc
 
 SRCDIR   := src
 BUILDDIR := build
+CACHEDIR := cache
 TOOLS    := tools
 
 C_SRCS := $(shell find $(SRCDIR) -name "*.c")
@@ -15,27 +21,45 @@ KERNEL_ELF := $(BUILDDIR)/kernel.elf
 BOOT_ISO := $(BUILDDIR)/Cuore.x86-64.iso
 CONFIG_BIN := $(BUILDDIR)/cuore.conf.bin
 ISO_ROOT := $(BUILDDIR)/iso_root
-LIMINE_DIR := $(BUILDDIR)/limine
+
+LIMINE_DIR := $(CACHEDIR)/limine
+FLANTERM_DIR := $(CACHEDIR)/flanterm
 INITRD := $(BUILDDIR)/initrd.img
 
-CFLAGS := -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(BUILDDIR)/flanterm -I. -Wall -Wextra -MMD -MP
-LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
+CFLAGS := -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
+CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wlogical-op -Wmissing-declarations
 
-DISK_IMG := $(BUILDDIR)/qemu-disk.img
-QEMU_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
+ADD_CFLAGS ?=
+LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
+ADD_LDFLAGS ?=
+
+CFLAGS += $(CC_WARNINGS)
+CFLAGS += $(ADD_CFLAGS)
+LDFLAGS += $(ADD_LDFLAGS)
+
+ifeq ($(filter clean format style,$(MAKECMDGOALS)),)
+    OLD_KMAIN_FLAGS := $(shell [ -f compile_commands.json ] && \
+        grep -A 1 "src/kmain.c" compile_commands.json | \
+        grep "command" | sed 's/.*"command": "\(.*\)".*/\1/' || true)
+    
+    CURRENT_KMAIN_CMD := $(CC) $(CFLAGS) -c src/kmain.c
+
+    ifneq ($(strip $(OLD_KMAIN_FLAGS)), $(strip $(CURRENT_KMAIN_CMD)))
+        ifneq ($(OLD_KMAIN_FLAGS),)
+            $(info [BUILD] CFLAGS changed. Forcing full recompile...)
+            FORCE_REBUILD := .FORCE_REBUILD
+        endif
+    endif
+endif
+
+DISK_IMG := $(CACHEDIR)/qemu-disk.img
 
 .PHONY: all clean run style format compile_commands
 
-all:
-	@$(MAKE) deps_setup
-	@$(MAKE) $(OBJS)
-	@$(MAKE) $(KERNEL_ELF)
-	@$(MAKE) compile_commands
-	@$(MAKE) $(DISK_IMG)
-	@$(MAKE) $(INITRD)
-	@$(MAKE) $(BOOT_ISO)
+all: deps_setup $(OBJS) $(KERNEL_ELF) compile_commands.json $(DISK_IMG) $(INITRD) $(BOOT_ISO)
+$(OBJS): | deps_setup
 
-compile_commands:
+compile_commands.json: $(C_SRCS) $(ASM_SRCS) $(TOOL_SRCS) $(FORCE_REBUILD)
 	@echo "Generating compile_commands.json"
 	@echo "[" > compile_commands.json
 
@@ -68,21 +92,26 @@ compile_commands:
 	@echo "]" >> compile_commands.json
 
 deps_setup:
-	@mkdir -p $(BUILDDIR)/flanterm $(LIMINE_DIR)
-	@if [ ! -d "$(BUILDDIR)/flanterm/.git" ]; then \
-		git clone --depth=1 https://codeberg.org/Mintsuki/Flanterm.git $(BUILDDIR)/flanterm; \
+	@mkdir -p $(FLANTERM_DIR) $(LIMINE_DIR)
+	@if [ ! -d "$(FLANTERM_DIR)/.git" ]; then \
+		git clone --depth=1 https://codeberg.org/Mintsuki/Flanterm.git $(FLANTERM_DIR); \
 	fi
 	@if [ ! -d "$(LIMINE_DIR)/.git" ]; then \
 		git clone --depth=1 --branch v10.x-binary https://codeberg.org/Limine/Limine.git $(LIMINE_DIR); \
 	fi
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.c
+$(BUILDDIR)/%.o: $(SRCDIR)/%.c $(FORCE_REBUILD)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo " [ $(CC) ] $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.S
+$(BUILDDIR)/%.o: $(SRCDIR)/%.S $(FORCE_REBUILD)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo " [ $(CC) ] $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+.PHONY: .FORCE_REBUILD
+.FORCE_REBUILD:
 
 # tools {
 
@@ -90,11 +119,13 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.S
 
 $(BUILDDIR)/$(TOOLS)/mkramfs: $(TOOLS)/mkramfs.c
 	@mkdir -p $(dir $@)
-	$(HOST_CC) -std=c11 -I./ $< -o $@
+	@echo " [ $(HOST_CC) ] [ TOOL ] $<"
+	@$(HOST_CC) -std=c11 -I./ $< -o $@
 
 $(BUILDDIR)/$(TOOLS)/mkconfig: $(TOOLS)/mkconfig.c
 	@mkdir -p $(dir $@)
-	$(HOST_CC) -std=c11 -I./ $< -o $@
+	@echo " [ $(HOST_CC) ] [ TOOL ] $<"
+	@$(HOST_CC) -std=c11 -I./ $< -o $@
 
 # / running
 
@@ -105,18 +136,16 @@ $(INITRD): $(CONFIG_BIN) $(BUILDDIR)/$(TOOLS)/mkramfs
 	$(BUILDDIR)/$(TOOLS)/mkramfs $@ $(CONFIG_BIN)
 
 DISK_SIZE_MB      := 1024
-PART_START_SECTOR := 2048
-
-DISK_FILES := $(CONFIG_BIN) cuore.conf
 
 $(DISK_IMG):
-	@echo " [ DISK ] Creating Empty $(DISK_SIZE_MB)MB image..."
+	@echo " [ qemu-img ] $(DISK_IMG)"
 	@qemu-img create -f raw $(DISK_IMG) $(DISK_SIZE_MB)M > /dev/null
 
 # }
 
 $(KERNEL_ELF): $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) -o $@
+	@echo " [ LINK ] $@"
+	@$(CC) $(LDFLAGS) $(OBJS) -o $@
 
 $(BOOT_ISO): $(KERNEL_ELF) $(INITRD)
 	@echo " [ISO] Generating $@"
@@ -142,24 +171,9 @@ run:
 	-device rtl8139,netdev=u1 \
 	-netdev user,id=u1
 
-runsc:
-	qemu-system-x86_64 -machine pc \
-	-bios $(QEMU_FIRMWARE) \
-	-drive file="$(DISK_IMG)",format=raw,index=0,media=disk \
-	-cdrom $(BOOT_ISO) \
-	-m 256M \
-	-serial stdio \
-	-device rtl8139,netdev=u1 \
-	-netdev user,id=u1
-
 format:
 	./format src/
 	./format tools/
 
-style: format
-
 clean:
 	rm -rf $(BUILDDIR)
-
-cleand:
-	rm -f build/qemu-disk.img

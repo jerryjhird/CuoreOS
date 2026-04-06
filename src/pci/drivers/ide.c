@@ -49,7 +49,7 @@ static uint8_t ide_write_sector(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* 
 	return 0;
 }
 
-void ide_identify_drive(kernel_disk_dev_t* dev) {
+static void ide_identify_drive(kernel_disk_dev_t* dev) {
 	uint16_t base = dev->port_base;
 	uint16_t temp_buffer[256];
 

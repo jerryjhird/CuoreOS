@@ -52,5 +52,4 @@ typedef struct {
 	pci_init_fn init;
 } pci_driver_entry_t;
 
-void pci_init();
-uint32_t pci_read_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset);
+void pci_init(void);
