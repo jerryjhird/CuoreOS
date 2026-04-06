@@ -146,6 +146,8 @@ $(DISK_IMG):
 $(KERNEL_ELF): $(OBJS)
 	@echo " [ LINK ] $@"
 	@$(CC) $(LDFLAGS) $(OBJS) -o $@
+	@cp $@ build/kernel.sym
+	@objcopy --strip-all -R .eh_frame -R .note.gnu.property -R .note.gnu.build-id -R .comment $@
 
 $(BOOT_ISO): $(KERNEL_ELF) $(INITRD)
 	@echo " [ISO] Generating $@"
