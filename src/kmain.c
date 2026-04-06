@@ -109,7 +109,7 @@ void panic(const char* header_msg, const char* msg) {
 		for (size_t i = 0; i < char_devices_c; i++) {
 			kernel_char_dev_t* dev = char_devices[i];
 
-			if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR)) {
+			if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR) && dev->initialized) {
 				dev_puts(dev, "\n*** KERNEL PANIC: ");
 				dev_puts(dev, header_msg);
 				dev_puts(dev, " ***\n");

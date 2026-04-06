@@ -2,11 +2,13 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 // generic device type
 typedef struct kernel_char_dev_t {
 	uint8_t DevCAP;
 	void (*putc)(char c);
+	bool initialized;
 } kernel_char_dev_t;
 
 typedef struct kernel_disk_dev_t {

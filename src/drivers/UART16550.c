@@ -25,7 +25,7 @@ static char rx_buffer[RX_BUF_SIZE];
 static volatile uint32_t rx_read_ptr = 0;
 static volatile uint32_t rx_write_ptr = 0;
 
-struct trap_frame* uart16550_irq_handler(struct trap_frame *tf) {
+static struct trap_frame* uart16550_irq_handler(struct trap_frame *tf) {
 	while (inb(UART_COM1 + UART_LSR) & UART_LSR_RX_READY) {
 		char c = (char)inb(UART_COM1 + UART_DATA);
 
@@ -40,7 +40,8 @@ struct trap_frame* uart16550_irq_handler(struct trap_frame *tf) {
 
 kernel_char_dev_t uart16550_dev = {
 	CHAR_DEV_CAP_ON_ERROR,
-	uart16550_putc
+	uart16550_putc,
+	false
 };
 
 void uart16550_init(void) {
@@ -58,6 +59,8 @@ void uart16550_init(void) {
 	outb(UART_COM1 + UART_FCR, 0xC7);
 	outb(UART_COM1 + UART_MCR, 0x0B);
 	outb(UART_COM1 + UART_IER, 0x01);
+
+	uart16550_dev.initialized = true;
 }
 
 static void uart16550_wait_tx(void) {while (!(inb(UART_COM1 + UART_LSR) & UART_LSR_TX_EMPTY));}

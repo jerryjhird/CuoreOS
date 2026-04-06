@@ -17,6 +17,7 @@ struct flanterm_context *ft_ctx = NULL;
 kernel_char_dev_t flanterm_dev = {
 	CHAR_DEV_CAP_ON_ERROR,
 	_c_flanterm_putc,
+	false
 };
 
 void _c_flanterm_init(struct limine_framebuffer *fb) {
@@ -47,10 +48,12 @@ void _c_flanterm_init(struct limine_framebuffer *fb) {
 		0,
 		0
 	);
+	flanterm_dev.initialized = true;
 }
 
 void _c_flanterm_free(void) {
 	flanterm_deinit(ft_ctx, sfree);
+	flanterm_dev.initialized = false;
 }
 
 void _c_flanterm_putc(char c) {
