@@ -5,7 +5,7 @@
 
 // kernel defines: {
 
-#define RAMFS_MAGIC 0x696E697472616D6673ULL
+#define RAMFS_MAGIC 0x494E495452414D21ULL
 
 typedef struct  {
 	uint64_t magic;

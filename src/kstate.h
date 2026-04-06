@@ -7,7 +7,6 @@
 
 #define CONFIG_MAGIC 0x00000000666E6F63
 #define HARDCODED_CONFIG_MAGIC 0x464E4F4344524148 // if no config is provided the system will default to a hardcoded config which uses this magic number
-#define INITRAMFS_MAGIC 0x0000000074696E69
 #define UNUSED(x) ((void)(x)) // helper macro
 
 #ifdef SERIOUS

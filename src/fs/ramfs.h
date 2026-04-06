@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define RAMFS_MAGIC 0x696E697472616D6673ULL
+#define RAMFS_MAGIC 0x494E495452414D21ULL
 
 // Baked into the archive
 
