@@ -45,6 +45,7 @@ void time_sync(void *data) {
 	int current_sec = start_sec;
 
 	while(current_sec == start_sec) {
+		__asm__ volatile("pause");
 		read_rtc(&current_sec, &m, &h, &d, &mo, &y);
 	}
 
