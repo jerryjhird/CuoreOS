@@ -1,7 +1,9 @@
 #include "HPET.h"
 
 #include "mem/mem.h"
+#include "mem/paging.h"
 #include "acpi/acpi.h"
+#include <stdint.h>
 
 static uint64_t hpet_base = 0;
 static uint32_t femtoseconds_per_tick = 0;
@@ -22,15 +24,21 @@ struct hpet_table {
 } __attribute__((packed));
 
 void hpet_init(void) {
-	struct hpet_table* table = acpi_find_sdt("HPET");
+	uintptr_t pml4_phys = vmm_get_pml4();
+	uint64_t* pml4_virt = (uint64_t*)(pml4_phys + hhdm_offset);
+
+	struct hpet_table* table = (struct hpet_table*)acpi_find_sdt("HPET");
 	if (!table) return;
 
-	hpet_base = table->address.address + hhdm_offset;
+	uintptr_t hpet_phys = table->address.address;
+	hpet_base = hpet_phys + hhdm_offset;
+
+	vmm_map_page(pml4_virt, hpet_base, hpet_phys, PTE_PRESENT | PTE_WRITABLE | PTE_WRITE_THROUGH | PTE_CACHE_DISABLE | PTE_TYPE_DRIVER);
 
 	uint64_t caps = *(volatile uint64_t*)(hpet_base + HPET_REG_CAPS);
 	femtoseconds_per_tick = (uint32_t)(caps >> 32);
 
-	*(volatile uint64_t*)(hpet_base + HPET_REG_CONFIG) = 0x01;
+	*(volatile uint64_t*)(hpet_base + HPET_REG_CONFIG) |= 0x01;
 }
 
 uint64_t hpet_get_nanos(void) {

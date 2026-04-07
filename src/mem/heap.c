@@ -5,11 +5,11 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include "mem.h" // IWYU pragma: keep
-#include <limine.h>
 #include "pma.h"
 #include "kstate.h"
 #include "stdio.h"
 #include "logbuf.h"
+#include "mem/paging.h"
 
 #define ALIGNMENT 16
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~(ALIGNMENT-1))
@@ -17,9 +17,13 @@
 #define MIN_SPLIT_SIZE 16
 #define PAGES_PER_GROWTH 4
 
+#define KERNEL_HEAP_START 0xFFFFFFFF90000000 // where the kernel heap starts in virtual memory
+#define KERNEL_HEAP_FLAGS (PTE_PRESENT | PTE_WRITABLE | PTE_NX)
+
 // Pool configuration for small objects
 #define POOL_COUNT 3
 static size_t pool_sizes[POOL_COUNT] = { 32, 64, 128 };
+static uintptr_t heap_current_top = KERNEL_HEAP_START;
 
 typedef struct PoolNode {
 	struct PoolNode* next;
@@ -57,54 +61,53 @@ static FixedPool pools[POOL_COUNT];
 static uintptr_t pool_page_registry[MAX_POOL_PAGES];
 static int registered_pool_pages = 0;
 
-static bool is_pool_ptr(void* ptr) {
-	uintptr_t page_base = (uintptr_t)ptr & ~0xFFF;
-	for (int i = 0; i < registered_pool_pages; i++) {
-		if (pool_page_registry[i] == page_base) return true;
-	}
-	return false;
-}
-
-static size_t get_safe_size(void* ptr) {
-	if (!ptr) return 0;
-	if (is_pool_ptr(ptr)) {
-		BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
-		return page_header->bin_size;
-	}
-	BlockHeader *bh = (BlockHeader*)ptr - 1;
-	return (bh->magic == HEAP_MAGIC) ? bh->size : 0;
-}
-
 void panic(const char* header_msg, const char* msg);
 
+static inline uint8_t get_ptr_type(void* ptr, uint64_t** out_pte) {
+	uint64_t* pml4_v = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	uint64_t* pte = vmm_get_pte(pml4_v, (uintptr_t)ptr, 0);
+	if (out_pte) *out_pte = pte;
+	if (!pte || !(*pte & 1)) return PTE_STATE_NOINFO;
+	return (uint8_t)((*pte >> 9) & 0x07);
+}
+
 static bool heap_grow(size_t size_needed) {
-	size_t total = size_needed + sizeof(BlockHeader);
-	size_t pages = (total + 4095) / 4096;
+	size_t pages = (size_needed + sizeof(BlockHeader) + 4095) / 4096;
 	if (pages < PAGES_PER_GROWTH) pages = PAGES_PER_GROWTH;
 
 	uintptr_t phys = pma_alloc_pages(pages);
 	if (!phys) return false;
 
-	BlockHeader *new_block = (BlockHeader*)(phys + hhdm_offset);
-	new_block->magic = HEAP_MAGIC;
-	new_block->size = (pages * 4096) - sizeof(BlockHeader);
-	new_block->is_free = true;
-	new_block->is_pool_block = false;
+	uint64_t* pml4_virt = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	uintptr_t grow_vaddr = heap_current_top;
+
+	for (size_t i = 0; i < pages; i++) {
+		vmm_map_page(pml4_virt, grow_vaddr + (i * 4096), phys + (i * 4096), KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+	}
 
 	BlockHeader *curr = head;
 	while (curr->next) curr = curr->next;
-	curr->next = new_block;
-	new_block->prev = curr;
-	new_block->next = NULL;
 
 	if (curr->is_free && !curr->is_pool_block) {
-		curr->size += sizeof(BlockHeader) + new_block->size;
-		curr->next = NULL;
+		curr->size += (pages * 4096);
+	} else {
+		BlockHeader *new_block = (BlockHeader*)grow_vaddr;
+		new_block->magic = HEAP_MAGIC;
+		new_block->size = (pages * 4096) - sizeof(BlockHeader);
+		new_block->is_free = true;
+		new_block->is_pool_block = false;
+		new_block->prev = curr;
+		new_block->next = NULL;
+		curr->next = new_block;
 	}
+
+	heap_current_top += (pages * 4096);
 	return true;
 }
 
 static void heap_init_pools(void) {
+	uint64_t* pml4_v = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+
 	for (int i = 0; i < POOL_COUNT; i++) {
 		pools[i].block_size = pool_sizes[i];
 		pools[i].free_list = NULL;
@@ -113,6 +116,8 @@ static void heap_init_pools(void) {
 		if (!phys) continue;
 
 		uintptr_t virt = phys + hhdm_offset;
+
+		vmm_map_page(pml4_v, virt, phys, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_POOL);
 
 		if (registered_pool_pages < MAX_POOL_PAGES) {
 			pool_page_registry[registered_pool_pages++] = virt;
@@ -143,13 +148,33 @@ static void heap_init_pools(void) {
 }
 
 void heap_init(void* start_address, size_t total_size) {
+	size_t pages = (total_size + 4095) / 4096; 	// determine how many physical pages we need
+
+	// allocate phys
+	uintptr_t phys = pma_alloc_pages(pages);
+	if (!phys) panic("HEAP INIT", "Could not allocate physical memory for heap");
+
+	// map virt to phys
+	uintptr_t vaddr = (uintptr_t)start_address;
+	uintptr_t paddr = phys;
+
+	// map each page
+	uint64_t* pml4_virt = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	for (size_t i = 0; i < pages; i++) {
+		vmm_map_page(pml4_virt, vaddr, paddr, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		vaddr += 4096;
+		paddr += 4096;
+	}
+
 	head = (BlockHeader*)start_address;
 	head->magic = HEAP_MAGIC;
-	head->size = total_size - sizeof(BlockHeader);
+	head->size = (pages * 4096) - sizeof(BlockHeader);
 	head->is_free = true;
 	head->is_pool_block = false;
 	head->next = NULL;
 	head->prev = NULL;
+
+	heap_current_top = vaddr;
 	heap_init_pools();
 }
 
@@ -216,10 +241,9 @@ void* malloc(size_t size) {
 	return NULL;
 }
 
-void free(void* ptr) {
+static void _free(void* ptr, uint8_t type) {
 	if (!ptr) return;
-
-	if (is_pool_ptr(ptr)) {
+	if (type == PTE_STATE_HEAP_POOL) {
 		BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
 		size_t bin = page_header->bin_size;
 
@@ -229,10 +253,8 @@ void free(void* ptr) {
 					page_header->used_slots--;
 				} else {
 					if (global_kernel_config.debug == 1) {
-						logbuf_vwrite(LOG_LEVEL_DEBUG, "[WARN] Double free or Underflow on bin: ");
+						logbuf_vwrite(LOG_LEVEL_DEBUG, "[WARN] Pool Underflow/Double Free on bin: ");
 						logbuf_vputhex64(LOG_LEVEL_DEBUG, bin);
-						logbuf_vwrite(LOG_LEVEL_DEBUG, " at ");
-						logbuf_vputhex64(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
 						logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 					}
 					return;
@@ -251,34 +273,45 @@ void free(void* ptr) {
 			}
 		}
 		panic("MEMORY CORRUPTION", "Pool block found but bin mismatch!");
-	}
 
-	BlockHeader *block = ((BlockHeader*)ptr) - 1;
-	if (block->magic != HEAP_MAGIC) {
-		logbuf_vwrite(LOG_LEVEL_DEBUG, "Invalid free at: ");
-		logbuf_vputhex64(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
-		panic("MEMORY CORRUPTION", "\nHeap corruption or invalid pointer!");
-	}
+	} else if (type == PTE_STATE_HEAP_BLOCK) {
+		BlockHeader *block = ((BlockHeader*)ptr) - 1;
 
-	if (global_kernel_config.debug == 1) {
-		logbuf_vwrite(LOG_LEVEL_DEBUG, "[FREE] Reclaiming heap block (Size: ");
-		logbuf_vputhex64(LOG_LEVEL_DEBUG, block->size);
-		logbuf_vwrite(LOG_LEVEL_DEBUG, ")\n");
-	}
+		if (block->magic != HEAP_MAGIC) {
+			logbuf_vwrite(LOG_LEVEL_DEBUG, "Invalid magic at: ");
+			logbuf_vputhex64(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
+			panic("MEMORY CORRUPTION", "Heap header magic mismatch!");
+		}
 
-	block->is_free = true;
+		if (global_kernel_config.debug == 1) {
+			logbuf_vwrite(LOG_LEVEL_DEBUG, "[FREE] Reclaiming heap block (Size: ");
+			logbuf_vputhex64(LOG_LEVEL_DEBUG, block->size);
+			logbuf_vwrite(LOG_LEVEL_DEBUG, ")\n");
+		}
 
-	if (block->next && block->next->is_free && !block->next->is_pool_block) {
-		block->size += sizeof(BlockHeader) + block->next->size;
-		block->next = block->next->next;
-		if (block->next) block->next->prev = block;
-	}
+		block->is_free = true;
 
-	if (block->prev && block->prev->is_free && !block->prev->is_pool_block) {
-		BlockHeader *p = block->prev;
-		p->size += sizeof(BlockHeader) + block->size;
-		p->next = block->next;
-		if (block->next) block->next->prev = p;
+		// Forward Coalesce:
+		if (block->next && block->next->is_free && !block->next->is_pool_block) {
+			block->size += sizeof(BlockHeader) + block->next->size;
+			block->next = block->next->next;
+			if (block->next) block->next->prev = block;
+		}
+
+		// Backward Coalesce:
+		if (block->prev && block->prev->is_free && !block->prev->is_pool_block) {
+			BlockHeader *p = block->prev;
+			p->size += sizeof(BlockHeader) + block->size;
+			p->next = block->next;
+			if (block->next) block->next->prev = p;
+		}
+
+	} else {
+		logbuf_write("pointer: ");
+		logbuf_puthex64((uintptr_t)ptr);
+		logbuf_write("\nNEAT: ");
+		logbuf_puthex64(type);
+		panic("MEMORY CORRUPTION", "Attempted to free non heap memory!");
 	}
 }
 
@@ -287,17 +320,23 @@ void* realloc(void* ptr, size_t new_size) {
 	if (new_size == 0) { free(ptr); return NULL; }
 
 	new_size = ALIGN(new_size);
-	size_t old_size = get_safe_size(ptr);
 
-	if (is_pool_ptr(ptr)) {
+	uint64_t* pml4_v = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	uint64_t* pte = vmm_get_pte(pml4_v, (uintptr_t)ptr, 0);
+
+	if (!pte || !(*pte & 1)) panic("MEMORY CORRUPTION", "Attempted to realloc non heap memory");;
+
+	uint8_t type = (uint8_t)((*pte >> 9) & 0x07);
+	size_t old_size = 0;
+
+	if (type == PTE_STATE_HEAP_POOL) {
+		BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
+		old_size = page_header->bin_size;
+
 		if (new_size <= old_size) return ptr;
 
 		if (global_kernel_config.debug == 1) {
-			logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] Pool migration: ");
-			logbuf_vputhex64(LOG_LEVEL_DEBUG, old_size);
-			logbuf_vwrite(LOG_LEVEL_DEBUG, " -> ");
-			logbuf_vputhex64(LOG_LEVEL_DEBUG, new_size);
-			logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+			logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] Pool migration\n");
 		}
 
 		void* new_p = malloc(new_size);
@@ -308,44 +347,56 @@ void* realloc(void* ptr, size_t new_size) {
 		return new_p;
 	}
 
-	BlockHeader *curr = (BlockHeader*)ptr - 1;
-	if (curr->magic != HEAP_MAGIC) panic("MEMORY CORRUPTION", "Realloc on invalid pointer!");
+	if (type == PTE_STATE_HEAP_BLOCK) {
+		BlockHeader *curr = (BlockHeader*)ptr - 1;
+		if (curr->magic != HEAP_MAGIC) panic("MEMORY CORRUPTION", "realloc on invalid magic!");
 
-	if (curr->size >= new_size) return ptr;
+		old_size = curr->size;
+		if (old_size >= new_size) return ptr;
 
-	if (curr->next && curr->next->is_free && !curr->next->is_pool_block &&
-		(curr->size + sizeof(BlockHeader) + curr->next->size) >= new_size) {
+		// try in place expansion
+		if (curr->next && curr->next->is_free && !curr->next->is_pool_block &&
+			(curr->size + sizeof(BlockHeader) + curr->next->size) >= new_size) {
 
-		if (global_kernel_config.debug == 1) logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] In-place expansion\n");
+			size_t total_avail = curr->size + sizeof(BlockHeader) + curr->next->size;
 
-		size_t total_avail = curr->size + sizeof(BlockHeader) + curr->next->size;
-		if (total_avail >= (new_size + sizeof(BlockHeader) + MIN_SPLIT_SIZE)) {
-			size_t leftover = total_avail - new_size - sizeof(BlockHeader);
-			curr->size = new_size;
-			BlockHeader *split = (BlockHeader*)((uint8_t*)(curr + 1) + new_size);
-			split->magic = HEAP_MAGIC;
-			split->size = leftover;
-			split->is_free = true;
-			split->is_pool_block = false;
-			split->next = curr->next->next;
-			split->prev = curr;
-			if (split->next) split->next->prev = split;
-			curr->next = split;
-		} else {
-			curr->size = total_avail;
-			curr->next = curr->next->next;
-			if (curr->next) curr->next->prev = curr;
+			if (total_avail >= (new_size + sizeof(BlockHeader) + MIN_SPLIT_SIZE)) {
+				size_t leftover = total_avail - new_size - sizeof(BlockHeader);
+				curr->size = new_size;
+				BlockHeader *split = (BlockHeader*)((uint8_t*)(curr + 1) + new_size);
+				split->magic = HEAP_MAGIC;
+				split->size = leftover;
+				split->is_free = true;
+				split->is_pool_block = false;
+				split->next = curr->next->next;
+				split->prev = curr;
+				if (split->next) split->next->prev = split;
+				curr->next = split;
+			} else {
+				curr->size = total_avail;
+				curr->next = curr->next->next;
+				if (curr->next) curr->next->prev = curr;
+			}
+			return ptr;
 		}
-		return ptr;
+
+		// migration required
+		void* new_ptr = malloc(new_size);
+		if (new_ptr) {
+			memcpy(new_ptr, ptr, old_size);
+			free(ptr);
+		}
+		return new_ptr;
 	}
 
-	if (global_kernel_config.debug == 1) logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] Heap migration required\n");
-	void* new_ptr = malloc(new_size);
-	if (new_ptr) {
-		memcpy(new_ptr, ptr, old_size);
-		free(ptr);
-	}
-	return new_ptr;
+	panic("REALLOC ERROR", "Attempted to realloc non heap memory");
+	return NULL;
+}
+
+void free(void* ptr) {
+	uint64_t* pte;
+	uint8_t type = get_ptr_type(ptr, &pte);
+	if (type != PTE_STATE_NOINFO) _free(ptr, type);
 }
 
 void* zalloc(size_t size) {
@@ -357,10 +408,18 @@ void* zalloc(size_t size) {
 
 void zfree(void* ptr) {
 	if(!ptr) return;
-	size_t size = get_safe_size(ptr);
-	if (size > 0) {
-		memset(ptr, 0, size);
+
+	uint64_t* pte;
+	uint8_t type = get_ptr_type(ptr, &pte);
+	size_t size = 0;
+
+	if (type == PTE_STATE_HEAP_POOL) {
+		size = ((BlockHeader*)((uintptr_t)ptr & ~0xFFF))->bin_size;
+	} else if (type == PTE_STATE_HEAP_BLOCK) {
+		size = (((BlockHeader*)ptr) - 1)->size;
 	}
+
+	if (size > 0) memset(ptr, 0, size);
 	free(ptr);
 }
 
@@ -371,11 +430,7 @@ void sfree(void* ptr, size_t size) {
 
 void szfree(void* ptr, size_t size) {
 	UNUSED(size);
-	if(!ptr)
-		return;
-	BlockHeader* bh = (BlockHeader*)ptr - 1;
-	memset(ptr, 0, bh->size);
-	free(ptr);
+	zfree(ptr);
 }
 
 void dump_memory_stats(void) {
