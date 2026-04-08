@@ -253,7 +253,7 @@ static void _free(void* ptr, uint8_t type) {
 					page_header->used_slots--;
 				} else {
 					if (global_kernel_config.debug == 1) {
-						logbuf_vwrite(LOG_LEVEL_DEBUG, "[WARN] Pool Underflow/Double Free on bin: ");
+						logbuf_vwrite(LOG_LEVEL_DEBUG, "[ WARN ] Pool Underflow/Double Free on bin: ");
 						logbuf_vputhex64(LOG_LEVEL_DEBUG, bin);
 						logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
 					}
@@ -265,7 +265,7 @@ static void _free(void* ptr, uint8_t type) {
 				pools[i].free_list = node;
 
 				if (global_kernel_config.debug == 1) {
-					logbuf_vwrite(LOG_LEVEL_DEBUG, "[FREE] Pool block (");
+					logbuf_vwrite(LOG_LEVEL_DEBUG, "[ FREE ] Pool block (");
 					logbuf_vputhex64(LOG_LEVEL_DEBUG, bin);
 					logbuf_vwrite(LOG_LEVEL_DEBUG, " bin) returned.\n");
 				}
@@ -284,7 +284,7 @@ static void _free(void* ptr, uint8_t type) {
 		}
 
 		if (global_kernel_config.debug == 1) {
-			logbuf_vwrite(LOG_LEVEL_DEBUG, "[FREE] Reclaiming heap block (Size: ");
+			logbuf_vwrite(LOG_LEVEL_DEBUG, "[ FREE ] Reclaiming heap block (Size: ");
 			logbuf_vputhex64(LOG_LEVEL_DEBUG, block->size);
 			logbuf_vwrite(LOG_LEVEL_DEBUG, ")\n");
 		}
