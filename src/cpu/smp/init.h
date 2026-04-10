@@ -20,10 +20,10 @@ typedef struct {
 	bool dts_support;
 	cpu_thermal_info_t thermal;
 
-	irq_handler_t routines[256];
+	irq_handler_t routines[SMP_MAX_CORES];
 } cpu_control_block_t;
 
-extern cpu_control_block_t cpus[256];
+extern cpu_control_block_t cpus[SMP_MAX_CORES];
 
 void AP_kstartc(struct limine_mp_info *mp);
 int get_idle_core(void);

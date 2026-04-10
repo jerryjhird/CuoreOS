@@ -1,9 +1,15 @@
 # CuoreOS
 Hobby x86-64 ELF Kernel
 
-### Compiling:
+### Configuring
+```
+make menuconfig
+```
+note: if its your first time configuring it will fill out the config for you with the default values
+
+### Compiling: (-Otarget isnt required)
 ```bash
-make -j$(nproc)
+make -j$(nproc) -Otarget
 ```
 
 ### Qemu example:

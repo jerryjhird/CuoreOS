@@ -26,13 +26,15 @@ void ioapic_map_irq(uint8_t irq_pin, uint8_t vector, uint8_t cpu_apic_id, uint32
 	uint32_t low_entry = (uint32_t)vector | flags;
 	ioapic_write(low_index, low_entry);
 
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "[IOAPIC] mapped pin: ");
-	logbuf_vputint(LOG_LEVEL_DEBUG, irq_pin);
-	logbuf_vwrite(LOG_LEVEL_DEBUG, ", vector:");
-	logbuf_vputint(LOG_LEVEL_DEBUG, vector);
-	logbuf_vwrite(LOG_LEVEL_DEBUG, ", flags:");
-	logbuf_vputint(LOG_LEVEL_DEBUG, flags);
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+	#ifdef DEBUG
+		logbuf_write("[IOAPIC] mapped pin: ");
+		logbuf_putint(irq_pin);
+		logbuf_write(", vector:");
+		logbuf_putint(vector);
+		logbuf_write(", flags:");
+		logbuf_putint(flags);
+		logbuf_write("\n");
+	#endif
 }
 
 void ioapic_init(uintptr_t base_addr) {

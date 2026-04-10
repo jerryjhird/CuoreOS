@@ -185,13 +185,15 @@ void* malloc(size_t size) {
 		if (size <= pools[i].block_size && pools[i].free_list) {
 			void* ptr = pools[i].free_list;
 			pools[i].free_list = pools[i].free_list->next;
-			if (global_kernel_config.debug == 1) {
-				logbuf_vwrite(LOG_LEVEL_DEBUG, "[MALLOC] Pool hit (");
-				logbuf_vputhex64(LOG_LEVEL_DEBUG, pools[i].block_size);
-				logbuf_vwrite(LOG_LEVEL_DEBUG, " bin) at ");
-				logbuf_vputhex64(LOG_LEVEL_DEBUG, (uint64_t)ptr);
-				logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
-			}
+
+			#ifdef DEBUG
+				logbuf_write("[MALLOC] Pool hit (");
+				logbuf_puthex64(pools[i].block_size);
+				logbuf_write(" bin) at ");
+				logbuf_puthex64((uint64_t)ptr);
+				logbuf_write("\n");
+			#endif
+
 			BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
 			page_header->used_slots++;
 			return ptr;
@@ -222,13 +224,15 @@ void* malloc(size_t size) {
 			}
 			curr->is_free = false;
 			last_fit = curr;
-			if (global_kernel_config.debug == 1) {
-				logbuf_vwrite(LOG_LEVEL_DEBUG, "[MALLOC] Allocated ");
-				logbuf_vputhex64(LOG_LEVEL_DEBUG, size);
-				logbuf_vwrite(LOG_LEVEL_DEBUG, " bytes at ");
-				logbuf_vputhex64(LOG_LEVEL_DEBUG, (uint64_t)(curr + 1));
-				logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
-			}
+
+			#ifdef DEBUG
+				logbuf_write("[MALLOC] Allocated ");
+				logbuf_puthex64(size);
+				logbuf_write(" bytes at ");
+				logbuf_puthex64((uint64_t)(curr + 1));
+				logbuf_write("\n");
+			#endif
+
 			return (void*)(curr + 1);
 		}
 		curr = curr->next;
@@ -252,11 +256,9 @@ static void _free(void* ptr, uint8_t type) {
 				if (page_header->used_slots > 0) {
 					page_header->used_slots--;
 				} else {
-					if (global_kernel_config.debug == 1) {
-						logbuf_vwrite(LOG_LEVEL_DEBUG, "[ WARN ] Pool Underflow/Double Free on bin: ");
-						logbuf_vputhex64(LOG_LEVEL_DEBUG, bin);
-						logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
-					}
+					logbuf_write("[ WARN ] Pool Underflow/Double Free on bin: ");
+					logbuf_puthex64(bin);
+					logbuf_write("\n");
 					return;
 				}
 
@@ -264,11 +266,11 @@ static void _free(void* ptr, uint8_t type) {
 				node->next = pools[i].free_list;
 				pools[i].free_list = node;
 
-				if (global_kernel_config.debug == 1) {
-					logbuf_vwrite(LOG_LEVEL_DEBUG, "[ FREE ] Pool block (");
-					logbuf_vputhex64(LOG_LEVEL_DEBUG, bin);
-					logbuf_vwrite(LOG_LEVEL_DEBUG, " bin) returned.\n");
-				}
+				#ifdef DEBUG
+					logbuf_write("[ FREE ] Pool block (");
+					logbuf_puthex64(bin);
+					logbuf_write(" bin) returned.\n");
+				#endif
 				return;
 			}
 		}
@@ -278,16 +280,16 @@ static void _free(void* ptr, uint8_t type) {
 		BlockHeader *block = ((BlockHeader*)ptr) - 1;
 
 		if (block->magic != HEAP_MAGIC) {
-			logbuf_vwrite(LOG_LEVEL_DEBUG, "Invalid magic at: ");
-			logbuf_vputhex64(LOG_LEVEL_DEBUG, (uintptr_t)ptr);
+			logbuf_write("Invalid magic at: ");
+			logbuf_puthex64((uintptr_t)ptr);
 			panic("MEMORY CORRUPTION", "Heap header magic mismatch!");
 		}
 
-		if (global_kernel_config.debug == 1) {
-			logbuf_vwrite(LOG_LEVEL_DEBUG, "[ FREE ] Reclaiming heap block (Size: ");
-			logbuf_vputhex64(LOG_LEVEL_DEBUG, block->size);
-			logbuf_vwrite(LOG_LEVEL_DEBUG, ")\n");
-		}
+		#ifdef DEBUG
+			logbuf_write("[ FREE ] Reclaiming heap block (Size: ");
+			logbuf_puthex64(block->size);
+			logbuf_write(")\n");
+		#endif
 
 		block->is_free = true;
 
@@ -335,9 +337,9 @@ void* realloc(void* ptr, size_t new_size) {
 
 		if (new_size <= old_size) return ptr;
 
-		if (global_kernel_config.debug == 1) {
-			logbuf_vwrite(LOG_LEVEL_DEBUG, "[REALLOC] Pool migration\n");
-		}
+		#ifdef DEBUG
+			logbuf_write("[REALLOC] Pool migration\n");
+		#endif
 
 		void* new_p = malloc(new_size);
 		if (new_p) {
@@ -476,7 +478,7 @@ void dump_memory_stats(void) {
 	size_t free_p  = pma_get_free_pages();
 	size_t used_p  = total_p - free_p;
 
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Total pages:	"); logbuf_vputhex64(LOG_LEVEL_DEBUG, total_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Free pages:	 "); logbuf_vputhex64(LOG_LEVEL_DEBUG, free_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
-	logbuf_vwrite(LOG_LEVEL_DEBUG, "[PMA]  Used pages:	 "); logbuf_vputhex64(LOG_LEVEL_DEBUG, used_p); logbuf_vwrite(LOG_LEVEL_DEBUG, "\n");
+	logbuf_write("[PMA]  Total pages:	"); logbuf_puthex64(total_p); logbuf_write("\n");
+	logbuf_write("[PMA]  Free pages:	 "); logbuf_puthex64(free_p); logbuf_write("\n");
+	logbuf_write("[PMA]  Used pages:	 "); logbuf_puthex64(used_p); logbuf_write("\n");
 }

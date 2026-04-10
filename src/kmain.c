@@ -14,11 +14,6 @@
 #include "apic/ioapic.h"
 #include "apic/madt.h"
 #include "pci/pci.h"
-
-#ifdef KERNEL_MODULE_ENABLED_RTL8139
-	#include "pci/drivers/rtl8139.h"
-#endif
-
 #include "pci/drivers/ide.h"
 #include "fs/ramfs.h"
 #include "scheduler.h"
@@ -66,11 +61,7 @@ volatile struct limine_mp_request mp_request = {
 	.revision = 0
 };
 
-kernel_config_t global_kernel_config = {0};
 uint64_t hhdm_offset;
-
-#define FOUND_CONFIG (1ULL << 0)
-#define FOUND_INITRAMFS (1ULL << 1)
 
 pci_driver_entry_t pci_discovery_table[] = {
 	// Intel : i440FX Host Bridge (0x1237)
@@ -88,19 +79,12 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.device_id = 0,
 		.class_id = 0x01, .subclass_id = 0x01,
 		.name = "Generic IDE Controller",
-		.init = ide_init
+		#ifdef KERNEL_MOD_IDE_ENABLED
+			.init = ide_init
+		#else
+			.init = NULL
+		#endif
 	},
-	#ifdef KERNEL_MODULE_ENABLED_RTL8139
-		// Realtek : RTL8139 (0x8139)
-		{
-			.vendor_id = PCI_VENDOR_REALTEK,
-			.device_id = PCI_DEVICE_RTL8139,
-			.class_id = 0, .subclass_id = 0,
-			.name = "Realtek RTL8139 Ethernet",
-			.init = rtl8139_init
-		},
-	#endif
-
 	{ .vendor_id = 0, .device_id = 0, .name = NULL, .init = NULL }
 };
 
@@ -149,7 +133,6 @@ static void uart16550_console_task(void) {
 	}
 }
 
-
 static void idle_task(void) {
 	while (1) {}
 }
@@ -185,7 +168,7 @@ static void kernel_main(void) {
 	// adjust time as needed (can be heavy so we offload it)
 	mailbox_send(get_idle_core(), time_sync, NULL);
 
-	cuorefs_file_t* existing = cuorefs_find_file("boottime");
+	cuorefs_file_t* existing = cuorefs_find_file("boottime"); // contains a safety check if filesystem or disk driver non existent
 
 	if (existing) {
 		if (existing->size >= sizeof(time_t)) {
@@ -198,11 +181,11 @@ static void kernel_main(void) {
 		free(existing->data);
 		free(existing);
 
-		cuorefs_delete_file("boottime");
+		cuorefs_delete_file("boottime"); // contains a safety check if filesystem or disk driver non existent
 	}
 
 	// save the current boot time to filesystem
-	cuorefs_add_file("boottime", &current_boot, sizeof(time_t));
+	cuorefs_add_file("boottime", &current_boot, sizeof(time_t)); // contains a safety check if filesystem or disk driver non existent
 
 	logbuf_write("[ BOOT ] Time it took to boot (ms): "); logbuf_putint(hpet_get_ms()); logbuf_write("\n");
 
@@ -257,25 +240,9 @@ void _kstartc(void) {
 	idt_init();
 
 	if (module_request.response->module_count <= 0) {
-		logbuf_write("[WARN] initramfs not found. defaulting to hardcoded config\n");
-		global_kernel_config.magic = HARDCODED_CONFIG_MAGIC;
-		global_kernel_config.epoch = 1774460058;
-		global_kernel_config.debug = 1;
-		global_kernel_config.flanterm_is_debug_interface = 0;
-		global_kernel_config.uart16550_is_debug_interface = 1;
+		logbuf_write("[WARN] initramfs not found.\n");
 	} else {
 		initramfs = ramfs_init(module_request.response->modules[0]->address);
-		ramfs_file_t config = ramfs_get_file(&initramfs, "cuore.conf.bin");
-		if (config.data != NULL && config.size >= sizeof(kernel_config_t)) {
-			kernel_config_t *ptr = (kernel_config_t *)config.data;
-			if (ptr->magic == CONFIG_MAGIC) {
-				global_kernel_config = *ptr;
-			} else {
-				panic("CONFIG ERROR", "invalid kernel config magic number");
-			}
-		} else {
-			panic("CONFIG ERROR", "kernel config not found or invalid");
-		}
 	}
 
 	pma_init();

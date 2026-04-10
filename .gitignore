@@ -8,6 +8,7 @@ cache
 
 # temp dev stuff
 *tmp*
+Config.mk
 
 # github slop
 .github/

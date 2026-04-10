@@ -1,3 +1,6 @@
+typedef int dummy0; // satisfy ISO C / -Wpedantic
+
+#ifdef KERNEL_MOD_IDE_ENABLED
 #include "devices.h"
 #include "devices.h"
 #include "pci/pci.h"
@@ -116,3 +119,4 @@ void ide_init(pci_dev_t pdev) {
 	disk_devices[disk_devices_c++] = &ide_output_dev;
 	generic_disk_init(&ide_output_dev);
 }
+#endif

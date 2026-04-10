@@ -46,8 +46,6 @@ kernel_char_dev_t uart16550_dev = {
 
 void uart16550_init(void) {
 	char_devices[char_devices_c++] = &uart16550_dev;
-	if (global_kernel_config.uart16550_is_debug_interface) {BIT_SET(uart16550_dev.DevCAP, CHAR_DEV_CAP_ON_DEBUG);}
-
 	rx_read_ptr = 0; rx_write_ptr = 0;
 	irq_install_handler(lapic_get_id(), 36, uart16550_irq_handler);
 

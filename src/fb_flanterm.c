@@ -22,7 +22,6 @@ kernel_char_dev_t flanterm_dev = {
 
 void _c_flanterm_init(struct limine_framebuffer *fb) {
 	char_devices[char_devices_c++] = &flanterm_dev;
-	if (global_kernel_config.flanterm_is_debug_interface) {BIT_SET(flanterm_dev.DevCAP, CHAR_DEV_CAP_ON_DEBUG);}
 
 	ft_ctx = flanterm_fb_init(
 		malloc,

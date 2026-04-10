@@ -11,8 +11,8 @@
 #include "init.h"
 
 static spinlock_t temp_spinlock = SPINLOCK_INIT;
-cpu_control_block_t cpus[256];
-cpu_control_block_t* online_cpus[256];
+cpu_control_block_t cpus[SMP_MAX_CORES];
+cpu_control_block_t* online_cpus[SMP_MAX_CORES];
 volatile uint64_t online_cpu_index = 0;
 
 static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
