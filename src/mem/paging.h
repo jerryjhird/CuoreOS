@@ -14,19 +14,19 @@
 #define PTE_NX (1ULL << 63)// No Execute
 
 // custom PTE attributes
-#define PTE_STATE_NOINFO 0      // 0 (000)
+#define PTE_STATE_NOINFO 0	  // 0 (000)
 #define PTE_STATE_HEAP_BLOCK 1  // 1 (001)
 #define PTE_STATE_HEAP_POOL 2   // 2 (010)
-#define PTE_STATE_DRIVER 3      // 3 (011)
+#define PTE_STATE_DRIVER 3	  // 3 (011)
 #define PTE_STATE_RESERVED0 4   // 4 (100)
 #define PTE_STATE_RESERVED1 5   // 5 (101)
 #define PTE_STATE_RESERVED2 6   // 6 (110)
 #define PTE_STATE_RESERVED3 7   // 7 (111)
 
-#define PTE_TYPE_NOINFO (0ULL << 9)     // Bit 11=0 | Bit 10=0 | Bit 9=0
+#define PTE_TYPE_NOINFO (0ULL << 9)	 // Bit 11=0 | Bit 10=0 | Bit 9=0
 #define PTE_TYPE_HEAP_BLOCK (1ULL << 9) // Bit 11=0 | Bit 10=0 | Bit 9=1
 #define PTE_TYPE_HEAP_POOL (2ULL << 9)  // Bit 11=0 | Bit 10=1 | Bit 9=0
-#define PTE_TYPE_DRIVER (3ULL << 9)     // Bit 11=0 | Bit 10=1 | Bit 9=1
+#define PTE_TYPE_DRIVER (3ULL << 9)	 // Bit 11=0 | Bit 10=1 | Bit 9=1
 #define PTE_TYPE_RESERVED0 (4ULL << 9)  // Bit 11=1 | Bit 10=0 | Bit 9=0
 #define PTE_TYPE_RESERVED1 (5ULL << 9)  // Bit 11=1 | Bit 10=0 | Bit 9=1
 #define PTE_TYPE_RESERVED2 (6ULL << 9)  // Bit 11=1 | Bit 10=1 | Bit 9=0
