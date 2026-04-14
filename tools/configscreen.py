@@ -18,9 +18,14 @@ config_groups = {
         "additional_cflags": "",
         "additional_ldflags": ""
     },
+    "booting": {
+        "mdname": "Booting",
+        "uefi_support": "true",
+        "bios_support": "true",
+    },
     "modules": {
         "mdname": "Modules",
-        "module_ide": "true"
+        "ide_support": "true"
     },
     "devices": {
         "mdname": "Devices",

@@ -17,7 +17,7 @@ FLANTERM_URL := $(strip $(CONFIG_FLANTERM))
 FLANTERM_FLAGS := $(strip $(CONFIG_FLANTERM_FLAGS))
 ADD_CFLAGS := $(strip $(CONFIG_ADDITIONAL_CFLAGS))
 ADD_LDFLAGS := $(strip $(CONFIG_ADDITIONAL_LDFLAGS))
-QEMU_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
+QEMU_UEFI_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
 
 SRCDIR   := src
 BUILDDIR := build
@@ -56,7 +56,7 @@ ifeq ($(CONFIG_PROFILE),debug)
     CFLAGS += -DDEBUG
 endif
 
-ifeq ($(CONFIG_MODULE_IDE),true)
+ifeq ($(CONFIG_IDE_SUPPORT),true)
     CFLAGS += -DKERNEL_MOD_IDE_ENABLED
 endif
 
@@ -78,7 +78,7 @@ print_config:
 
 menuconfig:
 	@python3 $(TOOLS)/configscreen.py $(CUOREOS_VERSION_NAME)
-	@echo -e "it is recommended to run 'make clean' before regenerating the build config"
+	@echo -e "it is recommended to run 'make clean' after regenerating the config"
 
 deps_setup:
 	@mkdir -p $(FLANTERM_DIR) $(LIMINE_DIR)
@@ -88,6 +88,8 @@ deps_setup:
 	@if [ ! -d "$(LIMINE_DIR)/.git" ]; then \
 		git clone $(LIMINE_FLAGS) $(LIMINE_URL) $(LIMINE_DIR); \
 	fi
+
+	make -C $(LIMINE_DIR)
 
 compile_commands.json: $(C_SRCS) $(ASM_SRCS) $(TOOL_SRCS) $(FORCE_REBUILD)
 	@echo "Generating compile_commands.json"
@@ -113,7 +115,6 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.S $(FORCE_REBUILD)
 	@echo " [ $(CC) ] $<"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-# --- Tools & Assets ---
 $(BUILDDIR)/$(TOOLS)/mkramfs: $(TOOLS)/mkramfs.c
 	@mkdir -p $(dir $@)
 	@echo " [ $(CC) ] [ TOOL ] $<"
@@ -135,25 +136,40 @@ $(KERNEL_ELF): $(OBJS)
 $(BOOT_ISO): $(KERNEL_ELF) $(INITRD)
 	@echo " [ISO] Generating $@"
 	@rm -rf $(ISO_ROOT)
-	@mkdir -p $(ISO_ROOT)/EFI/BOOT $(ISO_ROOT)/boot
-	@cp $(LIMINE_DIR)/BOOTX64.EFI $(ISO_ROOT)/EFI/BOOT/
-	@cp $(LIMINE_DIR)/limine-uefi-cd.bin $(ISO_ROOT)/boot/
+	@mkdir -p $(ISO_ROOT)/boot
 	@cp $(KERNEL_ELF) $(ISO_ROOT)/kernel.elf
 	@cp $(INITRD) $(ISO_ROOT)/boot/initrd.img
 	@cp limine.conf $(ISO_ROOT)/limine.conf
-	@xorriso -as mkisofs -R -J -pad -efi-boot-part --efi-boot-image --efi-boot boot/limine-uefi-cd.bin -no-emul-boot -o $@ $(ISO_ROOT) > /dev/null 2>&1
+	
+	$(eval XORRISO_FLAGS := -as mkisofs -R -J -pad -V "CUOREOS")
 
--include $(DEPS)
+ifeq ($(CONFIG_BIOS_SUPPORT),true)
+	@cp $(LIMINE_DIR)/limine-bios.sys $(LIMINE_DIR)/limine-bios-cd.bin $(ISO_ROOT)/boot/
+	$(eval XORRISO_FLAGS += -b boot/limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table)
+endif
 
-run:
-	qemu-system-x86_64 -machine pc \
-	-smp 6 \
-	-bios $(QEMU_FIRMWARE) \
-	-drive file="$(DISK_IMG)",format=raw,index=0,media=disk \
-	-cdrom $(BOOT_ISO) \
-	-m 256M \
-	-serial stdio \
-	-netdev user,id=u1
+ifeq ($(CONFIG_UEFI_SUPPORT),true)
+	@mkdir -p $(ISO_ROOT)/EFI/BOOT
+	@cp $(LIMINE_DIR)/limine-uefi-cd.bin $(ISO_ROOT)/boot/
+	@cp $(LIMINE_DIR)/BOOTX64.EFI $(ISO_ROOT)/EFI/BOOT/
+	$(eval XORRISO_FLAGS += --efi-boot boot/limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label)
+endif
+
+	@xorriso $(XORRISO_FLAGS) $(ISO_ROOT) -o $@ > /dev/null 2>&1
+
+ifeq ($(CONFIG_BIOS_SUPPORT),true)
+	@$(LIMINE_DIR)/limine bios-install $@
+endif
+
+run: uefi-run
+
+GENERIC_QEMU_CFLAGS = -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -drive file="$(DISK_IMG)",format=raw,index=0,media=disk -machine pc
+
+uefi-run:
+	qemu-system-x86_64 -bios $(QEMU_UEFI_FIRMWARE) $(GENERIC_QEMU_CFLAGS)
+
+bios-run:
+	qemu-system-x86_64 $(GENERIC_QEMU_CFLAGS)
 
 format:
 	./format src/
