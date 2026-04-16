@@ -90,10 +90,12 @@ void scheduler_yield(void) {
 
 void scheduler_init() {
 	task_t* ktask = (task_t*)zalloc(sizeof(task_t));
-
-	current_task = ktask;
+	ktask->upid = 0;
 	ktask->next = ktask;
 	ktask->prev = ktask;
 
+	__asm__ volatile ("cli");
+	current_task = ktask;
 	irq_install_handler(lapic_get_id(), 32, scheduler_timer_handler);
+	__asm__ volatile ("sti");
 }
