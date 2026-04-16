@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define PAGE_SIZE 4096
+
 char *strncpy(char *dest, const char *src, size_t n);
 int strncmp(const char *s1, const char *s2, size_t n);
 int strcmp(const char *s1, const char *s2);

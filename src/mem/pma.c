@@ -7,8 +7,6 @@
 #include "kstate.h"
 #include "mem.h" // IWYU pragma: keep
 
-#define PMA_PAGE_SIZE 4096
-
 static uint8_t *pma_bitmap = NULL;
 static size_t pma_total_pages = 0;
 static size_t pma_bitmap_bytes = 0;
@@ -43,11 +41,11 @@ void pma_init(void) {
 		if (end > max_phys) max_phys = end;
 	}
 
-	pma_total_pages = max_phys / PMA_PAGE_SIZE;
+	pma_total_pages = max_phys / PAGE_SIZE;
 	pma_bitmap_bytes = (pma_total_pages + 7) / 8;
 
-	size_t bitmap_pages = (pma_bitmap_bytes + PMA_PAGE_SIZE - 1) / PMA_PAGE_SIZE;
-	size_t bitmap_reserved_bytes = bitmap_pages * PMA_PAGE_SIZE;
+	size_t bitmap_pages = (pma_bitmap_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+	size_t bitmap_reserved_bytes = bitmap_pages * PAGE_SIZE;
 
 	for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
 		struct limine_memmap_entry *e = memmap_request.response->entries[i];
@@ -66,8 +64,8 @@ void pma_init(void) {
 	for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
 		struct limine_memmap_entry *e = memmap_request.response->entries[i];
 		if (e->type == LIMINE_MEMMAP_USABLE) {
-			for (uintptr_t addr = e->base; addr < e->base + e->length; addr += PMA_PAGE_SIZE) {
-				size_t page_idx = addr / PMA_PAGE_SIZE;
+			for (uintptr_t addr = e->base; addr < e->base + e->length; addr += PAGE_SIZE) {
+				size_t page_idx = addr / PAGE_SIZE;
 				if (page_idx < pma_total_pages) {
 					bit_clear(page_idx);
 					pma_free_pages_count++; // Increment the fast counter
@@ -96,7 +94,7 @@ uintptr_t pma_alloc_pages(size_t count) {
 				}
 
 				last_pma_index = (start_bit + count) % pma_total_pages;
-				return (uintptr_t)(start_bit * PMA_PAGE_SIZE);
+				return (uintptr_t)(start_bit * PAGE_SIZE);
 			}
 		} else {
 			consecutive_found = 0;
@@ -109,7 +107,7 @@ uintptr_t pma_alloc_pages(size_t count) {
 uintptr_t pma_alloc_page(void) { return pma_alloc_pages(1); }
 
 void pma_free_pages(uintptr_t phys, size_t count) {
-	size_t start_bit = phys / PMA_PAGE_SIZE;
+	size_t start_bit = phys / PAGE_SIZE;
 	for (size_t i = 0; i < count; i++) bit_clear(start_bit + i);
 }
 
