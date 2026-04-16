@@ -1,5 +1,6 @@
 #include "logbuf.h"
 #include "kstate.h"
+#include "mem/mem.h"
 #include "sync.h"
 #include "mailbox.h"
 #include "apic/lapic.h"

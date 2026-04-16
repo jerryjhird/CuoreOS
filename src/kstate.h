@@ -15,11 +15,6 @@
 
 void panic(const char* header_msg, const char* msg);
 
-#ifndef HHDM_OFFSET_SET
-extern uint64_t hhdm_offset;
-#define HHDM_OFFSET_SET
-#endif
-
 extern volatile struct limine_memmap_request memmap_request;
 extern volatile struct limine_framebuffer_request framebuffer_request;
 extern volatile struct limine_rsdp_request rsdp_request;

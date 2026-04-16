@@ -4,8 +4,9 @@
 #include "cpu/IRQ.h"
 #include <stddef.h>
 #include "mem/pma.h"
-#include "mem/heap.h" // IWYU pragma: keep
+#include "mem/heap.h"
 #include "kstate.h"
+#include "mem/mem.h"
 #include <string.h>
 
 task_t *current_task = NULL;
