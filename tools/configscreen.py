@@ -39,7 +39,7 @@ config_groups = {
     "sources": {
         "mdname": "Download Sources",
         "limine": "https://github.com/Limine-Bootloader/Limine.git",
-        "limine_flags": "--depth=1 --branch v10.x-binary",
+        "limine_flags": "--depth=1 --branch v11.x-binary",
         "flanterm": "https://github.com/Mintsuki/Flanterm.git",
         "flanterm_flags": "--depth=1"
     }
