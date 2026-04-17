@@ -145,26 +145,43 @@ static void kernel_main(void) {
 
 	time_init();
 
- 	if (mp_response->cpu_count < 2) {
+	uint64_t cores_to_boot = mp_response->cpu_count;
+	if (cores_to_boot > SMP_MAX_CORES) {
+		cores_to_boot = SMP_MAX_CORES;
+	}
+
+	if (mp_response->cpu_count < 2) {
 		logbuf_write("[ SMP  ] Only 1 CPU detected\n");
-		logbuf_write("[ SMP  ] Starting kernel in single-core mode\n\n");
 	} else {
-		logbuf_write("[ SMP  ] Multiple processor's found\n");
+		logbuf_write("[ SMP  ] Multiple processors found\n");
+
+		if (mp_response->cpu_count > SMP_MAX_CORES) {
+			logbuf_write("[ WARN ] the config used to compile this kernel limits usage to ");
+			logbuf_putint(SMP_MAX_CORES);
+			logbuf_write(" of ");
+			logbuf_putint(mp_response->cpu_count);
+			logbuf_write(" available cores.\n[ WARN ] ");
+			logbuf_putint(mp_response->cpu_count - SMP_MAX_CORES);
+			logbuf_write(" cores will remain inactive.\n");
+		}
 
 		for (uint64_t i = 0; i < mp_response->cpu_count; i++) {
 			struct limine_mp_info *cpu = mp_response->cpus[i];
-
-			void* ap_stack = malloc(AP_STACK_SIZE);
-			cpu->extra_argument = (uint64_t)ap_stack + AP_STACK_SIZE;
 
 			if (cpu->lapic_id == mp_response->bsp_lapic_id) {
 				continue;
 			}
 
+			if (i >= cores_to_boot) {
+				continue;
+			}
+
+			void* ap_stack = malloc(AP_STACK_SIZE);
+			cpu->extra_argument = (uint64_t)ap_stack + AP_STACK_SIZE;
 			cpu->goto_address = AP_kentry;
 		}
 
-		while (online_cpu_index < mp_response->cpu_count) {
+		while (__atomic_load_n(&online_cpu_index, __ATOMIC_ACQUIRE) < cores_to_boot) {
 			__asm__ volatile("pause");
 		}
 	}
