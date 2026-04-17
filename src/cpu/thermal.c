@@ -1,9 +1,9 @@
 #include "thermal.h"
 #include "MSR.h"
-#include "apic/lapic.h"
+#include "apic/cpuid.h"
 
-cpu_thermal_info_t thermal_read(void) {
-	cpu_thermal_info_t info = {0};
+thermal_info_t thermal_read(void) {
+	thermal_info_t info = {0};
 
 	uint64_t target_reg = read_msr(MSR_IA32_TEMPERATURE_TARGET);
 	uint32_t tj_max = (target_reg >> 16) & 0xFF;
@@ -21,16 +21,14 @@ cpu_thermal_info_t thermal_read(void) {
 bool does_cpu_support_dts(void) {
 	uint32_t eax, ebx, ecx, edx;
 
-	__asm__ volatile ("cpuid"
-					  : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-					  : "a"(6));
+	CPUID(CPUID_LEAF_THERMAL_POWER, 0, eax, ebx, ecx, edx);
 
-	if (!(eax & 0x01)) {
+	if (!(eax & CPUID_DTS_SUPPORTED)) {
 		// CPU doesnt support DTS
 		return false;
 	}
 
-	if (eax & 0x04) {
+	if (eax & CPUID_ARAT_SUPPORTED) {
 		// APIC timer is reliable in all power states
 	}
 

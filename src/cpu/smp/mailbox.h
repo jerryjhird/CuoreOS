@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef void (*mailbox_func_t)(void *data);
+typedef void (*mailbox_func_t)(void);
 
 typedef struct {
 	mailbox_func_t func;

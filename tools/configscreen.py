@@ -34,6 +34,7 @@ config_groups = {
     },
     "multicore": {
         "mdname": "Symmetric Multiprocessing",
+        "ap_stack_size": "16384",
         "max_cores": "255"
     },
     "sources": {

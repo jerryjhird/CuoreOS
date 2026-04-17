@@ -1,10 +1,8 @@
 #include "_time.h"
-#include "sync.h"
 #include <stdint.h>
 #include "devices.h"
 #include "drivers/RTC.h"
 #include "drivers/HPET.h"
-#include "kstate.h"
 
 static time_t boot_epoch = 0;
 static uint64_t boot_hpet_ticks = 0;
@@ -38,8 +36,8 @@ static time_t get_epoch_rtc(void) {
 	return (total_days * 86400) + (h * 3600) + (m * 60) + s;
 }
 
-void time_sync(void *data) {
-	UNUSED(data);
+// adjust RTC using HPET
+void time_sync(void) {
 	int start_sec, m, h, d, mo, y;
 	read_rtc(&start_sec, &m, &h, &d, &mo, &y);
 	int current_sec = start_sec;
@@ -52,15 +50,12 @@ void time_sync(void *data) {
 	boot_hpet_ticks = hpet_get_ticks();
 	boot_epoch = get_epoch_rtc();
 
-	SPIN_LOCK(&uart_spinlock);
 	dev_puts(&uart16550_dev, "[ TIME ] Time synced\n");
-	SPIN_UNLOCK(&uart_spinlock);
 }
 
-void time_init(bool sync_now) {
+void time_init(void) {
 	boot_hpet_ticks = hpet_get_ticks();
 	boot_epoch = get_epoch_rtc();
-	if (sync_now) { time_sync(NULL); }
 }
 
 time_t get_epoch(void) {

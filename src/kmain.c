@@ -137,25 +137,30 @@ static void idle_task(void) {
 	while (1) {}
 }
 
+extern void AP_kentry(struct limine_mp_info *mp);
+
 static void kernel_main(void) {
 	struct limine_mp_response *mp_response = mp_request.response;
 
-	time_init(mp_response->cpu_count < 2); // if single core sync now
+	time_init();
 
  	if (mp_response->cpu_count < 2) {
-		logbuf_write("[ CPU  ] Only 1 CPU detected\n");
-		logbuf_write(" + [ CPU  ] Starting kernel in single-core mode\n\n");
+		logbuf_write("[ SMP  ] Only 1 CPU detected\n");
+		logbuf_write("[ SMP  ] Starting kernel in single-core mode\n\n");
 	} else {
 		logbuf_write("[ SMP  ] Multiple processor's found\n");
 
 		for (uint64_t i = 0; i < mp_response->cpu_count; i++) {
 			struct limine_mp_info *cpu = mp_response->cpus[i];
 
+			void* ap_stack = malloc(AP_STACK_SIZE);
+			cpu->extra_argument = (uint64_t)ap_stack + AP_STACK_SIZE;
+
 			if (cpu->lapic_id == mp_response->bsp_lapic_id) {
 				continue;
 			}
 
-			cpu->goto_address = AP_kstartc;
+			cpu->goto_address = AP_kentry;
 		}
 
 		while (online_cpu_index < mp_response->cpu_count) {
@@ -163,38 +168,13 @@ static void kernel_main(void) {
 		}
 	}
 
-	time_t current_boot = get_epoch();
-
-	// adjust time as needed (can be heavy so we offload it)
-	mailbox_send(get_idle_core(), time_sync, NULL);
-
-	cuorefs_file_t* existing = cuorefs_find_file("boottime"); // contains a safety check if filesystem or disk driver non existent
-
-	if (existing) {
-		if (existing->size >= sizeof(time_t)) {
-			time_t old_epoch = *(time_t*)existing->data;
-			logbuf_write("[ BOOT ] last logged in: ");
-			logbuf_putint(old_epoch);
-			logbuf_write("\n");
-		}
-
-		free(existing->data);
-		free(existing);
-
-		cuorefs_delete_file("boottime"); // contains a safety check if filesystem or disk driver non existent
-	}
-
-	// save the current boot time to filesystem
-	cuorefs_add_file("boottime", &current_boot, sizeof(time_t)); // contains a safety check if filesystem or disk driver non existent
-
 	logbuf_write("[ BOOT ] Time it took to boot (ms): "); logbuf_putint(hpet_get_ms()); logbuf_write("\n");
-
-	SPIN_LOCK(&uart_spinlock);
 	logbuf_flush(&uart16550_dev);
-	SPIN_UNLOCK(&uart_spinlock);
-
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
+
+	// commented out until we can fully implement working SMP
+	// mailbox_send(get_idle_core(), time_sync, NULL);
 
 	scheduler_init();
 	scheduler_create_task(uart16550_console_task, 1);
@@ -219,40 +199,36 @@ void _kstartc(void) {
 	madt_init();
 	hpet_init();
 
+	// lapic stuff
 	lapic_init(madt_get_lapic_base() + hhdm_offset);
-
-	uint8_t my_id = (uint8_t)lapic_get_id();
-	cpu_control_block_t *my_cpu = &cpus[my_id];
-
-	my_cpu->dts_support = does_cpu_support_dts();
-	my_cpu->lapic_id = my_id;
-
-	if (my_cpu->dts_support) {
-		my_cpu->thermal = thermal_read();
-	}
-
-	my_cpu->status = CPU_BUSY; // bsp is always busy
-
-	online_cpus[online_cpu_index] = my_cpu;
-	__atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
+	uint8_t hardware_id = (uint8_t)lapic_get_id();
 
 	gdt_init();
 	idt_init();
-
-	if (module_request.response->module_count <= 0) {
-		logbuf_write("[WARN] initramfs not found.\n");
-	} else {
-		initramfs = ramfs_init(module_request.response->modules[0]->address);
-	}
-
 	pma_init();
-	uart16550_init();
-
-	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
 
 	uintptr_t phys_addr = pma_alloc_pages(HEAP_PAGES); // 256 pages = 1MB
 	void* virt_addr = (void*)(phys_addr + hhdm_req.response->offset);
 	heap_init(virt_addr, HEAP_SIZE);
+
+	int idx = __atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
+	cpu_control_block_t *my_cpu = zalloc(sizeof(cpu_control_block_t));
+	logical_indexed_cpu_list[idx] = my_cpu;
+	my_cpu->self = my_cpu;
+
+	__asm__ volatile ("wrmsr" : : "c"(0xC0000101), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32)));
+
+	my_cpu->logical_id = idx;
+	my_cpu->lapic_id = hardware_id;
+	my_cpu->ticks = 1;
+	my_cpu->dts_support = does_cpu_support_dts();
+	my_cpu->status = CPU_BUSY; // BSP is already working
+
+	if (my_cpu->dts_support) {my_cpu->thermal = thermal_read();}
+	my_cpu->status = CPU_BUSY; // bsp is always busy
+
+	uart16550_init();
+	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
 
 	pci_init();
 	logbuf_flush(&uart16550_dev);

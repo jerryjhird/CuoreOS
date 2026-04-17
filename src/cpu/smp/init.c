@@ -1,6 +1,10 @@
+// offloading work to cores is still heavily under development and can be unstable.
+// tho as of now AP initalization is functional and used
+
 #include "logbuf.h"
 #include "kstate.h"
 #include "mem/mem.h"
+#include "mem/heap.h"
 #include "sync.h"
 #include "mailbox.h"
 #include "apic/lapic.h"
@@ -10,10 +14,10 @@
 #include "apic/madt.h"
 #include <stdint.h>
 #include "init.h"
+#include "cpu/MSR.h"
 
 static spinlock_t temp_spinlock = SPINLOCK_INIT;
-cpu_control_block_t cpus[SMP_MAX_CORES];
-cpu_control_block_t* online_cpus[SMP_MAX_CORES];
+cpu_control_block_t *logical_indexed_cpu_list[SMP_MAX_CORES];
 volatile uint64_t online_cpu_index = 0;
 
 static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
@@ -22,8 +26,7 @@ static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
 }
 
 static struct trap_frame* clock_tick_irq(struct trap_frame *tf) {
-	uint8_t my_id = (uint8_t)lapic_get_id();
-	cpu_control_block_t *my_cpu = &cpus[my_id];
+	cpu_control_block_t *my_cpu; GET_CURRENT_CPU(my_cpu);
 
 	my_cpu->ticks++;
 
@@ -36,28 +39,45 @@ static struct trap_frame* clock_tick_irq(struct trap_frame *tf) {
 
 __attribute__((noinline))
 void AP_kstartc(struct limine_mp_info *mp) {
+	uint64_t sp; __asm__ volatile("mov %%rsp, %0" : "=r"(sp));
+
 	gdt_init();
 	idt_init();
 
 	lapic_init(madt_get_lapic_base() + hhdm_offset);
-	uint8_t my_id = (uint8_t)mp->lapic_id;
 
-	irq_install_handler(my_id, 40, ipi_wakeup_irq);
-	irq_install_handler(my_id, 32, clock_tick_irq);
-
-	cpu_control_block_t *my_cpu = &cpus[my_id];
-	my_cpu->lapic_id = my_id;
-	my_cpu->ticks = 1;
-	my_cpu->dts_support = does_cpu_support_dts();
+	static volatile int next_id = 1;
+	int logical_id = __atomic_fetch_add(&next_id, 1, __ATOMIC_SEQ_CST);
 
 	SPIN_LOCK(&temp_spinlock);
-	logbuf_write("+ [ SMP  ] CPU ");
-	logbuf_puthex(my_id);
-	logbuf_write(" Online\n");
+	cpu_control_block_t *my_cpu = zalloc(sizeof(cpu_control_block_t));
 	SPIN_UNLOCK(&temp_spinlock);
 
-	int idx = __atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
-	online_cpus[idx] = my_cpu;
+	logical_indexed_cpu_list[logical_id] = my_cpu;
+	my_cpu->self = my_cpu;
+
+	__asm__ volatile ("wrmsr" : : "c"(MSR_GS_BASE), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32))); 	// store a pointer to this CPU block in GS base
+
+	my_cpu->logical_id = logical_id;
+	my_cpu->lapic_id = (uint8_t)mp->lapic_id;;
+	my_cpu->ticks = 1;
+	my_cpu->dts_support = does_cpu_support_dts();
+	if (my_cpu->dts_support) {my_cpu->thermal = thermal_read();}
+
+	irq_install_handler(logical_id, 40, ipi_wakeup_irq);
+	irq_install_handler(logical_id, 32, clock_tick_irq);
+
+	SPIN_LOCK(&temp_spinlock);
+	logbuf_write("[ SMP  ] Core ");
+	logbuf_putint(logical_id);
+	logbuf_write(" Initialized = lapic: ");
+	logbuf_putint((uint8_t)mp->lapic_id);
+	logbuf_write(" | sp: ");
+	logbuf_puthex64(sp);
+	logbuf_write("\n");
+	SPIN_UNLOCK(&temp_spinlock);
+
+	__atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
 
 	while (1) {
 		wait_for_work:
@@ -68,7 +88,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 			my_cpu->status = CPU_BUSY;
 
 			if (my_cpu->mailbox.func) {
-				my_cpu->mailbox.func(my_cpu->mailbox.data);
+				my_cpu->mailbox.func();
 			}
 
 			__atomic_store_n(&my_cpu->mailbox.pending, false, __ATOMIC_RELEASE);
@@ -79,17 +99,15 @@ void AP_kstartc(struct limine_mp_info *mp) {
 
 // find a free cpu
 int get_idle_core(void) {
-	uint8_t self = (uint8_t)lapic_get_id();
+	cpu_control_block_t *self; GET_CURRENT_CPU(self);
 	uint64_t count = __atomic_load_n(&online_cpu_index, __ATOMIC_ACQUIRE);
 
 	for (uint64_t i = 0; i < count; i++) {
-		cpu_control_block_t* cpu = online_cpus[i];
-
-		if (cpu == NULL) continue;
-		if (cpu->lapic_id == self) continue;
+		cpu_control_block_t *cpu = logical_indexed_cpu_list[i];
+		if (cpu == self) continue;
 
 		if (cpu->status == CPU_IDLE && !cpu->mailbox.pending) {
-			return (int)cpu->lapic_id;
+			return i;
 		}
 	}
 	return -1;

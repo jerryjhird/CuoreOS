@@ -3,6 +3,7 @@
 #include "apic/lapic.h"
 #include "cpu/IRQ.h"
 #include <stddef.h>
+#include "cpu/smp/init.h"
 #include "mem/pma.h"
 #include "mem/heap.h"
 #include "kstate.h"
@@ -58,6 +59,7 @@ task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid
 	new_task->rsp = (uint64_t)frame;
 
 	// enroll task
+	__asm__ volatile ("cli");
 	if (current_task == NULL) {
 		current_task = new_task;
 		new_task->next = new_task;
@@ -69,6 +71,7 @@ task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid
 		new_task->next = current_task;
 		current_task->prev = new_task;
 	}
+	__asm__ volatile ("sti");
 
 	return new_task;
 }
@@ -89,13 +92,8 @@ void scheduler_yield(void) {
 }
 
 void scheduler_init() {
-	task_t* ktask = (task_t*)zalloc(sizeof(task_t));
-	ktask->upid = 0;
-	ktask->next = ktask;
-	ktask->prev = ktask;
-
-	__asm__ volatile ("cli");
-	current_task = ktask;
-	irq_install_handler(lapic_get_id(), 32, scheduler_timer_handler);
-	__asm__ volatile ("sti");
+	current_task = NULL;
+	cpu_control_block_t *my_cpu;
+	GET_CURRENT_CPU(my_cpu);
+	irq_install_handler(my_cpu->logical_id, 32, scheduler_timer_handler);
 }

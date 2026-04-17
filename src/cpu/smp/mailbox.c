@@ -1,3 +1,6 @@
+// offloading work to cores is still heavily under development and can be unstable.
+// tho as of now AP initalization is functional and used
+
 #include "mailbox.h"
 #include "apic/lapic.h"
 #include <stdint.h>
@@ -5,8 +8,8 @@
 #include "init.h"
 
 // send to a specific cpu
-void mailbox_send(uint8_t cpu_id, mailbox_func_t func, void *data) {
-	cpu_control_block_t *target = &cpus[cpu_id];
+void mailbox_send(uint8_t logical_id, mailbox_func_t func, void *data) {
+	cpu_control_block_t *target = logical_indexed_cpu_list[logical_id];
 
 	while (__atomic_load_n(&target->mailbox.pending, __ATOMIC_ACQUIRE)) {
 		__asm__ volatile("pause");
@@ -16,14 +19,19 @@ void mailbox_send(uint8_t cpu_id, mailbox_func_t func, void *data) {
 	target->mailbox.data = data;
 
 	__atomic_store_n(&target->mailbox.pending, true, __ATOMIC_RELEASE);
-	lapic_send_ipi(cpu_id, 0x40);
+
+	lapic_send_ipi(target->lapic_id, 40);
 }
 
 // send to everyone
 void mailman_send(mailbox_func_t func, void *data) {
+	cpu_control_block_t *self; GET_CURRENT_CPU(self);
+
 	for (uint8_t i = 0; i < online_cpu_index; i++) {
-		if (i == (uint8_t)lapic_get_id()) continue;
+		if (i == self->logical_id) continue;
+
 		mailbox_send(i, func, data);
 	}
-	func(data);
+
+	func();
 }

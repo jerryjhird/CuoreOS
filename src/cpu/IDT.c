@@ -46,6 +46,7 @@ void exception_main(struct trap_frame *tf, const char *description) {
 
 	char buf[32];
 	const char *labels[] = {
+		"CR2", "CR3", "CR4", "DS ", "ES ", "FS ", "GS ",
 		"R15", "R14", "R13", "R12", "R11", "R10", "R9 ", "R8 ",
 		"RBP", "RDI", "RSI", "RDX", "RCX", "RBX", "RAX",
 		"ERR", "RIP", "CS ", "FLG", "RSP", "SS "
@@ -67,21 +68,17 @@ void exception_main(struct trap_frame *tf, const char *description) {
 
 			uint64_t *raw_data = (uint64_t*)tf;
 
-			for (int j = 0; j < 21; j++) {
+			for (int j = 0; j < 28; j++) {
 				dev_puts(dev, labels[j]);
 				dev_puts(dev, ": 0x");
 
 				ptrthex(buf, raw_data[j]);
 				dev_puts(dev, buf);
 
-				if (j >= 15 || j % 2 == 1) {
-					dev->putc('\n');
-				} else {
-					dev_puts(dev, "  ");
+				dev->putc('\n');
 				}
 			}
 		}
-	}
 
 	for(;;) {
 		__asm__ volatile ("hlt");
@@ -99,6 +96,14 @@ void exception_main(struct trap_frame *tf, const char *description) {
 			"pushq %%rsi\n\t pushq %%rdi\n\t pushq %%rbp\n\t pushq %%r8\n\t"  \
 			"pushq %%r9\n\t  pushq %%r10\n\t pushq %%r11\n\t pushq %%r12\n\t" \
 			"pushq %%r13\n\t pushq %%r14\n\t pushq %%r15\n\t" \
+			"xorq %%rax, %%rax\n\t" \
+			"movw %%gs, %%ax\n\t pushq %%rax\n\t" \
+			"movw %%fs, %%ax\n\t pushq %%rax\n\t" \
+			"movw %%es, %%ax\n\t pushq %%rax\n\t" \
+			"movw %%ds, %%ax\n\t pushq %%rax\n\t" \
+			"movq %%cr4, %%rax\n\t pushq %%rax\n\t" \
+			"movq %%cr3, %%rax\n\t pushq %%rax\n\t" \
+			"movq %%cr2, %%rax\n\t pushq %%rax\n\t" \
 			"movq %%rsp, %%rdi\n\t" \
 			"movabsq %0, %%rsi\n\t" \
 			"andq $-16, %%rsp\n\t" \
@@ -115,8 +120,10 @@ void exception_main(struct trap_frame *tf, const char *description) {
 			"pushq %%rsi\n\t pushq %%rdi\n\t pushq %%rbp\n\t pushq %%r8\n\t"  \
 			"pushq %%r9\n\t  pushq %%r10\n\t pushq %%r11\n\t pushq %%r12\n\t" \
 			"pushq %%r13\n\t pushq %%r14\n\t pushq %%r15\n\t" \
+			"pushq $0\n\t pushq $0\n\t pushq $0\n\t pushq $0\n\t" \
+			"pushq $0\n\t pushq $0\n\t pushq $0\n\t" \
 			\
-			"movq %%rsp, %%rdi\n\t" /* pass trap_frame* */ \
+			"movq %%rsp, %%rdi\n\t" \
 			"movq %%rsp, %%rbp\n\t" \
 			"andq $-16, %%rsp\n\t" \
 			"subq $8, %%rsp\n\t" \
@@ -125,6 +132,7 @@ void exception_main(struct trap_frame *tf, const char *description) {
 			"call *%%rax\n\t" \
 			\
 			"movq %%rax, %%rsp\n\t" \
+			"addq $56, %%rsp\n\t" \
 			\
 			"popq %%r15\n\t popq %%r14\n\t popq %%r13\n\t popq %%r12\n\t" \
 			"popq %%r11\n\t popq %%r10\n\t popq %%r9\n\t  popq %%r8\n\t"  \
@@ -206,23 +214,24 @@ DEF_EXCEPTION_HANDLER(31, "Reserved", 0)
 
 // irq's
 
-void irq_install_handler(uint8_t lapic_id, uint8_t vector, irq_handler_t handler) {
-	cpu_control_block_t *my_cpu = &cpus[lapic_id];
-	my_cpu->routines[vector] = handler;
+void irq_install_handler(uint8_t logical_id, uint8_t vector, irq_handler_t handler) {
+	cpu_control_block_t *target_cpu = logical_indexed_cpu_list[logical_id];
+	target_cpu->routines[vector] = handler;
 }
 
 static struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
-	uint8_t my_id = (uint8_t)lapic_get_id();
-	cpu_control_block_t *my_cpu = &cpus[my_id];
+	cpu_control_block_t *my_cpu; GET_CURRENT_CPU(my_cpu);
+
+	struct trap_frame *ret_tf = tf;
+
+	if (my_cpu->routines[vector]) {
+		ret_tf = my_cpu->routines[vector](tf);
+	}
 
 	lapic_eoi();
 
-	if (my_cpu->routines[vector]) {
-		return my_cpu->routines[vector](tf);
-	}
-
-	return tf;
+	return ret_tf;
 }
 
 // for interrupt 255
