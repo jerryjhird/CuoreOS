@@ -10,13 +10,7 @@ endif
 
 -include Config.mk
 
-CC := $(strip $(CONFIG_CC))
-LIMINE_URL := $(strip $(CONFIG_LIMINE))
-LIMINE_FLAGS := $(strip $(CONFIG_LIMINE_FLAGS))
-FLANTERM_URL := $(strip $(CONFIG_FLANTERM))
-FLANTERM_FLAGS := $(strip $(CONFIG_FLANTERM_FLAGS))
-ADD_CFLAGS := $(strip $(CONFIG_ADDITIONAL_CFLAGS))
-ADD_LDFLAGS := $(strip $(CONFIG_ADDITIONAL_LDFLAGS))
+CC := $(CONFIG_CC)
 QEMU_UEFI_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
 
 SRCDIR   := src
@@ -49,8 +43,8 @@ RESET        := \033[0m
 CFLAGS := -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
 CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wlogical-op -Wmissing-declarations
 LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
-CFLAGS += $(CC_WARNINGS) $(ADD_CFLAGS)
-LDFLAGS += $(ADD_LDFLAGS)
+CFLAGS += $(CC_WARNINGS) $(CONFIG_ADDITIONAL_CFLAGS)
+LDFLAGS += $(CONFIG_ADDITIONAL_LDFLAGS)
 
 ifeq ($(CONFIG_PROFILE),debug)
     CFLAGS += -DDEBUG
@@ -71,10 +65,10 @@ print_config:
 	@echo -e "$(BLUE)CuoreOS Main Config:$(RESET)"
 	@echo -e "$(CYAN)  Profile: $(RESET)$(CONFIG_PROFILE)"
 	@echo -e "$(CYAN)  Compiler: $(RESET)$(CC)"
-	@echo -e "$(CYAN)  Additional CFLAGS: $(RESET)$(ADD_CFLAGS)"
-	@echo -e "$(CYAN)  Additional LDFLAGS: $(RESET)$(ADD_LDFLAGS)"
-	@echo -e "$(CYAN)  Limine: $(RESET)$(LIMINE_FLAGS) $(LIMINE_URL)"
-	@echo -e "$(CYAN)  Flanterm: $(RESET)$(FLANTERM_FLAGS) $(FLANTERM_URL)"
+	@echo -e "$(CYAN)  Additional CFLAGS: $(RESET)$(CONFIG_ADDITIONAL_CFLAGS)"
+	@echo -e "$(CYAN)  Additional LDFLAGS: $(RESET)$(CONFIG_ADDITIONAL_LDFLAGS)"
+	@echo -e "$(CYAN)  Limine: $(RESET)$(CONFIG_LIMINE_FLAGS) $(CONFIG_LIMINE)"
+	@echo -e "$(CYAN)  Flanterm: $(RESET)$(CONFIG_FLANTERM_FLAGS) $(CONFIG_FLANTERM)"
 
 menuconfig:
 	@python3 $(TOOLS)/configscreen.py $(CUOREOS_VERSION_NAME)
@@ -83,10 +77,10 @@ menuconfig:
 deps_setup:
 	@mkdir -p $(FLANTERM_DIR) $(LIMINE_DIR)
 	@if [ ! -d "$(FLANTERM_DIR)/.git" ]; then \
-		git clone $(FLANTERM_FLAGS) $(FLANTERM_URL) $(FLANTERM_DIR); \
+		git clone $(CONFIG_FLANTERM_FLAGS) $(CONFIG_FLANTERM) $(FLANTERM_DIR); \
 	fi
 	@if [ ! -d "$(LIMINE_DIR)/.git" ]; then \
-		git clone $(LIMINE_FLAGS) $(LIMINE_URL) $(LIMINE_DIR); \
+		git clone $(CONFIG_LIMINE_FLAGS) $(CONFIG_LIMINE) $(LIMINE_DIR); \
 	fi
 
 	make -C $(LIMINE_DIR)
