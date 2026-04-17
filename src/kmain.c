@@ -228,6 +228,8 @@ void _kstartc(void) {
 	my_cpu->status = CPU_BUSY; // BSP is always busy
 
 	uart16550_init();
+	dev_puts(&uart16550_dev, "\033[2J\033[H"); // ensure we dont overwrite things like the qemu dvd rom blob
+
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
 
 	pci_init();
