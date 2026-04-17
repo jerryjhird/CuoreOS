@@ -1,6 +1,3 @@
-// offloading work to cores is still heavily under development and can be unstable.
-// tho as of now AP initalization is functional and used
-
 #include "mailbox.h"
 #include "apic/lapic.h"
 #include <stdint.h>

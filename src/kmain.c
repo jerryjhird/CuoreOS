@@ -191,13 +191,11 @@ static void kernel_main(void) {
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
 
-	// commented out until we can fully implement working SMP
-	// mailbox_send(get_idle_core(), time_sync, NULL);
+	mailbox_send(get_idle_core(), time_sync, NULL);
 
 	scheduler_init();
 	scheduler_create_task(uart16550_console_task, 1);
 	scheduler_create_task(idle_task, 2);
-
 	scheduler_start();
 
 	for(;;) { __asm__ ("hlt"); }

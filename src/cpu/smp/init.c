@@ -1,6 +1,3 @@
-// offloading work to cores is still heavily under development and can be unstable.
-// tho as of now AP initalization is functional and used
-
 #include "logbuf.h"
 #include "kstate.h"
 #include "mem/mem.h"
@@ -65,7 +62,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	if (my_cpu->dts_support) {my_cpu->thermal = thermal_read();}
 
 	irq_install_handler(logical_id, 40, ipi_wakeup_irq);
-	irq_install_handler(logical_id, 32, clock_tick_irq);
+	// irq_install_handler(logical_id, 32, clock_tick_irq);
 
 	SPIN_LOCK(&temp_spinlock);
 	logbuf_write("[ SMP  ] Core ");
