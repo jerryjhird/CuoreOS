@@ -1,6 +1,6 @@
 #include "thermal.h"
 #include "MSR.h"
-#include "apic/cpuid.h"
+#include "cpu/cpuid.h"
 
 thermal_info_t thermal_read(void) {
 	thermal_info_t info = {0};
