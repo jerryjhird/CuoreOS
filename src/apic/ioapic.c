@@ -38,18 +38,7 @@ void ioapic_map_irq(uint8_t irq_pin, uint8_t vector, uint8_t cpu_apic_id, uint32
 }
 
 void ioapic_init(uintptr_t base_addr) {
-	if (base_addr == 0) {
-		panic("IOAPIC", "Received null base address!");
-	}
-
 	ioapic_virt_base = base_addr;
-
-	uint32_t ver = ioapic_read(IOAPIC_REG_VER);
-	uint8_t max_pins = (uint8_t)((ver >> 16) & 0xFF);
-
-	for (uint8_t i = 0; i <= max_pins; i++) {
-		ioapic_map_irq(i, 0, 0, (1 << 16));
-	}
 
 	uint8_t pin;
 	uint32_t flags;
