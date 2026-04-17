@@ -1,9 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "mailbox.h"
 #include "cpu/thermal.h"
-#include "cpu/IRQ.h"
 
 typedef enum {
 	CPU_IDLE = 0,
@@ -12,10 +10,15 @@ typedef enum {
 	CPU_PANIC
 } cpu_status_t;
 
+#define logical_coreid_t uint32_t // logical core id type
+
+#include "cpu/IRQ.h"
+#include "mailbox.h"
+
 typedef struct cpu_control_block {
 	struct cpu_control_block *self;
-	uint8_t logical_id;
-	uint8_t lapic_id;
+	logical_coreid_t logical_id;
+	uint32_t lapic_id;
 	uint64_t ticks;
 	volatile cpu_status_t status;
 	mailbox_t mailbox;

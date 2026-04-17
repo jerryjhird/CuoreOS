@@ -5,7 +5,7 @@
 #include "mem/heap.h"
 #include "limine.h"
 #include "mem/pma.h"
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/mem.h"
 #include "kstate.h"
 #include "devices.h"
 #include "fb_flanterm.h"
@@ -24,6 +24,7 @@
 #include "ui/installer.h"
 #include "_time.h"
 #include "cpu/thermal.h"
+#include "cpu/MSR.h"
 #include "bitmask.h"
 
 volatile struct limine_module_request module_request = {
@@ -211,21 +212,20 @@ void _kstartc(void) {
 	void* virt_addr = (void*)(phys_addr + hhdm_req.response->offset);
 	heap_init(virt_addr, HEAP_SIZE);
 
-	int idx = __atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
+	logical_coreid_t idx = __atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
 	cpu_control_block_t *my_cpu = zalloc(sizeof(cpu_control_block_t));
 	logical_indexed_cpu_list[idx] = my_cpu;
 	my_cpu->self = my_cpu;
 
-	__asm__ volatile ("wrmsr" : : "c"(0xC0000101), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32)));
+	__asm__ volatile ("wrmsr" : : "c"(MSR_GS_BASE), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32)));
 
 	my_cpu->logical_id = idx;
 	my_cpu->lapic_id = hardware_id;
 	my_cpu->ticks = 1;
 	my_cpu->dts_support = does_cpu_support_dts();
-	my_cpu->status = CPU_BUSY; // BSP is already working
 
 	if (my_cpu->dts_support) {my_cpu->thermal = thermal_read();}
-	my_cpu->status = CPU_BUSY; // bsp is always busy
+	my_cpu->status = CPU_BUSY; // BSP is always busy
 
 	uart16550_init();
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);

@@ -15,4 +15,6 @@ struct trap_frame {
 } __attribute__((packed));
 
 typedef struct trap_frame* (*irq_handler_t)(struct trap_frame *tf);
-void irq_install_handler(uint8_t logical_id, uint8_t vector, irq_handler_t handler);
+
+#include "cpu/smp/init.h"
+void irq_install_handler(logical_coreid_t logical_id, uint8_t vector, irq_handler_t handler);

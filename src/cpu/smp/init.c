@@ -18,7 +18,7 @@
 
 static spinlock_t temp_spinlock = SPINLOCK_INIT;
 cpu_control_block_t *logical_indexed_cpu_list[SMP_MAX_CORES];
-volatile uint64_t online_cpu_index = 0;
+volatile logical_coreid_t online_cpu_index = 0;
 
 static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
 	   // (dispatcher will call lapic_eoi for us)
@@ -47,7 +47,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	lapic_init(madt_get_lapic_base() + hhdm_offset);
 
 	static volatile int next_id = 1;
-	int logical_id = __atomic_fetch_add(&next_id, 1, __ATOMIC_SEQ_CST);
+	logical_coreid_t logical_id = __atomic_fetch_add(&next_id, 1, __ATOMIC_SEQ_CST);
 
 	SPIN_LOCK(&temp_spinlock);
 	cpu_control_block_t *my_cpu = zalloc(sizeof(cpu_control_block_t));
@@ -59,7 +59,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	__asm__ volatile ("wrmsr" : : "c"(MSR_GS_BASE), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32))); 	// store a pointer to this CPU block in GS base
 
 	my_cpu->logical_id = logical_id;
-	my_cpu->lapic_id = (uint8_t)mp->lapic_id;;
+	my_cpu->lapic_id = mp->lapic_id;;
 	my_cpu->ticks = 1;
 	my_cpu->dts_support = does_cpu_support_dts();
 	if (my_cpu->dts_support) {my_cpu->thermal = thermal_read();}
@@ -71,7 +71,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	logbuf_write("[ SMP  ] Core ");
 	logbuf_putint(logical_id);
 	logbuf_write(" Initialized = lapic: ");
-	logbuf_putint((uint8_t)mp->lapic_id);
+	logbuf_putint(mp->lapic_id);
 	logbuf_write(" | sp: ");
 	logbuf_puthex64(sp);
 	logbuf_write("\n");

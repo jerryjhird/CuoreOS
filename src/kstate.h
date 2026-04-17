@@ -21,5 +21,5 @@ extern volatile struct limine_rsdp_request rsdp_request;
 extern volatile struct limine_mp_request mp_request;
 extern volatile struct limine_executable_address_request executable_request;
 
-extern volatile uint64_t online_cpu_index;
+extern volatile logical_coreid_t online_cpu_index;
 extern bool supported_disk_exists;

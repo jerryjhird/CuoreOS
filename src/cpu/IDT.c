@@ -214,7 +214,7 @@ DEF_EXCEPTION_HANDLER(31, "Reserved", 0)
 
 // irq's
 
-void irq_install_handler(uint8_t logical_id, uint8_t vector, irq_handler_t handler) {
+void irq_install_handler(logical_coreid_t logical_id, uint8_t vector, irq_handler_t handler) {
 	cpu_control_block_t *target_cpu = logical_indexed_cpu_list[logical_id];
 	target_cpu->routines[vector] = handler;
 }
