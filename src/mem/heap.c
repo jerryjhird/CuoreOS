@@ -4,11 +4,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdarg.h>
-#include "mem.h" // IWYU pragma: keep
+#include "mem.h"
 #include "pma.h"
 #include "kstate.h"
 #include "stdio.h"
-#include "logbuf.h"
 #include "mem/paging.h"
 
 #define ALIGNMENT 16
@@ -186,14 +185,6 @@ void* malloc(size_t size) {
 			void* ptr = pools[i].free_list;
 			pools[i].free_list = pools[i].free_list->next;
 
-			#ifdef DEBUG
-				logbuf_write("[MALLOC] Pool hit (");
-				logbuf_puthex64(pools[i].block_size);
-				logbuf_write(" bin) at ");
-				logbuf_puthex64((uint64_t)ptr);
-				logbuf_write("\n");
-			#endif
-
 			BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
 			page_header->used_slots++;
 			return ptr;
@@ -225,14 +216,6 @@ void* malloc(size_t size) {
 			curr->is_free = false;
 			last_fit = curr;
 
-			#ifdef DEBUG
-				logbuf_write("[MALLOC] Allocated ");
-				logbuf_puthex64(size);
-				logbuf_write(" bytes at ");
-				logbuf_puthex64((uint64_t)(curr + 1));
-				logbuf_write("\n");
-			#endif
-
 			return (void*)(curr + 1);
 		}
 		curr = curr->next;
@@ -255,22 +238,12 @@ static void _free(void* ptr, uint8_t type) {
 			if (pools[i].block_size == bin) {
 				if (page_header->used_slots > 0) {
 					page_header->used_slots--;
-				} else {
-					logbuf_write("[ WARN ] Pool Underflow/Double Free on bin: ");
-					logbuf_puthex64(bin);
-					logbuf_write("\n");
-					return;
 				}
 
 				PoolNode* node = (PoolNode*)ptr;
 				node->next = pools[i].free_list;
 				pools[i].free_list = node;
 
-				#ifdef DEBUG
-					logbuf_write("[ FREE ] Pool block (");
-					logbuf_puthex64(bin);
-					logbuf_write(" bin) returned.\n");
-				#endif
 				return;
 			}
 		}
@@ -280,16 +253,8 @@ static void _free(void* ptr, uint8_t type) {
 		BlockHeader *block = ((BlockHeader*)ptr) - 1;
 
 		if (block->magic != HEAP_MAGIC) {
-			logbuf_write("Invalid magic at: ");
-			logbuf_puthex64((uintptr_t)ptr);
 			panic("MEMORY CORRUPTION", "Heap header magic mismatch!");
 		}
-
-		#ifdef DEBUG
-			logbuf_write("[ FREE ] Reclaiming heap block (Size: ");
-			logbuf_puthex64(block->size);
-			logbuf_write(")\n");
-		#endif
 
 		block->is_free = true;
 
@@ -308,12 +273,6 @@ static void _free(void* ptr, uint8_t type) {
 			if (block->next) block->next->prev = p;
 		}
 
-	} else {
-		logbuf_write("pointer: ");
-		logbuf_puthex64((uintptr_t)ptr);
-		logbuf_write("\nNEAT: ");
-		logbuf_puthex64(type);
-		panic("MEMORY CORRUPTION", "Attempted to free non heap memory!");
 	}
 }
 
@@ -336,10 +295,6 @@ void* realloc(void* ptr, size_t new_size) {
 		old_size = page_header->bin_size;
 
 		if (new_size <= old_size) return ptr;
-
-		#ifdef DEBUG
-			logbuf_write("[REALLOC] Pool migration\n");
-		#endif
 
 		void* new_p = malloc(new_size);
 		if (new_p) {
@@ -433,52 +388,4 @@ void sfree(void* ptr, size_t size) {
 void szfree(void* ptr, size_t size) {
 	UNUSED(size);
 	zfree(ptr);
-}
-
-void dump_memory_stats(void) {
-	size_t total_managed = 0;
-	size_t total_user_data = 0;
-	size_t total_metadata = 0;
-	size_t total_free_memory = 0;
-
-	BlockHeader *curr = head;
-	while (curr) {
-		if (curr->magic != HEAP_MAGIC) {
-			panic("MEMORY CORRUPTION", "HEAP CORRUPTION\n");
-			break;
-		}
-
-		total_metadata += sizeof(BlockHeader);
-		size_t block_total = sizeof(BlockHeader) + curr->size;
-		total_managed += block_total;
-
-		if (curr->is_pool_block) {
-			size_t max_slots = curr->size / curr->bin_size;
-			size_t used_slots = (curr->used_slots > max_slots) ? max_slots : curr->used_slots;
-
-			size_t used_bytes = used_slots * curr->bin_size;
-			total_user_data += used_bytes;
-			total_free_memory += (curr->size - used_bytes);
-		} else {
-			if (curr->is_free) {
-				total_free_memory += curr->size;
-			} else {
-				total_user_data += curr->size;
-			}
-		}
-		curr = curr->next;
-	}
-
-	logbuf_write("\n[HEAP] Total Managed:  "); logbuf_puthex64(total_managed);   logbuf_putc('\n');
-	logbuf_write("[HEAP] User Allocated: "); logbuf_puthex64(total_user_data);  logbuf_putc('\n');
-	logbuf_write("[HEAP] Free Available: "); logbuf_puthex64(total_free_memory); logbuf_putc('\n');
-	logbuf_write("[HEAP] Bookkeeping:	"); logbuf_puthex64(total_metadata);   logbuf_write("\n");
-
-	size_t total_p = pma_get_total_pages();
-	size_t free_p  = pma_get_free_pages();
-	size_t used_p  = total_p - free_p;
-
-	logbuf_write("[PMA]  Total pages:	"); logbuf_puthex64(total_p); logbuf_write("\n");
-	logbuf_write("[PMA]  Free pages:	 "); logbuf_puthex64(free_p); logbuf_write("\n");
-	logbuf_write("[PMA]  Used pages:	 "); logbuf_puthex64(used_p); logbuf_write("\n");
 }
