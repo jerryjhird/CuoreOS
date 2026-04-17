@@ -13,12 +13,15 @@
 task_t *current_task = NULL;
 
 static struct trap_frame* scheduler_timer_handler(struct trap_frame* tf) {
-	if (current_task != NULL) {
-		current_task->rsp = (uint64_t)tf;
-	}
+	current_task->rsp = (uint64_t)tf;
 
-	if (current_task != NULL && current_task->next != NULL) {
-		current_task = current_task->next;
+	task_t* old_task = current_task;
+	current_task = current_task->next;
+
+	// unlink the bootstrap task
+	if (old_task->upid == 0 && old_task != current_task) {
+		old_task->prev->next = old_task->next;
+		old_task->next->prev = old_task->prev;
 	}
 
 	return (struct trap_frame*)current_task->rsp;
@@ -92,7 +95,13 @@ void scheduler_yield(void) {
 }
 
 void scheduler_init() {
-	current_task = NULL;
+	task_t* bootstrap_task = (task_t*)zalloc(sizeof(task_t));
+	bootstrap_task->upid = 0;
+
+	current_task = bootstrap_task;
+	bootstrap_task->next = bootstrap_task;
+	bootstrap_task->prev = bootstrap_task;
+
 	cpu_control_block_t *my_cpu;
 	GET_CURRENT_CPU(my_cpu);
 	irq_install_handler(my_cpu->logical_id, 32, scheduler_timer_handler);
