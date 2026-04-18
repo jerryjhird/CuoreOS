@@ -23,9 +23,6 @@ typedef struct cpu_control_block {
 	volatile cpu_status_t status;
 	mailbox_t mailbox;
 
-	bool dts_support;
-	thermal_info_t thermal;
-
 	irq_handler_t routines[256];
 } __attribute__((aligned(64))) cpu_control_block_t;
 

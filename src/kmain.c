@@ -26,6 +26,7 @@
 #include "cpu/thermal.h"
 #include "cpu/MSR.h"
 #include "bitmask.h"
+#include "cpu/rdrand.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -124,7 +125,7 @@ kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
 size_t disk_devices_c = 0;
 
 ramfs_handle_t initramfs;
-spinlock_t uart_spinlock = SPINLOCK_INIT;
+
 bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 
 static void uart16550_console_task(void) {
@@ -237,9 +238,7 @@ void _kstartc(void) {
 	my_cpu->logical_id = idx;
 	my_cpu->lapic_id = hardware_id;
 	my_cpu->ticks = 1;
-	my_cpu->dts_support = does_cpu_support_dts();
 
-	if (my_cpu->dts_support) {my_cpu->thermal = thermal_read();}
 	my_cpu->status = CPU_BUSY; // BSP is always busy
 
 	uart16550_init();

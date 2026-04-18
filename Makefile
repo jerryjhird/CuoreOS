@@ -46,10 +46,6 @@ LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
 CFLAGS += $(CC_WARNINGS) $(CONFIG_ADDITIONAL_CFLAGS)
 LDFLAGS += $(CONFIG_ADDITIONAL_LDFLAGS)
 
-ifeq ($(CONFIG_PROFILE),debug)
-    CFLAGS += -DDEBUG
-endif
-
 ifeq ($(CONFIG_IDE_SUPPORT),true)
     CFLAGS += -DKERNEL_MOD_IDE_ENABLED
 endif
@@ -61,9 +57,19 @@ all: print_config deps_setup $(OBJS) $(KERNEL_ELF) compile_commands.json $(DISK_
 
 $(OBJS): | deps_setup
 
+FIRMWARE_SUPPORT_LIST = 
+
+ifeq ($(CONFIG_UEFI_SUPPORT),true)
+	FIRMWARE_SUPPORT_LIST += UEFI
+endif
+
+ifeq ($(CONFIG_BIOS_SUPPORT),true)
+	FIRMWARE_SUPPORT_LIST += BIOS
+endif
+
 print_config:
 	@echo -e "$(BLUE)CuoreOS Main Config:$(RESET)"
-	@echo -e "$(CYAN)  Profile: $(RESET)$(CONFIG_PROFILE)"
+	@echo -e "$(CYAN)  Firmware: $(RESET)$(FIRMWARE_SUPPORT_LIST)"
 	@echo -e "$(CYAN)  Compiler: $(RESET)$(CC)"
 	@echo -e "$(CYAN)  Additional CFLAGS: $(RESET)$(CONFIG_ADDITIONAL_CFLAGS)"
 	@echo -e "$(CYAN)  Additional LDFLAGS: $(RESET)$(CONFIG_ADDITIONAL_LDFLAGS)"

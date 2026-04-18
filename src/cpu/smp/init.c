@@ -24,13 +24,7 @@ static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
 
 static struct trap_frame* clock_tick_irq(struct trap_frame *tf) {
 	cpu_control_block_t *my_cpu; GET_CURRENT_CPU(my_cpu);
-
 	my_cpu->ticks++;
-
-	if (my_cpu->ticks % 100 == 0 && my_cpu->dts_support) {
-	   my_cpu->thermal = thermal_read();
-	}
-
 	return tf;
 }
 
@@ -58,11 +52,9 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	my_cpu->logical_id = logical_id;
 	my_cpu->lapic_id = mp->lapic_id;;
 	my_cpu->ticks = 1;
-	my_cpu->dts_support = does_cpu_support_dts();
-	if (my_cpu->dts_support) {my_cpu->thermal = thermal_read();}
 
 	irq_install_handler(logical_id, 40, ipi_wakeup_irq);
-	// irq_install_handler(logical_id, 32, clock_tick_irq);
+	irq_install_handler(logical_id, 32, clock_tick_irq);
 
 	SPIN_LOCK(&temp_spinlock);
 	logbuf_write("[ SMP  ] Core ");
