@@ -70,17 +70,20 @@ pci_driver_entry_t pci_discovery_table[] = {
 	{
 		.vendor_id = PCI_VENDOR_INTEL,
 		.device_id = PCI_DEVICE_I440FX_HB,
-		.class_id = 0, .subclass_id = 0,
+		.class_id = 0,
+		.subclass_id = 0,
 		.name = "Intel i440FX Host Bridge",
 		.init = NULL // no driver for this
 	},
 
-	// ANY Vendor : Class 0x01 (Storage) : Subclass 0x01 (IDE)
+	// IDE with any vendor (disk controllers should be last in the table, as they initalize filesystems and it can make logs look messy)
 	{
+		.name = "Generic IDE Controller",
 		.vendor_id = PCI_VENDOR_ANY,
 		.device_id = 0,
-		.class_id = 0x01, .subclass_id = 0x01,
-		.name = "Generic IDE Controller",
+		.class_id = PCI_CLASS_STORAGE,
+		.subclass_id = PCI_SUBCLASS_IDE,
+
 		#ifdef KERNEL_MOD_IDE_ENABLED
 			.init = ide_init
 		#else

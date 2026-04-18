@@ -18,13 +18,22 @@
 #define PCI_DEVICE_PIIX3_IDE 0x7010
 #define PCI_DEVICE_PIIX4_ACPI 0x7113
 
+// storage class 0x01
+#define PCI_CLASS_STORAGE 0x01
+#define PCI_SUBCLASS_IDE 0x01
+
+// network class 0x02
 #define PCI_CLASS_NETWORK 0x02
 #define PCI_SUBCLASS_ETH 0x00
 
+// multimedia class 0x04
+#define PCI_CLASS_MULTIMEDIA 0x04
+#define PCI_SUBCLASS_AUDIO 0x01
+
 typedef struct {
-	uintptr_t base; // physical address or I/O port
+	uintptr_t base; // physical address or IO port
 	uint32_t  size;
-	bool	  is_io; // true if port I/O false if MMIO
+	bool	  is_io; // true if port IO false if MMIO
 } pci_bar_t;
 
 typedef struct {
