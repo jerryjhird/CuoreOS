@@ -187,6 +187,18 @@ static void kernel_main(void) {
 		}
 	}
 
+	// random test
+	uint64_t random = 0;
+	if (!rdrand_supported()) {
+		logbuf_write("[ RNG  ] rdrand not supported\n");
+	} else {
+		if (rdrand64(&random)) {
+			logbuf_write("[ RNG  ] ");
+			logbuf_putint(random);
+			logbuf_write("\n");
+		}
+	}
+
 	logbuf_write("[ BOOT ] Time it took to boot (ms): "); logbuf_putint(hpet_get_ms()); logbuf_write("\n");
 	logbuf_flush(&uart16550_dev);
 	logbuf_flush(&flanterm_dev);

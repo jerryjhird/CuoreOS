@@ -163,7 +163,7 @@ endif
 
 run: uefi-run
 
-GENERIC_QEMU_CFLAGS = -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -drive file="$(DISK_IMG)",format=raw,index=0,media=disk -machine pc -boot d
+GENERIC_QEMU_CFLAGS = -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -drive file="$(DISK_IMG)",format=raw,index=0,media=disk -machine pc -boot d
 
 uefi-run:
 	qemu-system-x86_64 -bios $(QEMU_UEFI_FIRMWARE) $(GENERIC_QEMU_CFLAGS)
