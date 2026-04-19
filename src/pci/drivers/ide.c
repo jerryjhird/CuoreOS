@@ -112,7 +112,7 @@ void ide_init(pci_dev_t pdev) {
 	ide_output_dev.read_sector = ide_read_sector;
 	ide_output_dev.write_sector = ide_write_sector;
 
-	logbuf_write("+ [ IDE  ] Initialized ");
+	logbuf_write("[ IDE  ] Initialized ");
 	logbuf_write(ide_output_dev.model);
 	logbuf_write(" at ");
 	logbuf_puthex(base);
