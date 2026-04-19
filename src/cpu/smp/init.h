@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdint.h>
-#include "cpu/thermal.h"
 
 typedef enum {
 	CPU_IDLE = 0,
@@ -24,6 +23,7 @@ typedef struct cpu_control_block {
 	mailbox_t mailbox;
 
 	irq_handler_t routines[256];
+	uint64_t irq_stats[256];
 } __attribute__((aligned(64))) cpu_control_block_t;
 
 extern cpu_control_block_t *logical_indexed_cpu_list[SMP_MAX_CORES];

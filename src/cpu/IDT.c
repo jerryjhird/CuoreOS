@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include "bitmask.h"
-#include "drivers/UART16550.h"
 #include "stdio.h"
 #include "apic/lapic.h"
 #include "IRQ.h"
@@ -222,6 +221,8 @@ void irq_install_handler(logical_coreid_t logical_id, uint8_t vector, irq_handle
 static struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
 	cpu_control_block_t *my_cpu; GET_CURRENT_CPU(my_cpu);
+
+	my_cpu->irq_stats[vector]++;
 
 	struct trap_frame *ret_tf = tf;
 
