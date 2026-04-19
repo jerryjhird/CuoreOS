@@ -15,6 +15,7 @@
 #include "apic/madt.h"
 #include "pci/pci.h"
 #include "pci/drivers/ide.h"
+#include "pci/drivers/ac97.h"
 #include "fs/ramfs.h"
 #include "scheduler.h"
 #include "cpu/smp/init.h"
@@ -27,6 +28,7 @@
 #include "cpu/MSR.h"
 #include "bitmask.h"
 #include "cpu/rdrand.h"
+#include "multimedia/beep.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -68,17 +70,33 @@ uint64_t hhdm_offset;
 pci_driver_entry_t pci_discovery_table[] = {
 	// Intel : i440FX Host Bridge (0x1237)
 	{
+		.name = "Intel i440FX Host Bridge",
+		.group_id = 0,
 		.vendor_id = PCI_VENDOR_INTEL,
 		.device_id = PCI_DEVICE_I440FX_HB,
 		.class_id = 0,
 		.subclass_id = 0,
-		.name = "Intel i440FX Host Bridge",
 		.init = NULL // no driver for this
+	},
+	{
+		.name = "AC'97 Audio Controller",
+		.group_id = 1, // this will ensure that if we have more audio drivers, the first one in the table will be initalized and others will not
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_MULTIMEDIA,
+		.subclass_id = PCI_SUBCLASS_AUDIO,
+
+		#ifdef KERNEL_MOD_AC97_ENABLED
+			.init = ac97_init
+		#else
+			.init = NULL
+		#endif
 	},
 
 	// IDE with any vendor (disk controllers should be last in the table, as they initalize filesystems and it can make logs look messy)
 	{
 		.name = "Generic IDE Controller",
+		.group_id = 0,
 		.vendor_id = PCI_VENDOR_ANY,
 		.device_id = 0,
 		.class_id = PCI_CLASS_STORAGE,
@@ -126,6 +144,8 @@ size_t char_devices_c = 0;
 
 kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
 size_t disk_devices_c = 0;
+
+kernel_audio_dev_t* active_audio_device;
 
 ramfs_handle_t initramfs;
 
@@ -202,12 +222,15 @@ static void kernel_main(void) {
 		}
 	}
 
+	mailbox_send(get_idle_core(), time_sync, NULL);
+
 	logbuf_write("[ BOOT ] Time it took to boot (ms): "); logbuf_putint(hpet_get_ms()); logbuf_write("\n");
 	logbuf_flush(&uart16550_dev);
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
 
-	mailbox_send(get_idle_core(), time_sync, NULL);
+	audio_beep(active_audio_device, 600, 200);
+	audio_beep(active_audio_device, 800, 500);
 
 	scheduler_init();
 	scheduler_create_task(uart16550_console_task, 1);
@@ -218,7 +241,7 @@ static void kernel_main(void) {
 }
 
 // 256 pages = 1MB
-#define HEAP_PAGES 256
+#define HEAP_PAGES 4096
 #define HEAP_SIZE (HEAP_PAGES << 12)
 
 void _kstartc(void);
@@ -238,6 +261,12 @@ void _kstartc(void) {
 	gdt_init();
 	idt_init();
 	pma_init();
+
+	if (module_request.response->module_count <= 0) {
+		logbuf_write("[WARN] initramfs not found.\n");
+	} else {
+		initramfs = ramfs_init(module_request.response->modules[0]->address);
+	}
 
 	uintptr_t phys_addr = pma_alloc_pages(HEAP_PAGES); // 256 pages = 1MB
 	void* virt_addr = (void*)(phys_addr + hhdm_req.response->offset);

@@ -56,16 +56,24 @@ static pci_bar_t pci_get_bar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t ba
 static void pci_enable_capabilities(uint8_t bus, uint8_t slot, uint8_t func) {
 	uint32_t cmd = pci_read_word(bus, slot, func, 0x04);
 
-	// Bit 0: IO Space
-	// Bit 1: memory space
-	// Bit 2: bus master
-	pci_write_word(bus, slot, func, 0x04, cmd | 0x07);
+	// Bit 0: IO Space (1)
+	// Bit 1: Memory Space (1)
+	// Bit 2: Bus Master (1)
+	// Bit 10: Interrupt Disable (0)
+
+	// 0x07 enables bits 0, 1 and 2
+	// ~(1 << 10) clears the interrupt mask bit to ensure IRQs
+	cmd |= 0x07;
+	cmd &= ~(1 << 10);
+
+	pci_write_word(bus, slot, func, 0x04, cmd);
 }
 
 void pci_init(void) {
 	int capacity = 20; // 20 as a guess for the number of devices, can grow if needed and wastes little memory if there are under 20 devices
 	int count = 0;
 	pci_dev_t* discovered = malloc(sizeof(pci_dev_t) * capacity);
+	uint32_t claimed_groups = 0;
 
 	// hardware sweep to cache all device info
 	for (uint16_t bus = 0; bus < 256; bus++) {
@@ -93,6 +101,7 @@ void pci_init(void) {
 				d->func = func;
 				d->vendor_id = (uint16_t)(id_reg & 0xFFFF);
 				d->device_id = (uint16_t)(id_reg >> 16);
+				d->claimed = false; // Initialize the new flag
 
 				uint32_t class_reg = pci_read_word(bus, slot, func, 0x08);
 				d->class_id = (class_reg >> 24) & 0xFF;
@@ -111,39 +120,55 @@ void pci_init(void) {
 	}
 
 	// match against the driver table
-	uint64_t claimed = 0;
-
 	for (int i = 0; pci_discovery_table[i].name != NULL; i++) {
 		pci_driver_entry_t* entry = &pci_discovery_table[i];
 
+		if (entry->group_id != 0 && (claimed_groups & (1 << entry->group_id))) {
+			continue;
+		}
+
 		for (int j = 0; j < count; j++) {
-			if (j < 64 && (claimed & (1ULL << j))) continue;
-
 			pci_dev_t* dev = &discovered[j];
-			bool match = false;
 
-			if (entry->vendor_id != PCI_VENDOR_ANY) {
-				if (dev->vendor_id == entry->vendor_id && dev->device_id == entry->device_id) {
-					match = true;
+			if (dev->claimed) continue;
+
+			bool match = true;
+
+			// vendor id check
+			if (entry->vendor_id != PCI_VENDOR_ANY && entry->vendor_id != dev->vendor_id) {
+				match = false;
+			}
+
+			// device id check
+			if (match && entry->device_id != PCI_DEVICE_ANY && entry->device_id != dev->device_id) {
+				match = false;
+			}
+
+			// class/subclass check
+			if (match && entry->class_id != 0) {
+				if (dev->class_id != entry->class_id || dev->subclass_id != entry->subclass_id) {
+					match = false;
 				}
-			} else if (dev->class_id == entry->class_id && dev->subclass_id == entry->subclass_id) {
-				match = true;
 			}
 
 			if (match) {
-				if (j < 64) claimed |= (1ULL << j);
+				dev->claimed = true;
 
-				logbuf_write("[ PCI  ] ");
-				logbuf_write(entry->init ? "Initializing " : "Found ");
-				logbuf_write(entry->name);
+				if (entry->group_id != 0) {
+					claimed_groups |= (1 << entry->group_id);
+				}
 
 				if (entry->init) {
-					logbuf_write(" Driver\n");
 					pci_enable_capabilities(dev->bus, dev->slot, dev->func);
 					entry->init(*dev);
 				} else {
+					logbuf_write("[ PCI  ] ");
+					logbuf_write("Found ");
+					logbuf_write(entry->name);
 					logbuf_write("\n");
 				}
+
+				if (entry->group_id != 0) break;
 			}
 		}
 	}

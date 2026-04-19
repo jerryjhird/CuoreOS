@@ -24,7 +24,8 @@ config_groups = {
     },
     "modules": {
         "mdname": "Modules",
-        "ide_support": "true"
+        "ide_support": "true",
+        "ac97_support": "true"
     },
     "devices": {
         "mdname": "Devices",

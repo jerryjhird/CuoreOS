@@ -17,6 +17,7 @@
 #define PCI_DEVICE_PIIX3_ISA 0x7000
 #define PCI_DEVICE_PIIX3_IDE 0x7010
 #define PCI_DEVICE_PIIX4_ACPI 0x7113
+#define PCI_DEVICE_ANY 0xFFFF
 
 // storage class 0x01
 #define PCI_CLASS_STORAGE 0x01
@@ -46,6 +47,7 @@ typedef struct {
 	uint8_t slot;
 	uint8_t func;
 	pci_bar_t bars[6];
+	bool claimed;
 } pci_dev_t;
 
 typedef void (*pci_init_fn)(pci_dev_t dev);
@@ -56,6 +58,9 @@ typedef struct {
 
 	uint8_t  class_id;
 	uint8_t  subclass_id;
+
+	// parser configuration
+	uint16_t group_id; // 0 = always load if found | > 0 = only load one per group
 
 	const char* name;
 	pci_init_fn init;

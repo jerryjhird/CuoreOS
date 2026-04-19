@@ -50,6 +50,10 @@ ifeq ($(CONFIG_IDE_SUPPORT),true)
     CFLAGS += -DKERNEL_MOD_IDE_ENABLED
 endif
 
+ifeq ($(CONFIG_AC97_SUPPORT),true)
+    CFLAGS += -DKERNEL_MOD_AC97_ENABLED
+endif
+
 CFLAGS += -DAP_STACK_SIZE=$(CONFIG_AP_STACK_SIZE) -DSMP_MAX_CORES=$(CONFIG_MAX_CORES) -DMAX_CHAR_DEVICES=$(CONFIG_MAX_CHAR_DEVICES) -DMAX_DISK_DEVICES=$(CONFIG_MAX_DISK_DEVICES)
 
 .PHONY: all clean run style format compile_commands menuconfig print_config
@@ -163,13 +167,15 @@ endif
 
 run: uefi-run
 
-GENERIC_QEMU_CFLAGS = -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -drive file="$(DISK_IMG)",format=raw,index=0,media=disk -machine pc -boot d
+GENERIC_QEMU_FLAGS = -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -machine pc -boot d
+DISK_QEMU_FLAG = -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
+AUDIO_CARD_QEMU_FLAG = -audiodev pa,id=snd0 -device ac97,audiodev=snd0
 
 uefi-run:
-	qemu-system-x86_64 -bios $(QEMU_UEFI_FIRMWARE) $(GENERIC_QEMU_CFLAGS)
+	qemu-system-x86_64 -bios $(QEMU_UEFI_FIRMWARE) $(GENERIC_QEMU_FLAGS) $(DISK_QEMU_FLAG) $(AUDIO_CARD_QEMU_FLAG)
 
 bios-run:
-	qemu-system-x86_64 $(GENERIC_QEMU_CFLAGS)
+	qemu-system-x86_64 $(GENERIC_QEMU_FLAGS) $(DISK_QEMU_FLAG) $(AUDIO_CARD_QEMU_FLAG)
 
 format:
 	./format src/
