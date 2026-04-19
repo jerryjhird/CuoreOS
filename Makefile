@@ -169,7 +169,7 @@ run: uefi-run
 
 GENERIC_QEMU_FLAGS = -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -machine pc -boot d
 DISK_QEMU_FLAG = -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
-AUDIO_CARD_QEMU_FLAG = -audiodev pa,id=snd0 -device ac97,audiodev=snd0
+AUDIO_CARD_QEMU_FLAG = -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
 
 uefi-run:
 	qemu-system-x86_64 -bios $(QEMU_UEFI_FIRMWARE) $(GENERIC_QEMU_FLAGS) $(DISK_QEMU_FLAG) $(AUDIO_CARD_QEMU_FLAG)
