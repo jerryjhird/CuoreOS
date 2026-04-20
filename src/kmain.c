@@ -98,7 +98,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.name = "Generic IDE Controller",
 		.group_id = 0,
 		.vendor_id = PCI_VENDOR_ANY,
-		.device_id = 0,
+		.device_id = PCI_DEVICE_ANY,
 		.class_id = PCI_CLASS_STORAGE,
 		.subclass_id = PCI_SUBCLASS_IDE,
 
