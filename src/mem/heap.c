@@ -112,9 +112,8 @@ static void heap_init_pools(void) {
 		pools[i].free_list = NULL;
 
 		uintptr_t phys = pma_alloc_page();
-		if (!phys) continue;
-
-		uintptr_t virt = phys + hhdm_offset;
+		uintptr_t virt = heap_current_top;
+		heap_current_top += 4096;
 
 		vmm_map_page(pml4_v, virt, phys, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_POOL);
 
