@@ -5,9 +5,9 @@
 .extern AP_kstartc
 
 AP_kentry:
-    mov rsp, [rdi + 24]
-    xor rbp, rbp
+	mov rsp, [rdi + 24]
+	xor rbp, rbp
 
-    and rsp, -16
+	and rsp, -16
 
-    jmp AP_kstartc
+	jmp AP_kstartc
