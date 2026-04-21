@@ -41,7 +41,13 @@ RESET        := \033[0m
 
 # flags
 CFLAGS := -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
-CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wlogical-op -Wmissing-declarations
+CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wmissing-declarations
+GCC_WARNINGS := -Wlogical-op
+
+ifeq ($(CONFIG_CC),gcc)
+	CFLAGS += $(GCC_WARNINGS)
+endif
+
 LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
 CFLAGS += $(CC_WARNINGS) $(CONFIG_ADDITIONAL_CFLAGS)
 LDFLAGS += $(CONFIG_ADDITIONAL_LDFLAGS)
