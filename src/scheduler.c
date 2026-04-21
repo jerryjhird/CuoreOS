@@ -1,6 +1,5 @@
 #include "scheduler.h"
 
-#include "apic/lapic.h"
 #include "cpu/IRQ.h"
 #include <stddef.h>
 #include "cpu/smp/init.h"
@@ -94,7 +93,7 @@ void scheduler_yield(void) {
 	__asm__ volatile ("int $32");
 }
 
-void scheduler_init() {
+void scheduler_init(void) {
 	task_t* bootstrap_task = (task_t*)zalloc(sizeof(task_t));
 	bootstrap_task->upid = 0;
 

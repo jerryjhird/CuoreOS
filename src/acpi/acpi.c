@@ -26,12 +26,20 @@ void* acpi_find_sdt(const char* signature) {
 	uint8_t* table_ptrs_base = (uint8_t*)xsdt + sizeof(struct acpi_sdt_header);
 
 	for (int i = 0; i < entries; i++) {
-		uint64_t table_phys;
+		uint64_t table_phys = 0;
+		uint8_t* entry_ptr = table_ptrs_base + (i * ptr_size);
+
 		if (is_xsdt) {
-			table_phys = ((uint64_t*)table_ptrs_base)[i];
+			// 8 bytes for XSDT
+			memcpy(&table_phys, entry_ptr, 8);
 		} else {
-			table_phys = ((uint32_t*)table_ptrs_base)[i];
+			// 4 bytes for RSDT
+			uint32_t table_phys_32;
+			memcpy(&table_phys_32, entry_ptr, 4);
+			table_phys = table_phys_32;
 		}
+
+		if (table_phys == 0) continue;
 
 		struct acpi_sdt_header* table = (struct acpi_sdt_header*)(table_phys + hhdm_offset);
 		if (memcmp(table->signature, signature, 4) == 0) {

@@ -5,6 +5,7 @@
 #include "disk/partition.h"
 #include "fs/ramfs.h"
 #include <stdarg.h>
+#include <string.h>
 
 partition_t* glob_cuorefs_partition = NULL;
 
@@ -23,10 +24,12 @@ static int bitmap_test(uint8_t *bitmap, uint32_t bit) {
 void cuorefs_init(partition_t* part) {
 	uint8_t* buffer = malloc(BLOCK_SIZE);
 	for (int i = 0; i < 8; i++) {
-		if (part->disk->read_sector(part->disk, part->start_lba + i, (uint16_t*)(buffer + (i * 512))) != 0) {
+		uint8_t bounce[512];
+		if (part->disk->read_sector(part->disk, part->start_lba + i, (uint16_t*)bounce) != 0) {
 			free(buffer);
 			return;
 		}
+		memcpy(buffer + (i * 512), bounce, 512);
 	}
 
 	cuorefs_header_t* header = (cuorefs_header_t*)buffer;
@@ -55,14 +58,18 @@ int cuorefs_format(partition_t *part, uint32_t max_files) {
 	}
 
 	for (int i = 0; i < 8; i++) {
-		part->disk->write_sector(part->disk, part->start_lba + i, (uint16_t*)((uint8_t*)header + (i * SECTOR_SIZE)));
+		uint8_t bounce[512];
+		memcpy(bounce, (uint8_t*)header + (i * SECTOR_SIZE), 512);
+		part->disk->write_sector(part->disk, part->start_lba + i, (uint16_t*)bounce);
 	}
 
 	uint8_t *zero_block = zalloc(BLOCK_SIZE);
 	for (uint32_t b = 0; b < table_blocks; b++) {
 		uint64_t block_lba = part->start_lba + 8 + (b * 8);
 		for (int s = 0; s < 8; s++) {
-			part->disk->write_sector(part->disk, block_lba + s, (uint16_t*)(zero_block + (s * SECTOR_SIZE)));
+			uint8_t bounce[512];
+			memcpy(bounce, zero_block + (s * SECTOR_SIZE), 512);
+			part->disk->write_sector(part->disk, block_lba + s, (uint16_t*)bounce);
 		}
 	}
 
@@ -105,7 +112,9 @@ int cuorefs_add_file(const char *name, void *data, uint64_t size) {
 	uint32_t table_size = header->table_blocks * BLOCK_SIZE;
 	cuorefs_entry_t *table = malloc(table_size);
 	for(uint32_t s = 0; s < (header->table_blocks * 8); s++) {
-		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)((uint8_t*)table + (s * SECTOR_SIZE)));
+		uint8_t bounce[512];
+		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)bounce);
+		memcpy((uint8_t*)table + (s * SECTOR_SIZE), bounce, 512);
 	}
 
 	for (uint32_t i = start_block; i < start_block + needed_blocks; i++) {
@@ -129,10 +138,16 @@ int cuorefs_add_file(const char *name, void *data, uint64_t size) {
 
 	header->num_files++;
 
-	for(int i = 0; i < 8; i++)
-		disk->write_sector(disk, part_lba + i, (uint16_t*)((uint8_t*)header + (i * SECTOR_SIZE)));
-	for(uint32_t s = 0; s < (header->table_blocks * 8); s++)
-		disk->write_sector(disk, part_lba + 8 + s, (uint16_t*)((uint8_t*)table + (s * SECTOR_SIZE)));
+	for(int i = 0; i < 8; i++) {
+		uint8_t bounce[512];
+		memcpy(bounce, (uint8_t*)header + (i * SECTOR_SIZE), 512);
+		disk->write_sector(disk, part_lba + i, (uint16_t*)bounce);
+	}
+	for(uint32_t s = 0; s < (header->table_blocks * 8); s++) {
+		uint8_t bounce[512];
+		memcpy(bounce, (uint8_t*)table + (s * SECTOR_SIZE), 512);
+		disk->write_sector(disk, part_lba + 8 + s, (uint16_t*)bounce);
+	}
 
 	free(table);
 	return 0;
@@ -147,7 +162,9 @@ int cuorefs_delete_file(const char* name) {
 	uint32_t table_size = header->table_blocks * BLOCK_SIZE;
 	cuorefs_entry_t *table = malloc(table_size);
 	for (uint32_t s = 0; s < (header->table_blocks * 8); s++) {
-		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)((uint8_t*)table + (s * SECTOR_SIZE)));
+		uint8_t bounce[512];
+		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)bounce);
+		memcpy((uint8_t*)table + (s * SECTOR_SIZE), bounce, 512);
 	}
 
 	int found_idx = -1;
@@ -174,10 +191,16 @@ int cuorefs_delete_file(const char* name) {
 	memset(&table[header->num_files - 1], 0, sizeof(cuorefs_entry_t));
 	header->num_files--;
 
-	for (int i = 0; i < 8; i++)
-		disk->write_sector(disk, part_lba + i, (uint16_t*)((uint8_t*)header + (i * SECTOR_SIZE)));
-	for (uint32_t s = 0; s < (header->table_blocks * 8); s++)
-		disk->write_sector(disk, part_lba + 8 + s, (uint16_t*)((uint8_t*)table + (s * SECTOR_SIZE)));
+	for (int i = 0; i < 8; i++) {
+		uint8_t bounce[512];
+		memcpy(bounce, (uint8_t*)header + (i * SECTOR_SIZE), 512);
+		disk->write_sector(disk, part_lba + i, (uint16_t*)bounce);
+	}
+	for (uint32_t s = 0; s < (header->table_blocks * 8); s++) {
+		uint8_t bounce[512];
+		memcpy(bounce, (uint8_t*)table + (s * SECTOR_SIZE), 512);
+		disk->write_sector(disk, part_lba + 8 + s, (uint16_t*)bounce);
+	}
 
 	free(table);
 	return 0;
@@ -192,7 +215,9 @@ int cuorefs_wipe_file(const char* name) {
 	uint32_t table_size = header->table_blocks * BLOCK_SIZE;
 	cuorefs_entry_t *table = malloc(table_size);
 	for (uint32_t s = 0; s < (header->table_blocks * 8); s++) {
-		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)((uint8_t*)table + (s * SECTOR_SIZE)));
+		uint8_t bounce[512];
+		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)bounce);
+		memcpy((uint8_t*)table + (s * SECTOR_SIZE), bounce, 512);
 	}
 
 	int found_idx = -1;
@@ -226,10 +251,16 @@ int cuorefs_wipe_file(const char* name) {
 	memset(&table[header->num_files - 1], 0, sizeof(cuorefs_entry_t));
 	header->num_files--;
 
-	for (int i = 0; i < 8; i++)
-		disk->write_sector(disk, part_lba + i, (uint16_t*)((uint8_t*)header + (i * SECTOR_SIZE)));
-	for (uint32_t s = 0; s < (header->table_blocks * 8); s++)
-		disk->write_sector(disk, part_lba + 8 + s, (uint16_t*)((uint8_t*)table + (s * SECTOR_SIZE)));
+	for (int i = 0; i < 8; i++) {
+		uint8_t bounce[512];
+		memcpy(bounce, (uint8_t*)header + (i * SECTOR_SIZE), 512);
+		disk->write_sector(disk, part_lba + i, (uint16_t*)bounce);
+	}
+	for (uint32_t s = 0; s < (header->table_blocks * 8); s++) {
+		uint8_t bounce[512];
+		memcpy(bounce, (uint8_t*)table + (s * SECTOR_SIZE), 512);
+		disk->write_sector(disk, part_lba + 8 + s, (uint16_t*)bounce);
+	}
 
 	free(table);
 	return 0;
@@ -244,7 +275,9 @@ cuorefs_file_t* cuorefs_find_file(const char* name) {
 	uint32_t table_size = header->table_blocks * BLOCK_SIZE;
 	cuorefs_entry_t *table = malloc(table_size);
 	for (uint32_t s = 0; s < (header->table_blocks * 8); s++) {
-		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)((uint8_t*)table + (s * SECTOR_SIZE)));
+		uint8_t bounce[512];
+		disk->read_sector(disk, part_lba + 8 + s, (uint16_t*)bounce);
+		memcpy((uint8_t*)table + (s * SECTOR_SIZE), bounce, 512);
 	}
 
 	int found_idx = -1;

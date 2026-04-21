@@ -138,7 +138,8 @@ static void heap_init_pools(void) {
 
 		uint8_t* data_start = (uint8_t*)(bh + 1);
 		for (size_t j = 0; j <= (bh->size - pool_sizes[i]); j += pool_sizes[i]) {
-			PoolNode* node = (PoolNode*)(data_start + j);
+			uintptr_t node_addr = (uintptr_t)data_start + j;
+			PoolNode* node = (PoolNode*)node_addr;
 			node->next = pools[i].free_list;
 			pools[i].free_list = node;
 		}
@@ -182,7 +183,7 @@ void* malloc(size_t size) {
 	for (int i = 0; i < POOL_COUNT; i++) {
 		if (size <= pools[i].block_size && pools[i].free_list) {
 			void* ptr = pools[i].free_list;
-			pools[i].free_list = pools[i].free_list->next;
+			pools[i].free_list = ((PoolNode*)ptr)->next;
 
 			BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
 			page_header->used_slots++;
@@ -201,7 +202,8 @@ void* malloc(size_t size) {
 
 		if (curr->is_free && curr->size >= size) {
 			if (curr->size >= (size + sizeof(BlockHeader) + MIN_SPLIT_SIZE)) {
-				BlockHeader *next_block = (BlockHeader*)((uint8_t*)(curr + 1) + size);
+				uintptr_t next_addr = (uintptr_t)(curr + 1) + size;
+				BlockHeader *next_block = (BlockHeader*)next_addr;
 				next_block->magic = HEAP_MAGIC;
 				next_block->size = curr->size - size - sizeof(BlockHeader);
 				next_block->is_free = true;
@@ -277,14 +279,14 @@ static void _free(void* ptr, uint8_t type) {
 
 void* realloc(void* ptr, size_t new_size) {
 	if (!ptr) return malloc(new_size);
-	if (new_size == 0) { free(ptr); return NULL; }
+	if (new_size == 0) { _free(ptr, PTE_STATE_HEAP_BLOCK); return NULL; } // fixed: use internal free logic or your public free
 
 	new_size = ALIGN(new_size);
 
 	uint64_t* pml4_v = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
 	uint64_t* pte = vmm_get_pte(pml4_v, (uintptr_t)ptr, 0);
 
-	if (!pte || !(*pte & 1)) panic("MEMORY CORRUPTION", "Attempted to realloc non heap memory");;
+	if (!pte || !(*pte & 1)) panic("MEMORY CORRUPTION", "Attempted to realloc non heap memory");
 
 	uint8_t type = (uint8_t)((*pte >> 9) & 0x07);
 	size_t old_size = 0;
@@ -319,7 +321,8 @@ void* realloc(void* ptr, size_t new_size) {
 			if (total_avail >= (new_size + sizeof(BlockHeader) + MIN_SPLIT_SIZE)) {
 				size_t leftover = total_avail - new_size - sizeof(BlockHeader);
 				curr->size = new_size;
-				BlockHeader *split = (BlockHeader*)((uint8_t*)(curr + 1) + new_size);
+				uintptr_t split_addr = (uintptr_t)(curr + 1) + new_size;
+				BlockHeader *split = (BlockHeader*)split_addr;
 				split->magic = HEAP_MAGIC;
 				split->size = leftover;
 				split->is_free = true;

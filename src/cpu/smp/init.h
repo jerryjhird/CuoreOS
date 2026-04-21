@@ -30,5 +30,7 @@ extern cpu_control_block_t *logical_indexed_cpu_list[SMP_MAX_CORES];
 
 #define GET_CURRENT_CPU(target) __asm__ volatile ("mov %%gs:0, %0" : "=r"(target))
 
+struct limine_mp_info;
+
 void AP_kstartc(struct limine_mp_info *mp);
 int get_idle_core(void);

@@ -15,10 +15,11 @@ static void ioapic_write(uint32_t reg, uint32_t value) {
 	*(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_WIN) = value;
 }
 
-static uint32_t ioapic_read(uint32_t reg) {
-	*(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_SEL) = reg;
-	return *(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_WIN);
-}
+// not used yet
+// static uint32_t ioapic_read(uint32_t reg) {
+// 	*(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_SEL) = reg;
+// 	return *(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_WIN);
+// }
 
 void ioapic_map_irq(uint8_t irq_pin, uint8_t vector, uint8_t cpu_apic_id, uint32_t flags) {
 	uint32_t low_index = 0x10 + (irq_pin * 2);

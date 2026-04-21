@@ -8,6 +8,7 @@
 #include "devices.h"
 #include "kstate.h"
 #include "cpu/smp/init.h"
+#include "mem/mem.h" // IWYU pragma: keep
 
 struct idt_entry {
 	uint16_t offset_low;
@@ -65,19 +66,22 @@ void exception_main(struct trap_frame *tf, const char *description) {
 
 			dev_puts(dev, " ***\n");
 
-			uint64_t *raw_data = (uint64_t*)tf;
+			uint8_t *base = (uint8_t*)tf;
 
 			for (int j = 0; j < 28; j++) {
 				dev_puts(dev, labels[j]);
 				dev_puts(dev, ": 0x");
 
-				ptrthex(buf, raw_data[j]);
+				uint64_t val;
+				memcpy(&val, base + (j * sizeof(uint64_t)), sizeof(uint64_t));
+
+				ptrthex(buf, val);
 				dev_puts(dev, buf);
 
 				dev->putc('\n');
-				}
 			}
 		}
+	}
 
 	for(;;) {
 		__asm__ volatile ("hlt");

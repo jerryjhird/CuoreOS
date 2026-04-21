@@ -46,11 +46,11 @@ uint8_t mbr_parse(kernel_disk_dev_t* dev) {
 	return 0;
 }
 
-void mbr_install(kernel_disk_dev_t* dev, uint8_t type_id) {
+void mbr_install(kernel_disk_dev_t *dev, uint8_t type_id) {
 	uint8_t sector[512];
-	memset(sector, 0, 512);
+	memset(sector, 0, sizeof(sector));
 
-	uint8_t* partition_entry = &sector[446];
+	uint8_t *partition_entry = &sector[446];
 
 	partition_entry[0] = 0x80;
 	partition_entry[1] = 0x00;
@@ -66,14 +66,14 @@ void mbr_install(kernel_disk_dev_t* dev, uint8_t type_id) {
 	uint32_t start_lba = 2048;
 	uint32_t total_sectors = 0xFFFE;
 
-	*(uint32_t*)&partition_entry[8] = start_lba;
-	*(uint32_t*)&partition_entry[12] = total_sectors;
+	memcpy(&partition_entry[8], &start_lba, sizeof(uint32_t));
+	memcpy(&partition_entry[12], &total_sectors, sizeof(uint32_t));
 
 	sector[510] = 0x55;
 	sector[511] = 0xAA;
 
-	dev->write_sector(dev, 0, (uint16_t*)sector);
+	dev->write_sector(dev, 0, (uint16_t *)sector);
 
-	memset(sector, 0, 512);
-	dev->write_sector(dev, 2048, (uint16_t*)sector);
+	memset(sector, 0, sizeof(sector));
+	dev->write_sector(dev, 2048, (uint16_t *)sector);
 }

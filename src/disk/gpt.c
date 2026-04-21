@@ -6,6 +6,7 @@
 #include "mem/heap.h" // IWYU pragma: keep
 #include "mem/mem.h" // IWYU pragma: keep
 #include "crc32.h"
+#include <string.h>
 
 void gpt_parse(kernel_disk_dev_t* dev) {
 	uint8_t buffer[512];
@@ -31,8 +32,9 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 
 	uint32_t sectors_to_read = array_size / 512;
 	for (uint32_t s = 0; s < sectors_to_read; s++) {
-		dev->read_sector(dev, header->partition_entry_lba + s,
-						 (uint16_t*)(array_buffer + (s * 512)));
+		uint8_t bounce[512];
+		dev->read_sector(dev, header->partition_entry_lba + s, (uint16_t*)bounce);
+		memcpy(array_buffer + (s * 512), bounce, 512);
 	}
 
 	if (crc32(array_buffer, array_size) != header->partition_entry_array_crc32) {
@@ -44,7 +46,7 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 	uint32_t entry_size = header->sizeof_partition_entry;
 
 	for (uint32_t i = 0; i < header->num_partition_entries; i++) {
-		gpt_entry_t* gpt_p = (gpt_entry_t*)&array_buffer[i * entry_size];
+		gpt_entry_t* gpt_p = (gpt_entry_t*)(array_buffer + (i * entry_size));
 
 		if (memcmp(gpt_p->partition_type_guid, (uint8_t[])GUID_EMPTY, 16) == 0) {
 			continue;
@@ -53,12 +55,12 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 		partition_t* entry = (partition_t*)malloc(sizeof(partition_t));
 		if (!entry) break;
 
-		entry->start_lba	= gpt_p->starting_lba;
+		entry->start_lba = gpt_p->starting_lba;
 		entry->sector_count = (gpt_p->ending_lba - gpt_p->starting_lba) + 1;
 		entry->partition_id = i;
-		entry->type_id	  = 0;
-		entry->disk		 = dev;
-		entry->is_gpt	   = true;
+		entry->type_id = 0;
+		entry->disk = dev;
+		entry->is_gpt = true;
 		memcpy(entry->guid, gpt_p->partition_type_guid, 16);
 
 		partition_register(entry);
@@ -98,19 +100,28 @@ void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid
 
 	memset(sector, 0, 512);
 	sector[450] = 0xEE;
-	*(uint32_t*)&sector[454] = 1;
+
+	uint32_t lba_start = 1;
+	memcpy(&sector[454], &lba_start, sizeof(uint32_t));
+
 	uint32_t mbr_sz = (disk_sectors > 0xFFFFFFFF) ? 0xFFFFFFFF : (uint32_t)(disk_sectors - 1);
-	*(uint32_t*)&sector[458] = mbr_sz;
+	memcpy(&sector[458], &mbr_sz, sizeof(uint32_t));
+
 	sector[510] = 0x55;
 	sector[511] = 0xAA;
 	dev->write_sector(dev, 0, (uint16_t*)sector);
 
 	for (int i = 0; i < 32; i++) {
-		dev->write_sector(dev, 2 + i, (uint16_t*)(full_array + (i * 512)));
+		uint8_t bounce[512];
+		memcpy(bounce, full_array + (i * 512), 512);
+		dev->write_sector(dev, 2 + i, (uint16_t*)bounce);
 	}
 
+	// backup partition table
 	for (int i = 0; i < 32; i++) {
-		dev->write_sector(dev, (disk_sectors - 33) + i, (uint16_t*)(full_array + (i * 512)));
+		uint8_t bounce[512];
+		memcpy(bounce, full_array + (i * 512), 512);
+		dev->write_sector(dev, (disk_sectors - 33) + i, (uint16_t*)bounce);
 	}
 
 	// primary header

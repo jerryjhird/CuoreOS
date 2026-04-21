@@ -3,6 +3,7 @@
 #include "ioapic.h"
 #include "kstate.h"
 #include <stddef.h>
+#include "mem/mem.h" // IWYU pragma: keep
 
 static uintptr_t lapic_phys = 0;
 static uintptr_t ioapic_phys = 0;
@@ -25,20 +26,24 @@ void madt_init(void) {
 		uint8_t type = ptr[0];
 		uint8_t len  = ptr[1];
 
+		if (len == 0) break;
+
 		switch (type) {
 			case MADT_TYPE_LAPIC:
 				break;
 
 			case MADT_TYPE_IOAPIC: {
-				ioapic_phys = (uintptr_t)(*(uint32_t*)(ptr + 4));
+				uint32_t ioapic_addr_val;
+				memcpy(&ioapic_addr_val, ptr + 4, sizeof(uint32_t));
+				ioapic_phys = (uintptr_t)ioapic_addr_val;
 				break;
 			}
 
 			case MADT_TYPE_ISO: {
 				if (iso_count < 16) {
 					isos[iso_count].bus_source = ptr[3];
-					isos[iso_count].gsi = *(uint32_t*)(ptr + 4);
-					isos[iso_count].flags = *(uint16_t*)(ptr + 8);
+					memcpy(&isos[iso_count].gsi, ptr + 4, sizeof(uint32_t));
+					memcpy(&isos[iso_count].flags, ptr + 8, sizeof(uint16_t));
 					iso_count++;
 				}
 				break;
@@ -65,5 +70,5 @@ void madt_query_irq(uint8_t irq, uint8_t *out_pin, uint32_t *out_flags) {
 	}
 }
 
-uintptr_t madt_get_lapic_base()   { return lapic_phys; }
-uintptr_t madt_get_ioapic_base() { return ioapic_phys; }
+uintptr_t madt_get_lapic_base(void) { return lapic_phys; }
+uintptr_t madt_get_ioapic_base(void) { return ioapic_phys; }
