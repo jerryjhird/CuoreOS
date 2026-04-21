@@ -13,7 +13,7 @@ os.environ.setdefault('ESCDELAY', '25')
 config_groups = {
     "compiling": {
         "mdname": "Compiling",
-        "cc": "gcc",
+        "cc": "clang",
         "additional_cflags": "-DDEBUG",
         "additional_ldflags": ""
     },
