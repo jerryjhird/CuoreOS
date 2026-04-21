@@ -1,7 +1,9 @@
+#include "beep.h"
+
 #include "devices.h"
 #include "mem/heap.h"
 
-void beep_cleanup_hook(void* arg) {
+static void beep_cleanup_hook(void* arg) {
 	free(arg);
 }
 
