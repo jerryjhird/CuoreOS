@@ -222,7 +222,9 @@ static void kernel_main(void) {
 		}
 	}
 
-	mailbox_send(get_idle_core(), time_sync, NULL);
+	if (mp_response->cpu_count < 2) {
+		mailbox_send(get_idle_core(), time_sync, NULL);
+	}
 
 	logbuf_write("[ BOOT ] Time it took to boot (ms): "); logbuf_putint(hpet_get_ms()); logbuf_write("\n");
 	logbuf_flush(&uart16550_dev);
