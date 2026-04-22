@@ -1,7 +1,9 @@
 #include "PS2.h"
+
 #include "cpu/io.h"
 #include "kbd_layouts.h"
 #include <stdbool.h>
+#include "_time.h"
 
 static bool shift_active = false;
 static bool caps_active  = false;
@@ -44,16 +46,18 @@ char ps2_getc(void) {
 	return c;
 }
 
-static void io_wait(void) {
-	outb(0x80, 0);
-}
-
-// in for a rewrite
 char ps2_getc_blocking(void) {
-	char c = 0;
-	while ((c = ps2_getc()) == 0) {
-		for(int i = 0; i < 1000; i++) io_wait();
-		__asm__ volatile("pause");
-	}
-	return c;
+    char c;
+
+    if ((c = ps2_getc())) return c;
+
+    while (1) {
+        usleep(100); 
+        
+        if ((c = ps2_getc())) {
+            return c;
+        }
+
+        __asm__ volatile("pause");
+    }
 }
