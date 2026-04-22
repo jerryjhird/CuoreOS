@@ -81,7 +81,7 @@ static struct trap_frame* ac97_irq_handler(struct trap_frame* tf) {
 
 	// 0x18 = IOC (0x08) | LVI (0x10)
 	if (sr & 0x18) {
-		outw(state->nabmbar + AC97_PO_SR, sr & 0x18);
+		outw(state->nabmbar + AC97_PO_SR, 0x1C);
 
 		adev->is_playing = false;
 
