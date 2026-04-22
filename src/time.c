@@ -6,6 +6,8 @@
 
 static time_t boot_epoch = 0;
 static uint64_t boot_hpet_ticks = 0;
+static uint64_t hpet_ticks_per_ms = 0;
+static uint64_t hpet_ticks_per_us = 0;
 
 static const int days_before_month[] = {
 	0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
@@ -54,6 +56,11 @@ void time_sync(void) {
 }
 
 void time_init(void) {
+	uint64_t f_per_tick = hpet_femto_per_tick();
+
+	hpet_ticks_per_ms = 1000000000000ULL / f_per_tick;
+    hpet_ticks_per_us = 1000000000ULL / f_per_tick;
+
 	boot_hpet_ticks = hpet_get_ticks();
 	boot_epoch = get_epoch_rtc();
 }
@@ -69,4 +76,22 @@ time_t get_epoch(void) {
 	uint64_t elapsed_sec = elapsed_ticks / ticks_per_sec;
 
 	return boot_epoch + (time_t)elapsed_sec;
+}
+
+void msleep(uint64_t ms) {
+    uint64_t total_ticks = ms * hpet_ticks_per_ms;
+    uint64_t start = hpet_get_ticks();
+
+    while ((hpet_get_ticks() - start) < total_ticks) {
+        __asm__ volatile("pause");
+    }
+}
+
+void usleep(uint64_t us) {
+    uint64_t total_ticks = us * hpet_ticks_per_us;
+    uint64_t start = hpet_get_ticks();
+
+    while ((hpet_get_ticks() - start) < total_ticks) {
+        __asm__ volatile("pause");
+    }
 }
