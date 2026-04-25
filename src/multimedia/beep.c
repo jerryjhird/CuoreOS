@@ -4,6 +4,10 @@
 #include "mem/heap.h"
 
 static void beep_cleanup_hook(void* arg) {
+	#ifdef DEBUG
+		dev_puts(&uart16550_dev, "[ BEEP ] beeeeepppp\n");
+	#endif
+
 	free(arg);
 }
 
