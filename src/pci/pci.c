@@ -106,6 +106,7 @@ void pci_init(void) {
 				uint32_t class_reg = pci_read_word(bus, slot, func, 0x08);
 				d->class_id = (class_reg >> 24) & 0xFF;
 				d->subclass_id = (class_reg >> 16) & 0xFF;
+				d->progif = (class_reg >> 8) & 0xFF;
 				d->irq = pci_read_word(bus, slot, func, 0x3C) & 0xFF;
 
 				// cache all 6 BARs
@@ -147,6 +148,13 @@ void pci_init(void) {
 			// class/subclass check
 			if (match && entry->class_id != 0) {
 				if (dev->class_id != entry->class_id || dev->subclass_id != entry->subclass_id) {
+					match = false;
+				}
+			}
+
+			// progif check
+			if (match && entry->progif != 0xFF) {
+				if (dev->progif != entry->progif) {
 					match = false;
 				}
 			}

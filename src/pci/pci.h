@@ -30,6 +30,26 @@
 // multimedia class 0x04
 #define PCI_CLASS_MULTIMEDIA 0x04
 #define PCI_SUBCLASS_AUDIO 0x01
+#define PCI_SUBCLASS_HDAUDIO 0x03
+
+// bridge class 0x06
+#define PCI_CLASS_BRIDGE 0x06
+#define PCI_SUBCLASS_PCI_TO_PCI 0x04
+
+// serial bus class 0x0C
+#define PCI_CLASS_SERIAL 0x0C
+#define PCI_SUBCLASS_USB 0x03
+
+// progif
+#define PCI_PROGIF_ANY 0xFF
+#define PCI_PROGIF_UHCI 0x00
+#define PCI_PROGIF_OHCI 0x10
+#define PCI_PROGIF_EHCI 0x20
+#define PCI_PROGIF_XHCI 0x30
+#define PCI_PROGIF_IDE_COMPAT 0x80 // legacy mode
+#define PCI_PROGIF_IDE_NATIVE 0x85 // pci native mode
+#define PCI_PROGIF_SATA_AHCI 0x01 // for subclass 0x06
+#define PCI_PROGIF_NVME 0x02 // for subclass 0x08
 
 typedef struct {
 	uintptr_t base; // physical address or IO port
@@ -42,6 +62,7 @@ typedef struct {
 	uint16_t device_id;
 	uint8_t class_id;
 	uint8_t subclass_id;
+	uint8_t progif;
 	uint8_t irq;
 	uint8_t bus;
 	uint8_t slot;
@@ -56,8 +77,9 @@ typedef struct {
 	uint16_t vendor_id;
 	uint16_t device_id;
 
-	uint8_t  class_id;
-	uint8_t  subclass_id;
+	uint8_t class_id;
+	uint8_t subclass_id;
+	uint8_t progif;
 
 	// parser configuration
 	uint16_t group_id; // 0 = always load if found | > 0 = only load one per group

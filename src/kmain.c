@@ -76,6 +76,8 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.device_id = PCI_DEVICE_I440FX_HB,
 		.class_id = 0,
 		.subclass_id = 0,
+		.progif = PCI_PROGIF_ANY,
+
 		.init = NULL // no driver for this
 	},
 	{
@@ -85,6 +87,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.device_id = PCI_DEVICE_ANY,
 		.class_id = PCI_CLASS_MULTIMEDIA,
 		.subclass_id = PCI_SUBCLASS_AUDIO,
+		.progif = PCI_PROGIF_ANY,
 
 		#ifdef KERNEL_MOD_AC97_ENABLED
 			.init = ac97_init
@@ -101,6 +104,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.device_id = PCI_DEVICE_ANY,
 		.class_id = PCI_CLASS_STORAGE,
 		.subclass_id = PCI_SUBCLASS_IDE,
+		.progif = PCI_PROGIF_ANY,
 
 		#ifdef KERNEL_MOD_IDE_ENABLED
 			.init = ide_init
