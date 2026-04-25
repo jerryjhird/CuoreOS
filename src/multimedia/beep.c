@@ -2,6 +2,7 @@
 
 #include "devices.h"
 #include "mem/heap.h"
+#include "builtinabs.h"
 
 static void beep_cleanup_hook(void* arg) {
 	#ifdef DEBUG
@@ -12,16 +13,14 @@ static void beep_cleanup_hook(void* arg) {
 }
 
 void audio_beep(kernel_audio_dev_t* dev, uint32_t freq, uint32_t duration_ms) {
-	if (!dev) return;
+	if (UNLIKELY(!dev)) return;
 	while (dev->is_playing || dev->hook != NULL) {
 		__builtin_ia32_pause();
 	}
 
 	uint32_t num_samples = (dev->sample_rate * duration_ms) / 1000;
 	size_t buffer_size = num_samples * dev->channels * (dev->bit_depth / 8);
-
 	int16_t* buffer = zalloc(buffer_size);
-	if (!buffer) return;
 
 	uint32_t period = dev->sample_rate / freq;
 	uint32_t half_period = period / 2;

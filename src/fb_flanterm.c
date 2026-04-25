@@ -5,12 +5,11 @@
 
 #include "fb_flanterm.h"
 
-#include "bitmask.h"
 #include "limine.h"
 #include "devices.h"
 #include "mem/heap.h"
 #include <stdint.h>
-#include "kstate.h"
+#include "builtinabs.h"
 
 struct flanterm_context *ft_ctx = NULL;
 
@@ -56,7 +55,7 @@ void _c_flanterm_free(void) {
 }
 
 void _c_flanterm_putc(char c) {
-	if (!ft_ctx) return;
+	if (UNLIKELY(!ft_ctx)) return;
 
 	flanterm_write(ft_ctx, &c, 1);
 

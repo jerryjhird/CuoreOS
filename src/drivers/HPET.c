@@ -4,6 +4,7 @@
 #include "mem/paging.h"
 #include "acpi/acpi.h"
 #include <stdint.h>
+#include "builtinabs.h"
 
 static uint64_t hpet_base = 0;
 static uint32_t femtoseconds_per_tick = 0;
@@ -42,17 +43,17 @@ void hpet_init(void) {
 }
 
 uint64_t hpet_get_nanos(void) {
-	if (hpet_base == 0) return 0;
+	if (UNLIKELY(hpet_base == 0)) return 0;
 	return (hpet_get_ticks() * femtoseconds_per_tick) / 1000000ULL;
 }
 
 uint64_t hpet_get_ms(void) {
-	if (hpet_base == 0) return 0;
+	if (UNLIKELY(hpet_base == 0)) return 0;
 	return (hpet_get_ticks() * femtoseconds_per_tick) / 1000000000000ULL;
 }
 
 uint32_t hpet_femto_per_tick(void) {
-	if (hpet_base == 0) return 0;
+	if (UNLIKELY(hpet_base == 0)) return 0;
 	uint64_t caps = *(volatile uint64_t*)(hpet_base + HPET_REG_CAPS);
 	return (uint32_t)(caps >> 32);
 }

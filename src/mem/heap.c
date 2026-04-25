@@ -9,6 +9,7 @@
 #include "kstate.h"
 #include "stdio.h"
 #include "mem/paging.h"
+#include "builtinabs.h"
 
 #define ALIGNMENT 16
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~(ALIGNMENT-1))
@@ -75,8 +76,6 @@ static bool heap_grow(size_t size_needed) {
 	if (pages < PAGES_PER_GROWTH) pages = PAGES_PER_GROWTH;
 
 	uintptr_t phys = pma_alloc_pages(pages);
-	if (!phys) return false;
-
 	uint64_t* pml4_virt = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
 	uintptr_t grow_vaddr = heap_current_top;
 
@@ -151,7 +150,6 @@ void heap_init(void* start_address, size_t total_size) {
 
 	// allocate phys
 	uintptr_t phys = pma_alloc_pages(pages);
-	if (!phys) panic("HEAP INIT", "Could not allocate physical memory for heap");
 
 	// map virt to phys
 	uintptr_t vaddr = (uintptr_t)start_address;
@@ -178,7 +176,7 @@ void heap_init(void* start_address, size_t total_size) {
 }
 
 void* malloc(size_t size) {
-	if (size == 0) return NULL;
+	if (UNLIKELY(size == 0)) return NULL;
 
 	for (int i = 0; i < POOL_COUNT; i++) {
 		if (size <= pools[i].block_size && pools[i].free_list) {
@@ -198,7 +196,7 @@ void* malloc(size_t size) {
 	bool wrapped = false;
 
 	while (curr) {
-		if (curr->magic != HEAP_MAGIC) panic("MEMORY CORRUPTION", "Heap corruption!");
+		if (UNLIKELY(curr->magic != HEAP_MAGIC)) panic("MEMORY CORRUPTION", "Heap corruption!");
 
 		if (curr->is_free && curr->size >= size) {
 			if (curr->size >= (size + sizeof(BlockHeader) + MIN_SPLIT_SIZE)) {
@@ -224,13 +222,12 @@ void* malloc(size_t size) {
 		if (curr == start && wrapped) break;
 	}
 
-	if (heap_grow(size)) goto retry;
-	panic("MEMORY EXHAUSTION", "the heap is out of memory (OOM)");
-	return NULL;
+	heap_grow(size);
+	goto retry;
 }
 
 static void _free(void* ptr, uint8_t type) {
-	if (!ptr) return;
+	if (UNLIKELY(!ptr)) return;
 	if (type == PTE_STATE_HEAP_POOL) {
 		BlockHeader *page_header = (BlockHeader*)((uintptr_t)ptr & ~0xFFF);
 		size_t bin = page_header->bin_size;
@@ -278,8 +275,8 @@ static void _free(void* ptr, uint8_t type) {
 }
 
 void* realloc(void* ptr, size_t new_size) {
-	if (!ptr) return malloc(new_size);
-	if (new_size == 0) { _free(ptr, PTE_STATE_HEAP_BLOCK); return NULL; } // fixed: use internal free logic or your public free
+	if (UNLIKELY(!ptr)) return malloc(new_size);
+	if (UNLIKELY(new_size == 0)) { _free(ptr, PTE_STATE_HEAP_BLOCK); return NULL; } // fixed: use internal free logic or your public free
 
 	new_size = ALIGN(new_size);
 
@@ -341,10 +338,8 @@ void* realloc(void* ptr, size_t new_size) {
 
 		// migration required
 		void* new_ptr = malloc(new_size);
-		if (new_ptr) {
-			memcpy(new_ptr, ptr, old_size);
-			free(ptr);
-		}
+		memcpy(new_ptr, ptr, old_size);
+		free(ptr);
 		return new_ptr;
 	}
 
@@ -366,7 +361,7 @@ void* zalloc(size_t size) {
 }
 
 void zfree(void* ptr) {
-	if(!ptr) return;
+	if(UNLIKELY(!ptr)) return;
 
 	uint64_t* pte;
 	uint8_t type = get_ptr_type(ptr, &pte);

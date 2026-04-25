@@ -1,6 +1,7 @@
 #include "acpi.h"
 #include "mem/mem.h" // IWYU pragma: keep
 #include "kstate.h"
+#include "builtinabs.h"
 
 static struct acpi_sdt_header* xsdt = NULL;
 static bool is_xsdt = false;
@@ -19,7 +20,7 @@ void acpi_init(void) {
 }
 
 void* acpi_find_sdt(const char* signature) {
-	if (!xsdt) return NULL;
+	if (UNLIKELY(!xsdt)) return NULL;
 
 	size_t ptr_size = is_xsdt ? 8 : 4;
 	int entries = (xsdt->length - sizeof(struct acpi_sdt_header)) / ptr_size;

@@ -3,6 +3,7 @@
 #include "devices.h"
 #include "drivers/RTC.h"
 #include "drivers/HPET.h"
+#include "builtinabs.h"
 
 static time_t boot_epoch = 0;
 static uint64_t boot_hpet_ticks = 0;
@@ -66,7 +67,7 @@ void time_init(void) {
 }
 
 time_t get_epoch(void) {
-	if (boot_hpet_ticks == 0) return boot_epoch;
+	if (UNLIKELY(boot_hpet_ticks == 0)) return boot_epoch;
 
 	uint64_t elapsed_ticks = hpet_get_ticks() - boot_hpet_ticks;
 	uint64_t f_per_tick = hpet_femto_per_tick();

@@ -1,5 +1,6 @@
 #include "lapic.h"
 #include "cpu/MSR.h"
+#include "builtinabs.h"
 
 static uintptr_t lapic_base = 0;
 
@@ -63,7 +64,7 @@ void lapic_init(uintptr_t base_addr) {
 }
 
 void lapic_eoi(void) {
-	if (lapic_base) {
+	if (LIKELY(lapic_base)) {
 		lapic_write(LAPIC_REG_EOI, 0);
 	}
 }
