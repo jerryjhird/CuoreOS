@@ -47,17 +47,17 @@ char ps2_getc(void) {
 }
 
 char ps2_getc_blocking(void) {
-    char c;
+	char c;
 
-    if ((c = ps2_getc())) return c;
+	if ((c = ps2_getc())) return c;
 
-    while (1) {
-        usleep(100); 
-        
-        if ((c = ps2_getc())) {
-            return c;
-        }
+	while (1) {
+		usleep(100);
 
-        __asm__ volatile("pause");
-    }
+		if ((c = ps2_getc())) {
+			return c;
+		}
+
+		__asm__ volatile("pause");
+	}
 }

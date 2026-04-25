@@ -59,7 +59,7 @@ void time_init(void) {
 	uint64_t f_per_tick = hpet_femto_per_tick();
 
 	hpet_ticks_per_ms = 1000000000000ULL / f_per_tick;
-    hpet_ticks_per_us = 1000000000ULL / f_per_tick;
+	hpet_ticks_per_us = 1000000000ULL / f_per_tick;
 
 	boot_hpet_ticks = hpet_get_ticks();
 	boot_epoch = get_epoch_rtc();
@@ -79,19 +79,19 @@ time_t get_epoch(void) {
 }
 
 void msleep(uint64_t ms) {
-    uint64_t total_ticks = ms * hpet_ticks_per_ms;
-    uint64_t start = hpet_get_ticks();
+	uint64_t total_ticks = ms * hpet_ticks_per_ms;
+	uint64_t start = hpet_get_ticks();
 
-    while ((hpet_get_ticks() - start) < total_ticks) {
-        __asm__ volatile("pause");
-    }
+	while ((hpet_get_ticks() - start) < total_ticks) {
+		__asm__ volatile("pause");
+	}
 }
 
 void usleep(uint64_t us) {
-    uint64_t total_ticks = us * hpet_ticks_per_us;
-    uint64_t start = hpet_get_ticks();
+	uint64_t total_ticks = us * hpet_ticks_per_us;
+	uint64_t start = hpet_get_ticks();
 
-    while ((hpet_get_ticks() - start) < total_ticks) {
-        __asm__ volatile("pause");
-    }
+	while ((hpet_get_ticks() - start) < total_ticks) {
+		__asm__ volatile("pause");
+	}
 }
