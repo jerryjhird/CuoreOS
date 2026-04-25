@@ -21,14 +21,13 @@
 #include "cpu/smp/init.h"
 #include "fs/cuorefs.h"
 #include "stdio.h"
-#include "sync.h"
 #include "ui/installer.h"
 #include "_time.h"
-#include "cpu/thermal.h"
 #include "cpu/MSR.h"
 #include "bitmask.h"
 #include "cpu/rdrand.h"
 #include "multimedia/beep.h"
+#include "acpi/mcfg.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -111,6 +110,17 @@ pci_driver_entry_t pci_discovery_table[] = {
 		#else
 			.init = NULL
 		#endif
+	},
+	{
+		.name = "Generic SATA Controller",
+		.group_id = 0,
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_STORAGE,
+		.subclass_id = PCI_SUBCLASS_SATA,
+		.progif = PCI_PROGIF_ANY,
+
+		.init = NULL
 	},
 	{ .vendor_id = 0, .device_id = 0, .name = NULL, .init = NULL }
 };
@@ -230,7 +240,8 @@ static void kernel_main(void) {
 		mailbox_send(get_idle_core(), time_sync, NULL);
 	}
 
-	logbuf_write("[ BOOT ] Time it took to boot (ms): "); logbuf_putint(hpet_get_ms()); logbuf_write("\n");
+	logbuf_write("[ BOOT ] Time it took to boot (nano's): "); logbuf_putint(hpet_get_nanos()); logbuf_write("\n");
+
 	logbuf_flush(&uart16550_dev);
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
@@ -295,6 +306,7 @@ void _kstartc(void) {
 	dev_puts(&uart16550_dev, "\033[2J\033[H"); // ensure we dont overwrite things like the qemu dvd rom blob
 
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
+	mcfg_init();
 
 	pci_init();
 	logbuf_flush(&uart16550_dev);

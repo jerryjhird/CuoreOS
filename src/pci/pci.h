@@ -10,6 +10,8 @@
 #define PCI_VENDOR_REALTEK 0x10EC
 #define PCI_VENDOR_VMWARE 0x15AD // ew vmware
 #define PCI_VENDOR_QEMU 0x1234
+#define PCI_VENDOR_AGEIA 0x1A45
+#define PCI_VENDOR_SUN 0x108E
 #define PCI_VENDOR_ANY 0xFFFF
 
 #define PCI_DEVICE_RTL8139 0x8139
@@ -22,6 +24,8 @@
 // storage class 0x01
 #define PCI_CLASS_STORAGE 0x01
 #define PCI_SUBCLASS_IDE 0x01
+#define PCI_SUBCLASS_SATA 0x06
+#define PCI_SUBCLASS_NVME 0x08
 
 // network class 0x02
 #define PCI_CLASS_NETWORK 0x02
@@ -40,6 +44,10 @@
 #define PCI_CLASS_SERIAL 0x0C
 #define PCI_SUBCLASS_USB 0x03
 
+// processor class 0x0B
+#define PCI_CLASS_PROCESSOR 0x0B
+#define PCI_SUBCLASS_X86	0x40  // Co-processors often live here
+
 // progif
 #define PCI_PROGIF_ANY 0xFF
 #define PCI_PROGIF_UHCI 0x00
@@ -53,8 +61,8 @@
 
 typedef struct {
 	uintptr_t base; // physical address or IO port
-	uint32_t  size;
-	bool	  is_io; // true if port IO false if MMIO
+	uint64_t  size;
+	bool	  is_io;
 } pci_bar_t;
 
 typedef struct {

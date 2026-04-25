@@ -3,8 +3,16 @@
 #include "mem/heap.h"
 #include "logbuf.h"
 #include <stddef.h>
+#include "acpi/mcfg.h"
 
-static uint32_t pci_read_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
+static uint32_t pci_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
+	// try PCIe ECAM first
+	void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
+	if (addr) {
+		return *(volatile uint32_t*)((uintptr_t)addr + (offset & 0xfff));
+	}
+
+	// fallback to port IO
 	uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
 					   (((uint32_t)slot) << 11) |
 					   (((uint32_t)func) << 8) |
@@ -13,7 +21,15 @@ static uint32_t pci_read_word(uint16_t bus, uint16_t slot, uint16_t func, uint16
 	return inl(PCI_CONFIG_DATA);
 }
 
-static void pci_write_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint32_t data) {
+static void pci_write(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint32_t data) {
+	// try PCIe ECAM first
+	void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
+	if (addr) {
+		*(volatile uint32_t*)((uintptr_t)addr + (offset & 0xfff)) = data;
+		return;
+	}
+
+	// fallback to port IO
 	uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
 					   (((uint32_t)slot) << 11) |
 					   (((uint32_t)func) << 8) |
@@ -28,25 +44,33 @@ static pci_bar_t pci_get_bar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t ba
 	pci_bar_t bar = {0};
 	uint32_t offset = 0x10 + (bar_index * 4);
 
-	uint32_t low = pci_read_word(bus, slot, func, offset);
+	uint32_t low = pci_read(bus, slot, func, offset);
 	if (low == 0) return bar;
 
 	bar.is_io = (low & 0x1);
 
-	pci_write_word(bus, slot, func, offset, 0xFFFFFFFF);
-	uint32_t readback = pci_read_word(bus, slot, func, offset);
-	pci_write_word(bus, slot, func, offset, low);
+	pci_write(bus, slot, func, offset, 0xFFFFFFFF);
+	uint32_t readback = pci_read(bus, slot, func, offset);
+	pci_write(bus, slot, func, offset, low);
 
 	if (bar.is_io) {
 		bar.base = low & ~0x3;
-		bar.size = ~(readback & ~0x3) + 1;
+		bar.size = (uint64_t)(~(readback & ~0x3) + 1);
 	} else {
 		bar.base = low & ~0xF;
-		bar.size = ~(readback & ~0xF) + 1;
 
 		if ((low & 0x6) == 0x4) {
-			uint64_t high = pci_read_word(bus, slot, func, offset + 4);
+			uint64_t high = pci_read(bus, slot, func, offset + 4);
 			bar.base |= (high << 32);
+
+			pci_write(bus, slot, func, offset + 4, 0xFFFFFFFF);
+			uint32_t readback_high = pci_read(bus, slot, func, offset + 4);
+			pci_write(bus, slot, func, offset + 4, (uint32_t)high);
+
+			uint64_t combined_readback = (uint64_t)readback_high << 32 | (readback & ~0xF);
+			bar.size = ~combined_readback + 1;
+		} else {
+			bar.size = (uint64_t)(~(readback & ~0xF) + 1);
 		}
 	}
 
@@ -54,7 +78,7 @@ static pci_bar_t pci_get_bar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t ba
 }
 
 static void pci_enable_capabilities(uint8_t bus, uint8_t slot, uint8_t func) {
-	uint32_t cmd = pci_read_word(bus, slot, func, 0x04);
+	uint32_t cmd = pci_read(bus, slot, func, 0x04);
 
 	// Bit 0: IO Space (1)
 	// Bit 1: Memory Space (1)
@@ -66,7 +90,7 @@ static void pci_enable_capabilities(uint8_t bus, uint8_t slot, uint8_t func) {
 	cmd |= 0x07;
 	cmd &= ~(1 << 10);
 
-	pci_write_word(bus, slot, func, 0x04, cmd);
+	pci_write(bus, slot, func, 0x04, cmd);
 }
 
 void pci_init(void) {
@@ -79,14 +103,14 @@ void pci_init(void) {
 	for (uint16_t bus = 0; bus < 256; bus++) {
 		for (uint16_t slot = 0; slot < 32; slot++) {
 			// check if device exists at function 0
-			uint32_t id_reg = pci_read_word(bus, slot, 0, 0x00);
+			uint32_t id_reg = pci_read(bus, slot, 0, 0x00);
 			if ((id_reg & 0xFFFF) == 0xFFFF) continue;
 
-			uint32_t header = pci_read_word(bus, slot, 0, 0x0C);
+			uint32_t header = pci_read(bus, slot, 0, 0x0C);
 			int max_func = (header & 0x00800000) ? 8 : 1;
 
 			for (uint8_t func = 0; func < max_func; func++) {
-				id_reg = pci_read_word(bus, slot, func, 0x00);
+				id_reg = pci_read(bus, slot, func, 0x00);
 				if ((id_reg & 0xFFFF) == 0xFFFF) continue;
 
 				// expand heap buffer if hardware exceeds current capacity
@@ -103,17 +127,17 @@ void pci_init(void) {
 				d->device_id = (uint16_t)(id_reg >> 16);
 				d->claimed = false; // Initialize the new flag
 
-				uint32_t class_reg = pci_read_word(bus, slot, func, 0x08);
+				uint32_t class_reg = pci_read(bus, slot, func, 0x08);
 				d->class_id = (class_reg >> 24) & 0xFF;
 				d->subclass_id = (class_reg >> 16) & 0xFF;
 				d->progif = (class_reg >> 8) & 0xFF;
-				d->irq = pci_read_word(bus, slot, func, 0x3C) & 0xFF;
+				d->irq = pci_read(bus, slot, func, 0x3C) & 0xFF;
 
 				// cache all 6 BARs
 				for (int b = 0; b < 6; b++) {
 					d->bars[b] = pci_get_bar(bus, slot, func, b);
 					// handle 64 bit BARs
-					uint32_t raw = pci_read_word(bus, slot, func, 0x10 + (b * 4));
+					uint32_t raw = pci_read(bus, slot, func, 0x10 + (b * 4));
 					if (!(raw & 0x1) && ((raw & 0x6) == 0x4)) b++;
 				}
 			}

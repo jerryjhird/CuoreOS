@@ -33,10 +33,10 @@ typedef struct {
 } __attribute__((packed)) ac97_bdl_entry_t;
 
 typedef struct {
-	uint32_t nambar;
-	uint32_t nabmbar;
+	uintptr_t nambar;
+	uintptr_t nabmbar;
 	ac97_bdl_entry_t* bdl;
-	uintptr_t bdl_phys;
+	bool is_mmio;
 } ac97_state_t;
 
 void ac97_init(pci_dev_t dev);

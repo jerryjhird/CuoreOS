@@ -22,6 +22,36 @@ static const ac97_vendor_t ac97_vendors[] = {
 	{0, NULL}
 };
 
+static void ac97_write32(ac97_state_t* s, uintptr_t base, uint16_t reg, uint32_t val) {
+	if (s->is_mmio) *(volatile uint32_t*)(base + reg) = val;
+	else outl((uint16_t)base + reg, val);
+}
+
+static void ac97_write16(ac97_state_t* s, uintptr_t base, uint16_t reg, uint16_t val) {
+	if (s->is_mmio) *(volatile uint16_t*)(base + reg) = val;
+	else outw((uint16_t)base + reg, val);
+}
+
+static void ac97_write8(ac97_state_t* s, uintptr_t base, uint16_t reg, uint8_t val) {
+	if (s->is_mmio) *(volatile uint8_t*)(base + reg) = val;
+	else outb((uint16_t)base + reg, val);
+}
+
+static uint32_t ac97_read32(ac97_state_t* s, uintptr_t base, uint16_t reg) {
+	if (s->is_mmio) return *(volatile uint32_t*)(base + reg);
+	return inl((uint16_t)base + reg);
+}
+
+static uint16_t ac97_read16(ac97_state_t* s, uintptr_t base, uint16_t reg) {
+	if (s->is_mmio) return *(volatile uint16_t*)(base + reg);
+	return inw((uint16_t)base + reg);
+}
+
+static uint8_t ac97_read8(ac97_state_t* s, uintptr_t base, uint16_t reg) {
+	if (s->is_mmio) return *(volatile uint8_t*)(base + reg);
+	return inb((uint16_t)base + reg);
+}
+
 static void ac97_identify_vendor(kernel_audio_dev_t* adev, uint16_t vid1, uint16_t vid2) {
 	uint32_t full_id = (vid1 << 16) | vid2;
 	uint32_t masked_id = full_id & 0xFFFFFF00;
@@ -40,14 +70,14 @@ static void ac97_identify_vendor(kernel_audio_dev_t* adev, uint16_t vid1, uint16
 static void ac97_set_volume(kernel_audio_dev_t* dev, uint8_t volume) {
 	ac97_state_t* state = (ac97_state_t*)dev->private_data;
 	uint8_t val = 31 - ((31 * volume) / 100);
-	uint16_t reg = (val << 8) | val; // set left and right
-	outw(state->nambar + AC97_MASTER_VOLUME, reg);
+	uint16_t reg = (val << 8) | val;
+	ac97_write16(state, state->nambar, AC97_MASTER_VOLUME, reg);
 }
 
 static void ac97_stop(kernel_audio_dev_t* dev) {
 	ac97_state_t* state = (ac97_state_t*)dev->private_data;
-	uint8_t ctrl = inb(state->nabmbar + AC97_PO_CR);
-	outb(state->nabmbar + AC97_PO_CR, ctrl & ~0x01);
+	uint8_t ctrl = ac97_read8(state, state->nabmbar, AC97_PO_CR);
+	ac97_write8(state, state->nabmbar, AC97_PO_CR, ctrl & ~0x01);
 	dev->is_playing = false;
 }
 
@@ -55,21 +85,21 @@ static void ac97_play(kernel_audio_dev_t* dev, void* buffer, size_t size) {
 	ac97_state_t* state = (ac97_state_t*)dev->private_data;
 	uintptr_t phys_buffer = (uintptr_t)buffer - hhdm_offset;
 
-	outb(state->nabmbar + AC97_PO_CR, 0x02);
+	ac97_write8(state, state->nabmbar, AC97_PO_CR, 0x02);
 	int timeout = 1000;
-	while ((inb(state->nabmbar + AC97_PO_CR) & 0x02) && --timeout > 0);
+	while ((ac97_read8(state, state->nabmbar, AC97_PO_CR) & 0x02) && --timeout > 0);
 
 	state->bdl[0].addr = (uint32_t)phys_buffer;
 	state->bdl[0].length = (uint16_t)(size / 2);
 	state->bdl[0].flags = 0xC000; // IOC | BUP
 
-	outl(state->nabmbar + AC97_PO_BDBAR, (uint32_t)((uintptr_t)state->bdl - hhdm_offset));
-	outb(state->nabmbar + AC97_PO_LVI, 0);
-	outw(state->nabmbar + AC97_PO_SR, 0x1C);
+	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)((uintptr_t)state->bdl - hhdm_offset));
+	ac97_write8(state, state->nabmbar, AC97_PO_LVI, 0);
+	ac97_write16(state, state->nabmbar, AC97_PO_SR, 0x1C);
 
 	dev->is_playing = true;
 
-	outb(state->nabmbar + AC97_PO_CR, 0x1D);
+	ac97_write8(state, state->nabmbar, AC97_PO_CR, 0x1D);
 }
 
 static struct trap_frame* ac97_irq_handler(struct trap_frame* tf) {
@@ -77,11 +107,11 @@ static struct trap_frame* ac97_irq_handler(struct trap_frame* tf) {
 	if (!adev) return tf;
 
 	ac97_state_t* state = (ac97_state_t*)adev->private_data;
-	uint16_t sr = inw(state->nabmbar + AC97_PO_SR);
+	uint16_t sr = ac97_read16(state, state->nabmbar, AC97_PO_SR);
 
 	// 0x18 = IOC (0x08) | LVI (0x10)
 	if (sr & 0x18) {
-		outw(state->nabmbar + AC97_PO_SR, 0x1C);
+		ac97_write16(state, state->nabmbar, AC97_PO_SR, 0x1C);
 
 		adev->is_playing = false;
 
@@ -100,25 +130,31 @@ static struct trap_frame* ac97_irq_handler(struct trap_frame* tf) {
 }
 
 void ac97_init(pci_dev_t dev) {
-	uint32_t nambar  = (uint32_t)dev.bars[0].base;
-	uint32_t nabmbar = (uint32_t)dev.bars[1].base;
+	ac97_state_t* state = zalloc(sizeof(ac97_state_t));
 
-	outl(nabmbar + AC97_GLOB_CNT, 0x00000002);
+	state->nambar  = dev.bars[0].base;
+	state->nabmbar = dev.bars[1].base;
+	state->is_mmio = !dev.bars[0].is_io;
+
+	// apply offsets if MMIO
+	if (state->is_mmio) {
+		state->nambar  += hhdm_offset;
+		state->nabmbar += hhdm_offset;
+	}
+
+	ac97_write32(state, state->nabmbar, AC97_GLOB_CNT, 0x00000002);
 
 	int timeout = 1000;
-	while (!(inl(nabmbar + AC97_GLOB_STA) & (1 << 8)) && --timeout > 0);
+	while (!(ac97_read32(state, state->nabmbar, AC97_GLOB_STA) & (1 << 8)) && --timeout > 0);
 
 	// enable GIE
-	uint32_t glob_cnt = inl(nabmbar + AC97_GLOB_CNT);
-	outl(nabmbar + AC97_GLOB_CNT, glob_cnt | 0x01);
+	uint32_t glob_cnt = ac97_read32(state, state->nabmbar, AC97_GLOB_CNT);
+	ac97_write32(state, state->nabmbar, AC97_GLOB_CNT, glob_cnt | 0x01);
 
-	outw(nambar + AC97_MIXER_RESET, 0x0001);
-	outw(nambar + AC97_MASTER_VOLUME, 0x0F0F);
-	outw(nambar + AC97_PCM_VOLUME,	0x0F0F);
+	ac97_write16(state, state->nambar, AC97_MIXER_RESET, 0x0001);
+	ac97_write16(state, state->nambar, AC97_MASTER_VOLUME, 0x0F0F);
+	ac97_write16(state, state->nambar, AC97_PCM_VOLUME,	0x0F0F);
 
-	ac97_state_t* state = zalloc(sizeof(ac97_state_t));
-	state->nambar = nambar;
-	state->nabmbar = nabmbar;
 
 	uint8_t vector = 42;
 	if (dev.irq != 0xFF && dev.irq != 0) {
@@ -128,29 +164,28 @@ void ac97_init(pci_dev_t dev) {
 
 	// allocate 32 entries for BDL
 	state->bdl = (ac97_bdl_entry_t*)zalloc(sizeof(ac97_bdl_entry_t) * 32);
-	outl(nabmbar + AC97_PO_BDBAR, (uint32_t)((uintptr_t)state->bdl - hhdm_offset)); // point hardware to the BDL physical addr
+	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)((uintptr_t)state->bdl - hhdm_offset));
 
 	kernel_audio_dev_t* adev = zalloc(sizeof(kernel_audio_dev_t));
 
+	uint16_t vid1 = ac97_read16(state, state->nambar, AC97_VENDOR_ID1);
+	uint16_t vid2 = ac97_read16(state, state->nambar, AC97_VENDOR_ID2);
+
 	// get "model name"
-	ac97_identify_vendor(adev, inw(nambar + AC97_VENDOR_ID1), inw(nambar + AC97_VENDOR_ID2));
+	ac97_identify_vendor(adev, vid1, vid2);
 
 	adev->is_playing = false;
 	adev->sample_rate = 44100;
 	adev->channels = 2;
 	adev->bit_depth = 16;
-	adev->private_data = (void*)(uintptr_t)nabmbar;
+	adev->private_data = state;
 	adev->play = ac97_play;
 	adev->stop = ac97_stop;
 	adev->set_volume = ac97_set_volume;
-	adev->private_data = state; // point to our state struct
-
 	active_audio_device = adev;
 
 	logbuf_write("[ AC97 ] Initialized ");
 	logbuf_write(adev->model);
-	logbuf_write(" at ");
-	logbuf_puthex(nabmbar);
 	logbuf_write("\n");
 }
 

@@ -173,7 +173,8 @@ endif
 
 run: uefi-run
 
-GENERIC_QEMU_FLAGS = -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -machine pc -boot d
+QEMU_MACHINE ?= pc
+GENERIC_QEMU_FLAGS = -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -machine $(QEMU_MACHINE) -boot d
 DISK_QEMU_FLAG = -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
 AUDIO_CARD_QEMU_FLAG = -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
 
