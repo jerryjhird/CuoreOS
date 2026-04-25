@@ -285,9 +285,7 @@ void _kstartc(void) {
 		initramfs = ramfs_init(module_request.response->modules[0]->address);
 	}
 
-	uintptr_t phys_addr = pma_alloc_pages(HEAP_PAGES); // 256 pages = 1MB
-	void* virt_addr = (void*)(phys_addr + hhdm_req.response->offset);
-	heap_init(virt_addr, HEAP_SIZE);
+	heap_init((void*)KERNEL_HEAP_START, HEAP_SIZE);
 
 	logical_coreid_t idx = __atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
 	cpu_control_block_t *my_cpu = zalloc(sizeof(cpu_control_block_t));

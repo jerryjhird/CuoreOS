@@ -1,6 +1,9 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
+
+#define KERNEL_HEAP_START 0xFFFFFFFF90000000 // where the kernel heap starts in virtual memory
 
 void heap_init(void* start_address, size_t total_size);
 void dump_memory_stats(void);

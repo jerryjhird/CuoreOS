@@ -16,8 +16,6 @@
 #define HEAP_MAGIC 0xCAFEBABE
 #define MIN_SPLIT_SIZE 16
 #define PAGES_PER_GROWTH 4
-
-#define KERNEL_HEAP_START 0xFFFFFFFF90000000 // where the kernel heap starts in virtual memory
 #define KERNEL_HEAP_FLAGS (PTE_PRESENT | PTE_WRITABLE | PTE_NX)
 
 // Pool configuration for small objects

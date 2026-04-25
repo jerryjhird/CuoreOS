@@ -10,6 +10,7 @@ typedef int dummy0;
 #include "mem/mem.h"
 #include "apic/ioapic.h"
 #include "cpu/IRQ.h"
+#include "mem/paging.h"
 
 typedef struct {uint32_t id; const char* name;} ac97_vendor_t;
 
@@ -83,7 +84,8 @@ static void ac97_stop(kernel_audio_dev_t* dev) {
 
 static void ac97_play(kernel_audio_dev_t* dev, void* buffer, size_t size) {
 	ac97_state_t* state = (ac97_state_t*)dev->private_data;
-	uintptr_t phys_buffer = (uintptr_t)buffer - hhdm_offset;
+	uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	uintptr_t phys_buffer = vmm_get_phys(pml4, (uintptr_t)buffer);
 
 	ac97_write8(state, state->nabmbar, AC97_PO_CR, 0x02);
 	int timeout = 1000;
@@ -91,14 +93,15 @@ static void ac97_play(kernel_audio_dev_t* dev, void* buffer, size_t size) {
 
 	state->bdl[0].addr = (uint32_t)phys_buffer;
 	state->bdl[0].length = (uint16_t)(size / 2);
-	state->bdl[0].flags = 0xC000; // IOC | BUP
+	state->bdl[0].flags = 0xC000;
 
-	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)((uintptr_t)state->bdl - hhdm_offset));
+	uintptr_t bdl_phys = vmm_get_phys(pml4, (uintptr_t)state->bdl);
+	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)bdl_phys);
+
 	ac97_write8(state, state->nabmbar, AC97_PO_LVI, 0);
 	ac97_write16(state, state->nabmbar, AC97_PO_SR, 0x1C);
 
 	dev->is_playing = true;
-
 	ac97_write8(state, state->nabmbar, AC97_PO_CR, 0x1D);
 }
 
@@ -164,7 +167,10 @@ void ac97_init(pci_dev_t dev) {
 
 	// allocate 32 entries for BDL
 	state->bdl = (ac97_bdl_entry_t*)zalloc(sizeof(ac97_bdl_entry_t) * 32);
-	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)((uintptr_t)state->bdl - hhdm_offset));
+
+	uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	uintptr_t bdl_phys = vmm_get_phys(pml4, (uintptr_t)state->bdl);
+	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)bdl_phys);
 
 	kernel_audio_dev_t* adev = zalloc(sizeof(kernel_audio_dev_t));
 

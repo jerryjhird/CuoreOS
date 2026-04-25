@@ -35,3 +35,4 @@
 void vmm_map_page(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags);
 uint64_t* vmm_get_pte(uint64_t* pml4, uintptr_t virt, int allocate);
 uint64_t vmm_get_pml4(void);
+uintptr_t vmm_get_phys(uint64_t* pml4, uintptr_t vaddr);
