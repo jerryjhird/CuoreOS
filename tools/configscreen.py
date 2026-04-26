@@ -30,7 +30,8 @@ config_groups = {
     "devices": {
         "mdname": "Devices",
         "max_char_devices": "9",
-        "max_disk_devices": "9"
+        "max_disk_devices": "9",
+        "max_power_devices": "9"
     },
     "multicore": {
         "mdname": "Symmetric Multiprocessing",

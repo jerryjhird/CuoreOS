@@ -43,6 +43,13 @@ typedef struct kernel_audio_dev_t {
 	void* private_data;
 } kernel_audio_dev_t;
 
+typedef struct kernel_power_dev_t {
+    char model[32];
+    bool (*shutdown)(struct kernel_power_dev_t* dev);
+    bool (*reboot)(struct kernel_power_dev_t* dev);
+    void* private_data;
+} kernel_power_dev_t;
+
 void dev_puts(kernel_char_dev_t* dev, const char* s);
 void dev_putint(kernel_char_dev_t* dev, uint64_t n);
 
@@ -54,5 +61,8 @@ extern size_t char_devices_c;
 
 extern kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
 extern size_t disk_devices_c;
+
+extern kernel_power_dev_t* power_devices[MAX_POWER_DEVICES];
+extern size_t power_devices_c;
 
 extern kernel_audio_dev_t* active_audio_device;
