@@ -12,14 +12,12 @@
 #define PCI_VENDOR_QEMU 0x1234
 #define PCI_VENDOR_AGEIA 0x1A45
 #define PCI_VENDOR_SUN 0x108E
-#define PCI_VENDOR_ANY 0xFFFF
 
 #define PCI_DEVICE_RTL8139 0x8139
 #define PCI_DEVICE_I440FX_HB 0x1237
 #define PCI_DEVICE_PIIX3_ISA 0x7000
 #define PCI_DEVICE_PIIX3_IDE 0x7010
 #define PCI_DEVICE_PIIX4_ACPI 0x7113
-#define PCI_DEVICE_ANY 0xFFFF
 
 // storage class 0x01
 #define PCI_CLASS_STORAGE 0x01
@@ -47,6 +45,11 @@
 // processor class 0x0B
 #define PCI_CLASS_PROCESSOR 0x0B
 #define PCI_SUBCLASS_X86	0x40  // Co-processors often live here
+
+// any
+#define PCI_VENDOR_ANY 0xFFFF
+#define PCI_DEVICE_ANY 0xFFFF
+#define PCI_ID_ANY 0xFF
 
 // progif
 #define PCI_PROGIF_ANY 0xFF
@@ -95,5 +98,13 @@ typedef struct {
 	const char* name;
 	pci_init_fn init;
 } pci_driver_entry_t;
+
+// 32 bit access
+uint32_t pci_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset);
+void pci_write(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint32_t data);
+
+// 8 bit access
+uint8_t pci_read_byte(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset);
+void pci_write_byte(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint8_t data);
 
 void pci_init(void);

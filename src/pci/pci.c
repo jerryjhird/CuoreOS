@@ -5,7 +5,11 @@
 #include <stddef.h>
 #include "acpi/mcfg.h"
 
-static uint32_t pci_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
+//
+// 32 bit access
+//
+
+uint32_t pci_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
 	// try PCIe ECAM first
 	void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
 	if (addr) {
@@ -21,7 +25,7 @@ static uint32_t pci_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t of
 	return inl(PCI_CONFIG_DATA);
 }
 
-static void pci_write(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint32_t data) {
+void pci_write(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint32_t data) {
 	// try PCIe ECAM first
 	void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
 	if (addr) {
@@ -36,6 +40,44 @@ static void pci_write(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offse
 					   (offset & 0xfc) | 0x80000000);
 	outl(PCI_CONFIG_ADDRESS, address);
 	outl(PCI_CONFIG_DATA, data);
+}
+
+//
+// 8 bit access
+//
+
+uint8_t pci_read_byte(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
+    void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
+    if (addr) {
+        return *(volatile uint8_t*)((uintptr_t)addr + (offset & 0xfff));
+    }
+
+    uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
+                       (((uint32_t)slot) << 11) |
+                       (((uint32_t)func) << 8) |
+                       (offset & 0xfc) | 0x80000000);
+    outl(PCI_CONFIG_ADDRESS, address);
+    
+    return (uint8_t)((inl(PCI_CONFIG_DATA) >> ((offset & 3) * 8)) & 0xFF);
+}
+
+void pci_write_byte(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint8_t data) {
+    void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
+    if (addr) {
+        *(volatile uint8_t*)((uintptr_t)addr + (offset & 0xfff)) = data;
+        return;
+    }
+
+    uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
+                       (((uint32_t)slot) << 11) |
+                       (((uint32_t)func) << 8) |
+                       (offset & 0xfc) | 0x80000000);
+    outl(PCI_CONFIG_ADDRESS, address);
+
+    uint32_t tmp = inl(PCI_CONFIG_DATA);
+    tmp &= ~(0xFF << ((offset & 3) * 8));
+    tmp |= ((uint32_t)data << ((offset & 3) * 8));
+    outl(PCI_CONFIG_DATA, tmp);
 }
 
 extern pci_driver_entry_t pci_discovery_table[];
@@ -170,14 +212,16 @@ void pci_init(void) {
 			}
 
 			// class/subclass check
-			if (match && entry->class_id != 0) {
-				if (dev->class_id != entry->class_id || dev->subclass_id != entry->subclass_id) {
+			if (match && entry->class_id != PCI_ID_ANY) {
+				if (dev->class_id != entry->class_id) {
+					match = false;
+				} else if (entry->subclass_id != PCI_ID_ANY && dev->subclass_id != entry->subclass_id) {
 					match = false;
 				}
 			}
 
 			// progif check
-			if (match && entry->progif != 0xFF) {
+			if (match && entry->progif != PCI_ID_ANY) {
 				if (dev->progif != entry->progif) {
 					match = false;
 				}
@@ -194,14 +238,36 @@ void pci_init(void) {
 					pci_enable_capabilities(dev->bus, dev->slot, dev->func);
 					entry->init(*dev);
 				} else {
-					logbuf_write("[ PCI  ] ");
-					logbuf_write("Found ");
+					logbuf_write("[ PCI  ] Found ");
 					logbuf_write(entry->name);
 					logbuf_write("\n");
 				}
 
 				if (entry->group_id != 0) break;
 			}
+		}
+	}
+
+	for (int j = 0; j < count; j++) {
+		pci_dev_t* dev = &discovered[j];
+		if (!dev->claimed) {
+			logbuf_write("[ PCI  ] Unhandled: ");
+			logbuf_puthex(dev->bus);
+			logbuf_write(":");
+			logbuf_puthex(dev->slot);
+			logbuf_write(".");
+			logbuf_puthex(dev->func);
+
+			logbuf_write(" ID ");
+			logbuf_puthex(dev->vendor_id);
+			logbuf_write(":");
+			logbuf_puthex(dev->device_id);
+
+			logbuf_write(" Class ");
+			logbuf_puthex(dev->class_id);
+			logbuf_write("/");
+			logbuf_puthex(dev->subclass_id);
+			logbuf_write("\n");
 		}
 	}
 
