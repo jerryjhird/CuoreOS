@@ -14,7 +14,7 @@ static int iso_count = 0;
 void madt_init(void) {
 	struct madt* table = (struct madt*)acpi_find_sdt("APIC");
 	if (!table) {
-		panic("MADT", "Could not find MADT table!");
+		panic("MADT", "MADT table is missing or corrupted.");
 	}
 
 	lapic_phys = table->lapic_addr;

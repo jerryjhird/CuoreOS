@@ -47,37 +47,37 @@ void pci_write(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint
 //
 
 uint8_t pci_read_byte(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
-    void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
-    if (addr) {
-        return *(volatile uint8_t*)((uintptr_t)addr + (offset & 0xfff));
-    }
+	void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
+	if (addr) {
+		return *(volatile uint8_t*)((uintptr_t)addr + (offset & 0xfff));
+	}
 
-    uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
-                       (((uint32_t)slot) << 11) |
-                       (((uint32_t)func) << 8) |
-                       (offset & 0xfc) | 0x80000000);
-    outl(PCI_CONFIG_ADDRESS, address);
-    
-    return (uint8_t)((inl(PCI_CONFIG_DATA) >> ((offset & 3) * 8)) & 0xFF);
+	uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
+					   (((uint32_t)slot) << 11) |
+					   (((uint32_t)func) << 8) |
+					   (offset & 0xfc) | 0x80000000);
+	outl(PCI_CONFIG_ADDRESS, address);
+
+	return (uint8_t)((inl(PCI_CONFIG_DATA) >> ((offset & 3) * 8)) & 0xFF);
 }
 
 void pci_write_byte(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset, uint8_t data) {
-    void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
-    if (addr) {
-        *(volatile uint8_t*)((uintptr_t)addr + (offset & 0xfff)) = data;
-        return;
-    }
+	void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
+	if (addr) {
+		*(volatile uint8_t*)((uintptr_t)addr + (offset & 0xfff)) = data;
+		return;
+	}
 
-    uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
-                       (((uint32_t)slot) << 11) |
-                       (((uint32_t)func) << 8) |
-                       (offset & 0xfc) | 0x80000000);
-    outl(PCI_CONFIG_ADDRESS, address);
+	uint32_t address = (uint32_t)((((uint32_t)bus) << 16) |
+					   (((uint32_t)slot) << 11) |
+					   (((uint32_t)func) << 8) |
+					   (offset & 0xfc) | 0x80000000);
+	outl(PCI_CONFIG_ADDRESS, address);
 
-    uint32_t tmp = inl(PCI_CONFIG_DATA);
-    tmp &= ~(0xFF << ((offset & 3) * 8));
-    tmp |= ((uint32_t)data << ((offset & 3) * 8));
-    outl(PCI_CONFIG_DATA, tmp);
+	uint32_t tmp = inl(PCI_CONFIG_DATA);
+	tmp &= ~(0xFF << ((offset & 3) * 8));
+	tmp |= ((uint32_t)data << ((offset & 3) * 8));
+	outl(PCI_CONFIG_DATA, tmp);
 }
 
 extern pci_driver_entry_t pci_discovery_table[];

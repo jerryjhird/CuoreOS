@@ -16,6 +16,7 @@
 #include "pci/pci.h"
 #include "pci/drivers/ide.h"
 #include "pci/drivers/ac97.h"
+#include "acpi/power.h"
 #include "fs/ramfs.h"
 #include "scheduler.h"
 #include "cpu/smp/init.h"
@@ -28,6 +29,8 @@
 #include "cpu/rdrand.h"
 #include "multimedia/beep.h"
 #include "acpi/mcfg.h"
+#include "acpi/fadt.h"
+#include "builtinabs.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -153,22 +156,31 @@ void panic(const char* header_msg, const char* msg) {
 	for(;;) { __asm__ ("hlt"); }
 }
 
-kernel_char_dev_t* char_devices[MAX_CHAR_DEVICES];
-size_t char_devices_c = 0;
-
-kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
-size_t disk_devices_c = 0;
-
-kernel_audio_dev_t* active_audio_device;
-
 ramfs_handle_t initramfs;
 
 bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 
 static void uart16550_console_task(void) {
 	while (1) {
-		char c =uart16550_getc();
+		char c = uart16550_getc();
 		dev_puts(&uart16550_dev, &c);
+
+		#ifdef DEBUG
+			if (c == 's') {
+				if (LIKELY(power_devices_c > 0 && power_devices[0] != NULL)) {
+					power_devices[0]->shutdown(power_devices[0]);
+				} else {
+					panic("POWER", "no power device registered for shutdown!\n");
+				}
+			}
+			else if (c == 'r') {
+				if (LIKELY(power_devices_c > 0 && power_devices[0] != NULL)) {
+					power_devices[0]->reboot(power_devices[0]);
+				} else {
+					panic("POWER", "no power device registered for reboot!\n");
+				}
+			}
+		#endif
 	}
 }
 
@@ -268,6 +280,7 @@ void _kstartc(void) {
 	hhdm_offset = hhdm_req.response->offset;
 
 	acpi_init();
+	fadt_init();
 	madt_init();
 	hpet_init();
 
@@ -305,6 +318,8 @@ void _kstartc(void) {
 
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
 	mcfg_init();
+
+	acpi_power_init();
 
 	pci_init();
 	logbuf_flush(&uart16550_dev);

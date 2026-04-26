@@ -1,5 +1,16 @@
 #include "devices.h"
 
+kernel_char_dev_t* char_devices[MAX_CHAR_DEVICES];
+size_t char_devices_c = 0;
+
+kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
+size_t disk_devices_c = 0;
+
+kernel_power_dev_t* power_devices[MAX_POWER_DEVICES];
+size_t power_devices_c = 0;
+
+kernel_audio_dev_t* active_audio_device;
+
 void dev_puts(kernel_char_dev_t* dev, const char* s) {
 	while (*s) {
 		dev->putc(*s++);

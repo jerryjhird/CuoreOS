@@ -2,6 +2,7 @@
 #include "mem/mem.h" // IWYU pragma: keep
 #include "kstate.h"
 #include "builtinabs.h"
+#include "logbuf.h"
 
 static struct acpi_sdt_header* xsdt = NULL;
 static bool is_xsdt = false;
@@ -19,6 +20,17 @@ void acpi_init(void) {
 	}
 }
 
+bool acpi_checksum(struct acpi_sdt_header* table) {
+	uint8_t sum = 0;
+	uint8_t* bytes = (uint8_t*)table;
+
+	for (uint32_t i = 0; i < table->length; i++) {
+		sum += bytes[i];
+	}
+
+	return (sum == 0);
+}
+
 void* acpi_find_sdt(const char* signature) {
 	if (UNLIKELY(!xsdt)) return NULL;
 
@@ -31,10 +43,8 @@ void* acpi_find_sdt(const char* signature) {
 		uint8_t* entry_ptr = table_ptrs_base + (i * ptr_size);
 
 		if (is_xsdt) {
-			// 8 bytes for XSDT
 			memcpy(&table_phys, entry_ptr, 8);
 		} else {
-			// 4 bytes for RSDT
 			uint32_t table_phys_32;
 			memcpy(&table_phys_32, entry_ptr, 4);
 			table_phys = table_phys_32;
@@ -43,7 +53,15 @@ void* acpi_find_sdt(const char* signature) {
 		if (table_phys == 0) continue;
 
 		struct acpi_sdt_header* table = (struct acpi_sdt_header*)(table_phys + hhdm_offset);
+
 		if (memcmp(table->signature, signature, 4) == 0) {
+			if (!acpi_checksum(table)) {
+				logbuf_write("[ ACPI ] Checksum failed for table ");
+				logbuf_write(signature);
+				logbuf_write("\n");
+				return NULL;
+			}
+
 			return (void*)table;
 		}
 	}

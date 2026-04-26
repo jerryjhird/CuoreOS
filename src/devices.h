@@ -44,10 +44,10 @@ typedef struct kernel_audio_dev_t {
 } kernel_audio_dev_t;
 
 typedef struct kernel_power_dev_t {
-    char model[32];
-    bool (*shutdown)(struct kernel_power_dev_t* dev);
-    bool (*reboot)(struct kernel_power_dev_t* dev);
-    void* private_data;
+	char model[32];
+	bool (*shutdown)(struct kernel_power_dev_t* dev);
+	bool (*reboot)(struct kernel_power_dev_t* dev);
+	void* private_data;
 } kernel_power_dev_t;
 
 void dev_puts(kernel_char_dev_t* dev, const char* s);

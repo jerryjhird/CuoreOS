@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-struct acpi_sdt_header {
+typedef struct acpi_sdt_header {
 	char signature[4];
 	uint32_t length;
 	uint8_t revision;
@@ -12,7 +12,15 @@ struct acpi_sdt_header {
 	uint32_t oem_revision;
 	uint32_t creator_id;
 	uint32_t creator_revision;
-} __attribute__((packed));
+} __attribute__((packed)) acpi_sdt_header_t;
+
+typedef struct acpi_gas {
+	uint8_t  address_space_id;
+	uint8_t  register_bit_width;
+	uint8_t  register_bit_offset;
+	uint8_t  access_size;
+	uint64_t address;
+} __attribute__((packed)) acpi_gas_t;
 
 struct rsdp_v2 {
 	char signature[8];
