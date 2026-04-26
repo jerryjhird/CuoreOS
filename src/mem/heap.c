@@ -108,7 +108,7 @@ static void heap_init_pools(void) {
 		pools[i].block_size = pool_sizes[i];
 		pools[i].free_list = NULL;
 
-		uintptr_t phys = pma_alloc_page();
+		uintptr_t phys = pma_alloc_pages(1);
 		uintptr_t virt = heap_current_top;
 		heap_current_top += 4096;
 

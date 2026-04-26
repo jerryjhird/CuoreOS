@@ -12,7 +12,7 @@ uint64_t* vmm_get_pte(uint64_t* pml4, uintptr_t virt, int allocate) {
 
 		if (!(entry & 1)) {
 			if (!allocate) return NULL;
-			uintptr_t new_table_phys = pma_alloc_page();
+			uintptr_t new_table_phys = pma_alloc_pages(1);
 			uint64_t* new_table_virt = (uint64_t*)(new_table_phys + hhdm_offset);
 
 			memset(new_table_virt, 0, 4096);

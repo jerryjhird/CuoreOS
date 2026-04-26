@@ -6,11 +6,11 @@
 #include <limine.h>
 #include "kstate.h"
 #include "mem.h" // IWYU pragma: keep
+#include "builtinabs.h"
 
 static uint8_t *pma_bitmap = NULL;
 static size_t pma_total_pages = 0;
 static size_t pma_bitmap_bytes = 0;
-static size_t last_pma_index = 0; // performance hint
 static size_t pma_free_pages_count = 0;
 
 static inline void bit_set(size_t bit) {
@@ -68,32 +68,32 @@ void pma_init(void) {
 				size_t page_idx = addr / PAGE_SIZE;
 				if (page_idx < pma_total_pages) {
 					bit_clear(page_idx);
-					pma_free_pages_count++; // Increment the fast counter
+					pma_free_pages_count++; // increment the fast counter
 				}
 			}
 		}
 	}
+
+	bit_set(0);
+
 }
 
-uintptr_t pma_alloc_pages(size_t count) {
-	if (count == 0) return 0;
+static uintptr_t _pma_alloc_range(size_t count, size_t limit) {
+	if (UNLIKELY(count == 0)) return 0;
+	if (limit > pma_total_pages) limit = pma_total_pages;
 
 	size_t consecutive_found = 0;
 	size_t start_bit = 0;
 
-	for (size_t i = last_pma_index; i < pma_total_pages + last_pma_index; i++) {
-		size_t idx = i % pma_total_pages;
-
-		if (!bit_test(idx)) {
-			if (consecutive_found == 0) start_bit = idx;
+	for (size_t i = 0; i < limit; i++) {
+		if (!bit_test(i)) {
+			if (consecutive_found == 0) start_bit = i;
 			consecutive_found++;
 
 			if (consecutive_found == count) {
 				for (size_t j = 0; j < count; j++) {
 					bit_set(start_bit + j);
 				}
-
-				last_pma_index = (start_bit + count) % pma_total_pages;
 				return (uintptr_t)(start_bit * PAGE_SIZE);
 			}
 		} else {
@@ -104,31 +104,29 @@ uintptr_t pma_alloc_pages(size_t count) {
 	return 0; // OOM
 }
 
-uintptr_t pma_alloc_page(void) { return pma_alloc_pages(1); }
+// allocate anywhere in physical memory
+
+uintptr_t pma_alloc_pages(size_t count) {
+	uintptr_t addr = _pma_alloc_range(count, pma_total_pages);
+	if (UNLIKELY(addr == 0)) {
+		panic("PMA", "Out of memory");
+	}
+	return addr;
+}
+
+// below 4gb memory allocation for legacy devices that cant do 64 bit DMA
+
+uintptr_t pma_alloc_pages_low(size_t count) {
+	uintptr_t addr = _pma_alloc_range(count, PMA_ZONE_32BIT);
+	if (UNLIKELY(addr == 0)) {
+		panic("PMA", "Out of memory in 32-bit (low) range");
+	}
+	return addr;
+}
+
+// free pages
 
 void pma_free_pages(uintptr_t phys, size_t count) {
 	size_t start_bit = phys / PAGE_SIZE;
 	for (size_t i = 0; i < count; i++) bit_clear(start_bit + i);
-}
-
-void pma_free_page(uintptr_t phys) { pma_free_pages(phys, 1); }
-
-// stats
-
-size_t pma_get_total_pages(void) {
-	return pma_total_pages;
-}
-
-size_t pma_get_free_pages(void) {
-	size_t free_count = 0;
-	for (size_t i = 0; i < pma_total_pages; i++) {
-		if (!bit_test(i)) {
-			free_count++;
-		}
-	}
-	return free_count;
-}
-
-size_t pma_get_used_pages(void) {
-	return pma_total_pages - pma_get_free_pages();
 }
