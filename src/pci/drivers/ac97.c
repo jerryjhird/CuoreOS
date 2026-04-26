@@ -139,8 +139,19 @@ void ac97_init(pci_dev_t dev) {
 	state->nabmbar = dev.bars[1].base;
 	state->is_mmio = !dev.bars[0].is_io;
 
-	// apply offsets if MMIO
+	// map na(b)mbar apply offsets if MMIO
 	if (state->is_mmio) {
+		uintptr_t pml4_phys = vmm_get_pml4();
+		uint64_t* pml4_virt = (uint64_t*)(pml4_phys + hhdm_offset);
+
+		// NAMBAR
+		vmm_map_page(pml4_virt, state->nambar + hhdm_offset, state->nambar,
+					 PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
+
+		// NABMBAR
+		vmm_map_page(pml4_virt, state->nabmbar + hhdm_offset, state->nabmbar,
+					 PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
+
 		state->nambar  += hhdm_offset;
 		state->nabmbar += hhdm_offset;
 	}
