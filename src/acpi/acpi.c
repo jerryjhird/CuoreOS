@@ -20,7 +20,7 @@ void acpi_init(void) {
 	}
 }
 
-bool acpi_checksum(struct acpi_sdt_header* table) {
+static bool acpi_checksum(struct acpi_sdt_header* table) {
 	uint8_t sum = 0;
 	uint8_t* bytes = (uint8_t*)table;
 
