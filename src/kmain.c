@@ -68,14 +68,14 @@ volatile struct limine_mp_request mp_request = {
 uint64_t hhdm_offset;
 
 pci_driver_entry_t pci_discovery_table[] = {
-	// Intel : i440FX Host Bridge (0x1237)
+	// Host Bridge
 	{
-		.name = "Intel i440FX Host Bridge",
+		.name = "Host Bridge",
 		.group_id = 0,
-		.vendor_id = PCI_VENDOR_INTEL,
-		.device_id = PCI_DEVICE_I440FX_HB,
-		.class_id = 0,
-		.subclass_id = 0,
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_BRIDGE,
+		.subclass_id = PCI_SUBCLASS_HOST_BRIDGE,
 		.progif = PCI_PROGIF_ANY,
 
 		.init = NULL // no driver for this

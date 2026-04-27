@@ -36,6 +36,7 @@
 
 // bridge class 0x06
 #define PCI_CLASS_BRIDGE 0x06
+#define PCI_SUBCLASS_HOST_BRIDGE 0x00
 #define PCI_SUBCLASS_PCI_TO_PCI 0x04
 
 // serial bus class 0x0C
