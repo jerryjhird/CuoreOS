@@ -31,51 +31,51 @@ void pma_init(void) {
 
 	for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
 		struct limine_memmap_entry *e = memmap_request.response->entries[i];
-
-		if (e->type != LIMINE_MEMMAP_USABLE &&
-			e->type != LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+		if (e->type != LIMINE_MEMMAP_USABLE && e->type != LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
 			continue;
 		}
-
 		uintptr_t end = e->base + e->length;
 		if (end > max_phys) max_phys = end;
 	}
 
 	pma_total_pages = max_phys / PAGE_SIZE;
 	pma_bitmap_bytes = (pma_total_pages + 7) / 8;
-
 	size_t bitmap_pages = (pma_bitmap_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
 	size_t bitmap_reserved_bytes = bitmap_pages * PAGE_SIZE;
+
+	uintptr_t bitmap_phys_addr = 0;
 
 	for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
 		struct limine_memmap_entry *e = memmap_request.response->entries[i];
 		if (e->type == LIMINE_MEMMAP_USABLE && e->length >= bitmap_reserved_bytes) {
-			pma_bitmap = (uint8_t *)(e->base + hhdm_offset);
-
+			bitmap_phys_addr = e->base;
+			pma_bitmap = (uint8_t *)(bitmap_phys_addr + hhdm_offset);
 			memset(pma_bitmap, 0xFF, pma_bitmap_bytes);
-
-			e->base += bitmap_reserved_bytes;
-			e->length -= bitmap_reserved_bytes;
 			break;
 		}
 	}
+
+	if (!pma_bitmap) return;
 
 	// mark usable regions as free
 	for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
 		struct limine_memmap_entry *e = memmap_request.response->entries[i];
 		if (e->type == LIMINE_MEMMAP_USABLE) {
 			for (uintptr_t addr = e->base; addr < e->base + e->length; addr += PAGE_SIZE) {
+				if (addr >= bitmap_phys_addr && addr < bitmap_phys_addr + bitmap_reserved_bytes) {
+					continue;
+				}
+
 				size_t page_idx = addr / PAGE_SIZE;
 				if (page_idx < pma_total_pages) {
 					bit_clear(page_idx);
-					pma_free_pages_count++; // increment the fast counter
+					pma_free_pages_count++;
 				}
 			}
 		}
 	}
 
 	bit_set(0);
-
 }
 
 static uintptr_t _pma_alloc_range(size_t count, size_t limit) {
