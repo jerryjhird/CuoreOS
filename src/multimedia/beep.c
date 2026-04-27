@@ -24,7 +24,7 @@ static void beep_cleanup_hook(void* arg) {
 }
 
 void audio_beep(kernel_audio_dev_t* dev, uint32_t freq, uint32_t duration_ms) {
-	if (UNLIKELY(!dev)) return;
+	if (UNLIKELY(!dev || freq == 0 || duration_ms == 0)) return;
 	while (dev->is_playing || dev->hook != NULL) {
 		__builtin_ia32_pause();
 	}
