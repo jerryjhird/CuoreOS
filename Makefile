@@ -1,22 +1,28 @@
 # CuoreOS Build System
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
+SYSTEM_CONFIG_VERSION := 0001
 
 WHITELIST_GOALS := menuconfig clean
 ifeq ($(wildcard Config.mk),)
     ifeq ($(filter $(WHITELIST_GOALS),$(MAKECMDGOALS)),)
         $(error [!] Config.mk is missing. Run 'make menuconfig' first)
     endif
+else
+    -include Config.mk
+    ifneq ($(CONFIG_STORED_VERSION),$(SYSTEM_CONFIG_VERSION))
+        ifeq ($(filter $(WHITELIST_GOALS),$(MAKECMDGOALS)),)
+            $(error [!] Config.mk is outdated (Version $(CONFIG_STORED_VERSION) vs Required $(SYSTEM_CONFIG_VERSION)). Run 'make menuconfig' and press 'S' or explore the new configuration options)
+        endif
+    endif
 endif
-
--include Config.mk
 
 CC := $(CONFIG_CC)
 QEMU_UEFI_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
 
-SRCDIR   := src
+SRCDIR := src
 BUILDDIR := build
 CACHEDIR := cache
-TOOLS    := tools
+TOOLS := tools
 
 C_SRCS := $(shell find $(SRCDIR) -name "*.c")
 ASM_SRCS := $(shell find $(SRCDIR) -name "*.S")
@@ -25,19 +31,19 @@ OBJS := $(C_SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o) $(ASM_SRCS:$(SRCDIR)/%.S=$(BUILD
 DEPS := $(OBJS:.o=.d)
 
 KERNEL_ELF := $(BUILDDIR)/kernel.elf
-BOOT_ISO   := $(BUILDDIR)/Cuore.x86-64.iso
-ISO_ROOT   := $(BUILDDIR)/iso_root
-INITRD     := $(BUILDDIR)/initrd.img
+BOOT_ISO := $(BUILDDIR)/Cuore.x86-64.iso
+ISO_ROOT := $(BUILDDIR)/iso_root
+INITRD := $(BUILDDIR)/initrd.img
 
-LIMINE_DIR   := $(CACHEDIR)/limine
+LIMINE_DIR := $(CACHEDIR)/limine
 FLANTERM_DIR := $(CACHEDIR)/flanterm
-DISK_IMG     := $(CACHEDIR)/qemu-disk.img
+DISK_IMG := $(CACHEDIR)/qemu-disk.img
 
 # colors
-BLUE         := \033[1;34m
-CYAN         := \033[1;36m
-GREEN        := \033[1;32m
-RESET        := \033[0m
+BLUE := \033[1;34m
+CYAN := \033[1;36m
+GREEN := \033[1;32m
+RESET := \033[0m
 
 # flags
 CFLAGS := -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
@@ -91,7 +97,7 @@ print_config:
 	@echo -e "$(CYAN)  Flanterm: $(RESET)$(CONFIG_FLANTERM_FLAGS) $(CONFIG_FLANTERM)"
 
 menuconfig:
-	@python3 $(TOOLS)/configscreen.py $(CUOREOS_VERSION_NAME)
+	@python3 $(TOOLS)/configscreen.py $(CUOREOS_VERSION_NAME) $(SYSTEM_CONFIG_VERSION)
 	@echo -e "it is recommended to run 'make clean' after regenerating the config"
 
 deps_setup:
