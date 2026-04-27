@@ -29,6 +29,7 @@
 #include "acpi/mcfg.h"
 #include "acpi/fadt.h"
 #include "builtinabs.h"
+#include "disk/diskinit.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -320,6 +321,20 @@ void _kstartc(void) {
 	acpi_power_init();
 
 	pci_init();
+
+	// scan disks previously found by pci discovery
+	for (size_t i = 0; i < disk_devices_c; i++) {
+        kernel_disk_dev_t* dev = disk_devices[i];
+
+        if (dev == NULL) continue;
+
+        logbuf_write("[ DISK ] Scanning ");
+        logbuf_write(dev->model);
+        logbuf_write("...\n");
+
+        generic_disk_init(dev); 
+    }
+
 	logbuf_flush(&uart16550_dev);
 
 	_c_flanterm_init(framebuffer_request.response->framebuffers[0]);

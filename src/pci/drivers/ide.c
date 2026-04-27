@@ -1,14 +1,16 @@
 typedef int dummy0; // satisfy ISO C / -Wpedantic
 
+// driver for IDE disks. only supports PMIO
+
 #ifdef KERNEL_MOD_IDE_ENABLED
 #include "devices.h"
 #include "devices.h"
 #include "pci/pci.h"
 #include "cpu/io.h"
 #include "logbuf.h"
-#include "disk/diskinit.h"
 #include "mem/mem.h" // IWYU pragma: keep
-#include "stdio.h"
+#include "mem/heap.h"
+#include "_time.h"
 #include "ide.h"
 
 static uint8_t ide_read_sector(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer) {
@@ -52,73 +54,74 @@ static uint8_t ide_write_sector(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* 
 	return 0;
 }
 
-static void ide_identify_drive(kernel_disk_dev_t* dev) {
-	uint16_t base = dev->port_base;
-	uint16_t temp_buffer[256];
+void ide_init(pci_dev_t pdev) {
+	uint16_t base = (pdev.bars[0].is_io && pdev.bars[0].base != 0)
+					? (uint16_t)pdev.bars[0].base
+					: 0x1F0;
 
-	outb(base + IDE_REG_DRIVE_SEL, IDE_SEL_MASTER);
+	uint8_t status = inb(base + IDE_REG_STATUS);
+	if (status == 0xFF) return;
+
+	outb(base + IDE_REG_DRIVE_SEL, 0xA0);
+	usleep(1);
+
+	outb(base + IDE_REG_SECTOR_CNT, 0);
+	outb(base + IDE_REG_LBA_LOW, 0);
+	outb(base + IDE_REG_LBA_MID, 0);
+	outb(base + IDE_REG_LBA_HIGH, 0);
 	outb(base + IDE_REG_COMMAND, IDE_CMD_IDENTIFY);
 
+	status = inb(base + IDE_REG_STATUS);
+	if (status == 0) return;
+
 	while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
-	uint8_t status = inb(base + IDE_REG_STATUS);
-	if (status == 0 || (status & 0x01)) return;
 
-	while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
-	insw(base + IDE_REG_DATA, temp_buffer, 256);
-
-	// get total sectors
-	if (temp_buffer[83] & (1 << 10)) {
-		memcpy(&dev->total_sectors, &temp_buffer[100], sizeof(uint64_t));
-	} else {
-		uint32_t lba28_sectors = 0;
-		memcpy(&lba28_sectors, &temp_buffer[60], sizeof(uint32_t));
-		dev->total_sectors = (uint64_t)lba28_sectors;
+	if (inb(base + IDE_REG_LBA_MID) == 0x14 && inb(base + IDE_REG_LBA_HIGH) == 0xEB) {
+		return;
 	}
 
-	// get model name
-	char* model_raw = (char*)&temp_buffer[27];
-	for (int i = 0; i < 40; i++) {
-		dev->model[i] = model_raw[i];
+	while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ)) {
+		if (inb(base + IDE_REG_STATUS) & 0x01) return;
+	}
+
+	kernel_disk_dev_t* dev = zalloc(sizeof(kernel_disk_dev_t));
+	if (!dev) {
+		logbuf_write("[ IDE  ] Critical: Failed to allocate device struct!\n");
+		return;
+	}
+
+	memset(dev, 0, sizeof(kernel_disk_dev_t));
+
+	uint16_t data[256];
+	insw(base + IDE_REG_DATA, data, 256);
+
+	if (data[83] & (1 << 10)) {
+		dev->total_sectors = *(uint64_t*)&data[100];
+	} else {
+		dev->total_sectors = *(uint32_t*)&data[60];
+	}
+
+	for (int i = 0; i < 20; i++) {
+		uint16_t val = data[27 + i];
+		dev->model[i * 2] = (char)(val >> 8);
+		dev->model[i * 2 + 1] = (char)(val & 0xFF);
 	}
 	dev->model[40] = '\0';
-	byteswap_str(dev->model, 40);
 
 	for (int i = 39; i >= 0 && dev->model[i] == ' '; i--) {
 		dev->model[i] = '\0';
 	}
-}
 
-kernel_disk_dev_t ide_output_dev = {0};
+	dev->port_base = base;
+	dev->read_sector = ide_read_sector;
+	dev->write_sector = ide_write_sector;
 
-void ide_init(pci_dev_t pdev) {
-	uint16_t base;
+	logbuf_write("[ IDE  ] Found \"");
+	logbuf_write(dev->model);
+	logbuf_write("\" (");
+	logbuf_putint(dev->total_sectors / 2048);
+	logbuf_write(" MiB)\n");
 
-	if (pdev.bars[0].is_io && pdev.bars[0].base != 0) {
-		base = (uint16_t)pdev.bars[0].base;
-	} else {
-		base = 0x1F0;
-	}
-
-	outb(base + IDE_REG_DRIVE_SEL, IDE_SEL_MASTER);
-	uint8_t status = inb(base + IDE_REG_STATUS);
-	if (status == 0xFF || status == 0x00) {
-		return;
-	}
-
-	ide_output_dev.port_base = base;
-
-	ide_identify_drive(&ide_output_dev);
-
-	ide_output_dev.read_sector = ide_read_sector;
-	ide_output_dev.write_sector = ide_write_sector;
-
-	logbuf_write("[ IDE  ] Initialized ");
-	logbuf_write(ide_output_dev.model);
-	logbuf_write(" at ");
-	logbuf_puthex(base);
-	logbuf_write("\n");
-
-	disk_devices[disk_devices_c++] = &ide_output_dev;
-	generic_disk_init(&ide_output_dev);
+	disk_devices[disk_devices_c++] = dev;
 }
 #endif
