@@ -48,7 +48,7 @@ void uart16550_init(void) {
 	char_devices[char_devices_c++] = &uart16550_dev;
 	rx_read_ptr = 0; rx_write_ptr = 0;
 
-	cpu_control_block_t *my_cpu; GET_CURRENT_CPU(my_cpu);
+	kernel_cpu_dev_t *my_cpu; GET_CURRENT_CPU(my_cpu);
 	irq_install_handler(my_cpu->logical_id, 36, uart16550_irq_handler);
 
 	outb(UART_COM1 + UART_IER, 0x00);

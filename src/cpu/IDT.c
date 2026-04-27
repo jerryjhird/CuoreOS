@@ -7,7 +7,6 @@
 #include "IRQ.h"
 #include "devices.h"
 #include "kstate.h"
-#include "cpu/smp/init.h"
 #include "mem/mem.h" // IWYU pragma: keep
 
 struct idt_entry {
@@ -217,14 +216,14 @@ DEF_EXCEPTION_HANDLER(31, "Reserved", 0)
 
 // irq's
 
-void irq_install_handler(logical_coreid_t logical_id, uint8_t vector, irq_handler_t handler) {
-	cpu_control_block_t *target_cpu = logical_indexed_cpu_list[logical_id];
+void irq_install_handler(uint32_t logical_id, uint8_t vector, irq_handler_t handler) {
+	kernel_cpu_dev_t *target_cpu = cpu_devices[logical_id];
 	target_cpu->routines[vector] = handler;
 }
 
 static struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
-	cpu_control_block_t *my_cpu; GET_CURRENT_CPU(my_cpu);
+	kernel_cpu_dev_t *my_cpu; GET_CURRENT_CPU(my_cpu);
 
 	my_cpu->irq_stats[vector]++;
 

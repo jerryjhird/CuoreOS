@@ -11,7 +11,8 @@ typedef struct {
 	volatile bool pending;
 } mailbox_t;
 
-#include "cpu/smp/init.h"
-
-void mailbox_send(logical_coreid_t cpu_id, mailbox_func_t func, void *data);
+void mailbox_send(uint32_t cpu_id, mailbox_func_t func, void *data);
 void mailman_send(mailbox_func_t func, void *data);
+bool mailbox_send_fc(mailbox_func_t func, void *data);
+
+int get_idle_core(void);

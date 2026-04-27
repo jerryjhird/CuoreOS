@@ -1,12 +1,15 @@
 #include "devices.h"
 
-kernel_char_dev_t* char_devices[MAX_CHAR_DEVICES];
+kernel_char_dev_t *char_devices[MAX_CHAR_DEVICES];
 size_t char_devices_c = 0;
 
-kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
+kernel_cpu_dev_t *cpu_devices[SMP_MAX_CORES];
+volatile uint32_t cpu_devices_c = 0;
+
+kernel_disk_dev_t *disk_devices[MAX_DISK_DEVICES];
 size_t disk_devices_c = 0;
 
-kernel_power_dev_t* power_devices[MAX_POWER_DEVICES];
+kernel_power_dev_t *power_devices[MAX_POWER_DEVICES];
 size_t power_devices_c = 0;
 
 kernel_audio_dev_t* active_audio_device;

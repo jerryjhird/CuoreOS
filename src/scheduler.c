@@ -2,12 +2,12 @@
 
 #include "cpu/IRQ.h"
 #include <stddef.h>
-#include "cpu/smp/init.h"
 #include "mem/pma.h"
 #include "mem/heap.h"
 #include "kstate.h"
 #include "mem/mem.h"
 #include <string.h>
+#include "devices.h"
 
 task_t *current_task = NULL;
 
@@ -101,7 +101,7 @@ void scheduler_init(void) {
 	bootstrap_task->next = bootstrap_task;
 	bootstrap_task->prev = bootstrap_task;
 
-	cpu_control_block_t *my_cpu;
+	kernel_cpu_dev_t *my_cpu;
 	GET_CURRENT_CPU(my_cpu);
 	irq_install_handler(my_cpu->logical_id, 32, scheduler_timer_handler);
 }

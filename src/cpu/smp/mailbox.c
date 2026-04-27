@@ -1,12 +1,13 @@
 #include "mailbox.h"
+
 #include "apic/lapic.h"
 #include <stdint.h>
 #include "kstate.h"
-#include "init.h"
+#include "devices.h"
 
 // send to a specific cpu
-void mailbox_send(logical_coreid_t logical_id, mailbox_func_t func, void *data) {
-	cpu_control_block_t *target = logical_indexed_cpu_list[logical_id];
+void mailbox_send(uint32_t logical_id, mailbox_func_t func, void *data) {
+	kernel_cpu_dev_t *target = cpu_devices[logical_id];
 
 	while (__atomic_load_n(&target->mailbox.pending, __ATOMIC_ACQUIRE)) {
 		__asm__ volatile("pause");
@@ -20,11 +21,20 @@ void mailbox_send(logical_coreid_t logical_id, mailbox_func_t func, void *data) 
 	lapic_send_ipi(target->lapic_id, 40);
 }
 
+// send to any idle cpu
+bool mailbox_send_fc(mailbox_func_t func, void *data) {
+	int target = get_idle_core();
+	if (target == -1) { return false; }
+
+	mailbox_send(target, func, data);
+	return true;
+}
+
 // send to everyone
 void mailman_send(mailbox_func_t func, void *data) {
-	cpu_control_block_t *self; GET_CURRENT_CPU(self);
+	kernel_cpu_dev_t *self; GET_CURRENT_CPU(self);
 
-	for (logical_coreid_t i = 0; i < online_cpu_index; i++) {
+	for (uint32_t i = 0; i < cpu_devices_c; i++) {
 		if (i == self->logical_id) continue;
 
 		mailbox_send(i, func, data);

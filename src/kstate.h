@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "limine.h"
-#include "cpu/smp/init.h"
 
 #define UNUSED(x) ((void)(x)) // helper macro
 
@@ -21,5 +20,5 @@ extern volatile struct limine_rsdp_request rsdp_request;
 extern volatile struct limine_mp_request mp_request;
 extern volatile struct limine_executable_address_request executable_request;
 
-extern volatile logical_coreid_t online_cpu_index;
+extern volatile uint32_t cpu_devices_c;
 extern bool supported_disk_exists;

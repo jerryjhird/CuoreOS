@@ -230,7 +230,7 @@ static void kernel_main(void) {
 			cpu->goto_address = AP_kentry;
 		}
 
-		while (__atomic_load_n(&online_cpu_index, __ATOMIC_ACQUIRE) < cores_to_boot) {
+		while (__atomic_load_n(&cpu_devices_c, __ATOMIC_ACQUIRE) < cores_to_boot) {
 			__asm__ volatile("pause");
 		}
 	}
@@ -248,7 +248,7 @@ static void kernel_main(void) {
 	}
 
 	if (mp_response->cpu_count > 2) {
-		mailbox_send(get_idle_core(), time_sync, NULL);
+		mailbox_send_fc(time_sync, NULL);
 	}
 
 	logbuf_write("[ BOOT ] Time it took to boot (nano's): "); logbuf_putint(hpet_get_nanos()); logbuf_write("\n");
@@ -299,9 +299,9 @@ void _kstartc(void) {
 
 	heap_init((void*)KERNEL_HEAP_START, HEAP_SIZE);
 
-	logical_coreid_t idx = __atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
-	cpu_control_block_t *my_cpu = zalloc(sizeof(cpu_control_block_t));
-	logical_indexed_cpu_list[idx] = my_cpu;
+	uint32_t idx = __atomic_fetch_add(&cpu_devices_c, 1, __ATOMIC_SEQ_CST);
+	kernel_cpu_dev_t *my_cpu = zalloc(sizeof(kernel_cpu_dev_t));
+	cpu_devices[idx] = my_cpu;
 	my_cpu->self = my_cpu;
 
 	__asm__ volatile ("wrmsr" : : "c"(MSR_GS_BASE), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32)));

@@ -7,15 +7,12 @@
 #include "apic/lapic.h"
 #include "cpu/GDT.h"
 #include "cpu/IRQ.h"
-#include "cpu/thermal.h"
 #include "apic/madt.h"
 #include <stdint.h>
 #include "init.h"
 #include "cpu/MSR.h"
 
 static spinlock_t temp_spinlock = SPINLOCK_INIT;
-cpu_control_block_t *logical_indexed_cpu_list[SMP_MAX_CORES];
-volatile logical_coreid_t online_cpu_index = 0;
 
 static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
 	   // (dispatcher will call lapic_eoi for us)
@@ -23,7 +20,7 @@ static struct trap_frame* ipi_wakeup_irq(struct trap_frame *tf) {
 }
 
 static struct trap_frame* clock_tick_irq(struct trap_frame *tf) {
-	cpu_control_block_t *my_cpu; GET_CURRENT_CPU(my_cpu);
+	kernel_cpu_dev_t *my_cpu; GET_CURRENT_CPU(my_cpu);
 	my_cpu->ticks++;
 	return tf;
 }
@@ -38,13 +35,13 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	lapic_init(madt_get_lapic_base() + hhdm_offset);
 
 	static volatile int next_id = 1;
-	logical_coreid_t logical_id = __atomic_fetch_add(&next_id, 1, __ATOMIC_SEQ_CST);
+	uint32_t logical_id = __atomic_fetch_add(&next_id, 1, __ATOMIC_SEQ_CST);
 
 	SPIN_LOCK(&temp_spinlock);
-	cpu_control_block_t *my_cpu = zalloc(sizeof(cpu_control_block_t));
+	kernel_cpu_dev_t *my_cpu = zalloc(sizeof(kernel_cpu_dev_t));
 	SPIN_UNLOCK(&temp_spinlock);
 
-	logical_indexed_cpu_list[logical_id] = my_cpu;
+	cpu_devices[logical_id] = my_cpu;
 	my_cpu->self = my_cpu;
 
 	__asm__ volatile ("wrmsr" : : "c"(MSR_GS_BASE), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32))); 	// store a pointer to this CPU block in GS base
@@ -66,7 +63,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	logbuf_write("\n");
 	SPIN_UNLOCK(&temp_spinlock);
 
-	__atomic_fetch_add(&online_cpu_index, 1, __ATOMIC_SEQ_CST);
+	__atomic_fetch_add(&cpu_devices_c, 1, __ATOMIC_SEQ_CST);
 
 	while (1) {
 		wait_for_work:
@@ -88,12 +85,14 @@ void AP_kstartc(struct limine_mp_info *mp) {
 
 // find a free cpu
 int get_idle_core(void) {
-	cpu_control_block_t *self; GET_CURRENT_CPU(self);
-	uint64_t count = __atomic_load_n(&online_cpu_index, __ATOMIC_ACQUIRE);
+	kernel_cpu_dev_t *self;
+	GET_CURRENT_CPU(self);
+	uint64_t count = __atomic_load_n(&cpu_devices_c, __ATOMIC_ACQUIRE);
 
 	for (uint64_t i = 0; i < count; i++) {
-		cpu_control_block_t *cpu = logical_indexed_cpu_list[i];
-		if (cpu == self) continue;
+		kernel_cpu_dev_t *cpu = cpu_devices[i];
+
+		if (!cpu || cpu == self) continue;
 
 		if (cpu->status == CPU_IDLE && !cpu->mailbox.pending) {
 			return i;

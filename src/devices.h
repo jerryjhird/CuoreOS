@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "cpu/IRQ.h"
+#include "cpu/smp/mailbox.h"
 
 // character device capabilities
 #define CHAR_DEV_CAP_ON_ERROR (1ULL << 0) // device should be used to display error's (e.g cpu exceptions, panics etc)
@@ -13,6 +15,20 @@ typedef struct kernel_char_dev_t {
 	void (*putc)(char c);
 	bool initialized;
 } kernel_char_dev_t;
+
+// cpu core
+typedef enum { CPU_IDLE = 0, CPU_BUSY, CPU_HALTED, CPU_PANIC } cpu_status_t;
+typedef struct kernel_cpu_dev_t {
+	struct kernel_cpu_dev_t *self;
+	uint32_t logical_id;
+	uint32_t lapic_id;
+	uint64_t ticks;
+	volatile cpu_status_t status;
+	mailbox_t mailbox;
+
+	irq_handler_t routines[256];
+	uint64_t irq_stats[256];
+} __attribute__((aligned(64))) kernel_cpu_dev_t;
 
 typedef struct kernel_disk_dev_t {
 	struct partition_s* partitions;
@@ -65,5 +81,9 @@ extern size_t disk_devices_c;
 
 extern kernel_power_dev_t* power_devices[MAX_POWER_DEVICES];
 extern size_t power_devices_c;
+
+#define GET_CURRENT_CPU(target) __asm__ volatile ("mov %%gs:0, %0" : "=r"(target))
+extern kernel_cpu_dev_t* cpu_devices[SMP_MAX_CORES];
+extern volatile uint32_t cpu_devices_c;
 
 extern kernel_audio_dev_t* active_audio_device;
