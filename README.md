@@ -52,5 +52,5 @@ QEMU_FIRMWARE=PATH_TO_OVMF make run
 ```
 bios:
 ```bash
-make bios-run
+make runb
 ```
