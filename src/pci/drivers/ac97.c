@@ -86,8 +86,15 @@ static void ac97_stop(kernel_audio_dev_t* dev) {
 
 static void ac97_play(kernel_audio_dev_t* dev, void* buffer, size_t size) {
 	ac97_state_t* state = (ac97_state_t*)dev->private_data;
-	uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+
+	uintptr_t cr3;
+	__asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+	uint64_t* pml4 = (uint64_t*)((cr3 & ~0xFFFULL) + hhdm_offset);
+
 	uintptr_t phys_buffer = vmm_get_phys(pml4, (uintptr_t)buffer);
+	uintptr_t bdl_phys = vmm_get_phys(pml4, (uintptr_t)state->bdl);
+
+	if (!phys_buffer || !bdl_phys) return;
 
 	ac97_write8(state, state->nabmbar, AC97_PO_CR, 0x02);
 	int timeout = 1000;
@@ -97,9 +104,7 @@ static void ac97_play(kernel_audio_dev_t* dev, void* buffer, size_t size) {
 	state->bdl[0].length = (uint16_t)(size / 2);
 	state->bdl[0].flags = 0xC000;
 
-	uintptr_t bdl_phys = vmm_get_phys(pml4, (uintptr_t)state->bdl);
 	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)bdl_phys);
-
 	ac97_write8(state, state->nabmbar, AC97_PO_LVI, 0);
 	ac97_write16(state, state->nabmbar, AC97_PO_SR, 0x1C);
 
