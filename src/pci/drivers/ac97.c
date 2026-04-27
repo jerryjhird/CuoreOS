@@ -117,11 +117,17 @@ static struct trap_frame* ac97_irq_handler(struct trap_frame* tf) {
 	if (!adev) return tf;
 
 	ac97_state_t* state = (ac97_state_t*)adev->private_data;
+	uint32_t glob_sta = ac97_read32(state, state->nabmbar, AC97_GLOB_STA);
+
+	if (!(glob_sta & (1 << 8))) {
+		return tf;
+	}
+
 	uint16_t sr = ac97_read16(state, state->nabmbar, AC97_PO_SR);
 
 	// 0x18 = IOC (0x08) | LVI (0x10)
 	if (sr & 0x18) {
-		ac97_write16(state, state->nabmbar, AC97_PO_SR, 0x1C);
+		ac97_write16(state, state->nabmbar, AC97_PO_SR, sr & 0x1C);
 
 		adev->is_playing = false;
 
@@ -176,10 +182,8 @@ void ac97_init(pci_dev_t dev) {
 	ac97_write16(state, state->nambar, AC97_MASTER_VOLUME, 0x0F0F);
 	ac97_write16(state, state->nambar, AC97_PCM_VOLUME,	0x0F0F);
 
-
-	uint8_t vector = 42;
 	if (dev.irq != 0xFF && dev.irq != 0) {
-		ioapic_map_irq(dev.irq, vector, 0, 0);
+		uint8_t vector = ioapic_map_irq_to_free_vector(dev.irq, 0, 0);
 		irq_install_handler(0, vector, ac97_irq_handler);
 	}
 

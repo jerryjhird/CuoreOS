@@ -12,3 +12,6 @@ Config.mk
 
 # github slop
 .github/
+
+# qemu output
+network_capture.pcap

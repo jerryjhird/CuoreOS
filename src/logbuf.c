@@ -25,24 +25,31 @@ void logbuf_write(const char *str) {
 	}
 }
 
-void logbuf_puthex(uint64_t val) {
+void logbuf_putrawhex(uint64_t val) {
 	const char *hex_chars = "0123456789ABCDEF";
-	logbuf_putc('0');
-	logbuf_putc('x');
-
-	if (val == 0) {
-		logbuf_putc('0');
-		return;
-	}
-
 	bool started = false;
+
 	for (int i = 15; i >= 0; i--) {
 		uint8_t nibble = (val >> (i * 4)) & 0xF;
-		if (nibble > 0 || started) {
-			logbuf_putc(hex_chars[nibble]);
+
+		if (nibble > 0) {
 			started = true;
 		}
+
+		if (started) {
+			logbuf_putc(hex_chars[nibble]);
+		}
 	}
+
+	if (!started) {
+		logbuf_putc('0');
+	}
+}
+
+void logbuf_puthex(uint64_t val) {
+	logbuf_putc('0');
+	logbuf_putc('x');
+	logbuf_putrawhex(val);
 }
 
 void logbuf_puthex64(uint64_t val) {

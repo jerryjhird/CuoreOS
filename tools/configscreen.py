@@ -25,7 +25,8 @@ config_groups = {
     "drivers": {
         "mdname": "Drivers",
         "ide_support": "true",
-        "ac97_support": "true"
+        "ac97_support": "true",
+        "rtl8139_support": "true"
     },
     "devices": {
         "mdname": "Devices",

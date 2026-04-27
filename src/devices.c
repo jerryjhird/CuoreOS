@@ -12,6 +12,7 @@ size_t disk_devices_c = 0;
 kernel_power_dev_t *power_devices[MAX_POWER_DEVICES];
 size_t power_devices_c = 0;
 
+kernel_net_dev_t *active_net_device;
 kernel_audio_dev_t* active_audio_device;
 
 void dev_puts(kernel_char_dev_t* dev, const char* s) {

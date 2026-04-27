@@ -218,23 +218,32 @@ DEF_EXCEPTION_HANDLER(31, "Reserved", 0)
 
 void irq_install_handler(uint32_t logical_id, uint8_t vector, irq_handler_t handler) {
 	kernel_cpu_dev_t *target_cpu = cpu_devices[logical_id];
-	target_cpu->routines[vector] = handler;
+	irq_vector_chain_t *chain = &target_cpu->routines[vector];
+
+	if (chain->count < MAX_HANDLERS_PER_VECTOR) {
+		chain->handlers[chain->count] = handler;
+		chain->count++;
+	} else {
+		panic("IRQ", "too many handlers sharing vector");
+	}
 }
 
 static struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
-	kernel_cpu_dev_t *my_cpu; GET_CURRENT_CPU(my_cpu);
+	kernel_cpu_dev_t *my_cpu;
+	GET_CURRENT_CPU(my_cpu);
 
 	my_cpu->irq_stats[vector]++;
+	irq_vector_chain_t *chain = &my_cpu->routines[vector];
 
 	struct trap_frame *ret_tf = tf;
 
-	if (my_cpu->routines[vector]) {
-		ret_tf = my_cpu->routines[vector](tf);
+	for (uint8_t i = 0; i < chain->count; i++) {
+		struct trap_frame *temp_tf = chain->handlers[i](tf);
+		if (temp_tf) ret_tf = temp_tf;
 	}
 
 	lapic_eoi();
-
 	return ret_tf;
 }
 

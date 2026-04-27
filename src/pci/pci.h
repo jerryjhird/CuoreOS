@@ -27,7 +27,7 @@
 
 // network class 0x02
 #define PCI_CLASS_NETWORK 0x02
-#define PCI_SUBCLASS_ETH 0x00
+#define PCI_SUBCLASS_ETHERNET 0x00
 
 // multimedia class 0x04
 #define PCI_CLASS_MULTIMEDIA 0x04

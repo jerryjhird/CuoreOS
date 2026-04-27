@@ -9,6 +9,8 @@
 #define IOAPIC_REG_WIN  0x10
 
 static uintptr_t ioapic_virt_base = 0;
+static uint8_t pin_to_vector[24] = {0};
+static uint8_t next_free_vector = 40;
 
 static void ioapic_write(uint32_t reg, uint32_t value) {
 	*(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_SEL) = reg;
@@ -36,6 +38,20 @@ void ioapic_map_irq(uint8_t irq_pin, uint8_t vector, uint8_t cpu_apic_id, uint32
 		logbuf_putint(flags);
 		logbuf_write("\n");
 	#endif
+}
+
+uint8_t ioapic_map_irq_to_free_vector(uint8_t irq_pin, uint8_t cpu_apic_id, uint32_t flags) {
+	if (irq_pin >= 24) return 0;
+
+	if (pin_to_vector[irq_pin] != 0) {
+		return pin_to_vector[irq_pin];
+	}
+
+	uint8_t vector = next_free_vector++;
+	ioapic_map_irq(irq_pin, vector, cpu_apic_id, flags);
+	pin_to_vector[irq_pin] = vector;
+
+	return vector;
 }
 
 void ioapic_init(uintptr_t base_addr) {

@@ -16,4 +16,11 @@ struct trap_frame {
 
 typedef struct trap_frame* (*irq_handler_t)(struct trap_frame *tf);
 
+#define MAX_HANDLERS_PER_VECTOR 4
+
+typedef struct {
+	irq_handler_t handlers[MAX_HANDLERS_PER_VECTOR];
+	uint8_t count;
+} irq_vector_chain_t;
+
 void irq_install_handler(uint32_t logical_id, uint8_t vector, irq_handler_t handler);

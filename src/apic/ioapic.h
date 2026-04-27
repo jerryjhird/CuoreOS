@@ -13,3 +13,4 @@
 
 void ioapic_init(uintptr_t base_addr);
 void ioapic_map_irq(uint8_t irq_pin, uint8_t vector, uint8_t cpu_apic_id, uint32_t flags);
+uint8_t ioapic_map_irq_to_free_vector(uint8_t irq_pin, uint8_t cpu_apic_id, uint32_t flags);

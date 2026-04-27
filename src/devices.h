@@ -26,7 +26,7 @@ typedef struct kernel_cpu_dev_t {
 	volatile cpu_status_t status;
 	mailbox_t mailbox;
 
-	irq_handler_t routines[256];
+	irq_vector_chain_t routines[256];
 	uint64_t irq_stats[256];
 } __attribute__((aligned(64))) kernel_cpu_dev_t;
 
@@ -67,6 +67,21 @@ typedef struct kernel_power_dev_t {
 	void* private_data;
 } kernel_power_dev_t;
 
+typedef struct kernel_net_dev_t {
+	char model[32];
+	uint8_t mac[6];
+
+	// driver interface
+	void (*send_packet)(struct kernel_net_dev_t* dev, void* data, size_t len);
+	void (*set_promiscuous)(struct kernel_net_dev_t* dev, bool enabled);
+
+	// hook for networking stack
+	void (*on_received)(struct kernel_net_dev_t* dev, void* data, size_t len);
+
+	void* private_data;
+	bool link_up;
+} kernel_net_dev_t;
+
 void dev_puts(kernel_char_dev_t* dev, const char* s);
 void dev_putint(kernel_char_dev_t* dev, uint64_t n);
 
@@ -86,4 +101,5 @@ extern size_t power_devices_c;
 extern kernel_cpu_dev_t* cpu_devices[SMP_MAX_CORES];
 extern volatile uint32_t cpu_devices_c;
 
+extern kernel_net_dev_t* active_net_device;
 extern kernel_audio_dev_t* active_audio_device;

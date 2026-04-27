@@ -3,6 +3,7 @@
 #include "pci/pci.h"
 #include "pci/drivers/ide.h"
 #include "pci/drivers/ac97.h"
+#include "pci/drivers/rtl8139.h"
 
 pci_driver_entry_t pci_discovery_table[] = {
 	// Host Bridge
@@ -28,6 +29,21 @@ pci_driver_entry_t pci_discovery_table[] = {
 
 		#ifdef KERNEL_MOD_AC97_ENABLED
 			.init = ac97_init
+		#else
+			.init = NULL
+		#endif
+	},
+	{
+		.name = "RTL8139 Ethernet Controller",
+		.group_id = 2,
+		.vendor_id = PCI_VENDOR_REALTEK,
+		.device_id = PCI_DEVICE_RTL8139,
+		.class_id = PCI_CLASS_NETWORK,
+		.subclass_id = PCI_SUBCLASS_ETHERNET,
+		.progif = PCI_PROGIF_ANY,
+
+		#ifdef KERNEL_MOD_RTL8139_ENABLED
+			.init = rtl8139_init
 		#else
 			.init = NULL
 		#endif
