@@ -126,6 +126,27 @@ static void idle_task(void) {
 	while (1) {}
 }
 
+static void startup_sound_task(void) {
+	audio_beep(active_audio_device, 659, 150);
+	audio_beep(active_audio_device, 1, 90);
+	audio_beep(active_audio_device, 659, 150);
+	audio_beep(active_audio_device, 1, 90);
+	audio_beep(active_audio_device, 659, 300);
+	audio_beep(active_audio_device, 1, 100);
+	audio_beep(active_audio_device, 659, 150);
+	audio_beep(active_audio_device, 1, 90);
+	audio_beep(active_audio_device, 659, 150);
+	audio_beep(active_audio_device, 1, 90);
+	audio_beep(active_audio_device, 659, 300);
+	audio_beep(active_audio_device, 1, 100);
+	audio_beep(active_audio_device, 659, 150);
+	audio_beep(active_audio_device, 783, 150);
+	audio_beep(active_audio_device, 523, 150);
+	audio_beep(active_audio_device, 587, 150);
+	audio_beep(active_audio_device, 659, 600);
+	scheduler_exit_task();
+}
+
 extern void AP_kentry(struct limine_mp_info *mp);
 
 static void kernel_main(void) {
@@ -196,12 +217,12 @@ static void kernel_main(void) {
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
 
-	audio_beep(active_audio_device, 600, 200);
-	audio_beep(active_audio_device, 800, 500);
+	active_audio_device->set_volume(active_audio_device, 1);
 
 	scheduler_init();
 	scheduler_create_task(uart16550_console_task, 1);
 	scheduler_create_task(idle_task, 2);
+	scheduler_create_task(startup_sound_task, 3);
 	scheduler_start();
 
 	for(;;) { __asm__ ("hlt"); }

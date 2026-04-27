@@ -78,6 +78,23 @@ task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid
 	return new_task;
 }
 
+void scheduler_exit_task(void) {
+	__asm__ volatile ("cli");
+
+	task_t* task = current_task;
+
+	if (task->next == task) {
+		panic("SCHEDULER", "Last task attempted to exit. Halting.");
+	}
+
+	task->prev->next = task->next;
+	task->next->prev = task->prev;
+
+	__asm__ volatile ("int $32"); // fire 32 to switch to next task
+
+	while(1);
+}
+
 void scheduler_start(void) {
 	if (current_task == NULL) {
 		panic("SCHEDULER", "INITALIZED WITH NO TASKS");

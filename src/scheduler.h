@@ -15,6 +15,7 @@ extern task_t *current_task;
 void scheduler_init(void);
 void scheduler_start(void);
 void scheduler_yield(void);
+void scheduler_exit_task(void);
 
 task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid);
 task_t* get_task_by_upid(uint64_t target_upid);
