@@ -20,9 +20,7 @@
 #include "fs/ramfs.h"
 #include "scheduler.h"
 #include "cpu/smp/init.h"
-#include "fs/cuorefs.h"
 #include "stdio.h"
-#include "ui/installer.h"
 #include "_time.h"
 #include "cpu/MSR.h"
 #include "bitmask.h"
@@ -325,10 +323,6 @@ void _kstartc(void) {
 	logbuf_flush(&uart16550_dev);
 
 	_c_flanterm_init(framebuffer_request.response->framebuffers[0]);
-
-	if (glob_cuorefs_partition == NULL && supported_disk_exists) {
-		installer_show_menu();
-	}
 
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();

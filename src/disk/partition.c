@@ -1,9 +1,9 @@
 #include "partition.h"
+
 #include "mem/mem.h" // IWYU pragma: keep
 #include "guid_list.h"
 #include "kstate.h"
-#include "fs/cuorefs.h"
-
+#include "logbuf.h"
 #include "mem/heap.h" // IWYU pragma: keep
 #include "mbr.h"
 #include "gpt.h"
@@ -15,7 +15,7 @@ typedef struct {
 
 static const partition_type_lookup_t partition_lookup_table[] = {
 	{0x00, GUID_EMPTY, "Empty"},
-	{0x7F, GUID_CUORE_BASIC_DATA, "Cuore Basic Data"},
+	{0x7F, GUID_CUORE_BASIC_DATA, "Cuore Basic Data"}, // CuoreFS no longer exists but keep it for now
 	{0x06, GUID_MS_BASIC_DATA, "FAT16"},
 	{0x0B, GUID_MS_BASIC_DATA, "FAT32 (CHS)"},
 	{0x0C, GUID_MS_BASIC_DATA, "FAT32 (LBA)"},
@@ -31,27 +31,25 @@ static const gpt_name_lookup_t guid_name_table[] = {
 	{GUID_EMPTY, "Empty/Unknown"},
 	{GUID_EFI_SYSTEM, "EFI System Partition"},
 	{GUID_BIOS_BOOT, "BIOS Boot Partition"},
-	{GUID_CUORE_BASIC_DATA, "Cuore Basic Data"},
+	{GUID_CUORE_BASIC_DATA, "Cuore Basic Data"}, // CuoreFS no longer exists but keep it for now
 	{GUID_MS_BASIC_DATA, MICROSOFT_STRING " Basic Data"},
 	{GUID_LINUX_SWAP, "Linux Swap"},
 	{GUID_LINUX_FILESYSTEM, "Linux Filesystem"},
 	{GUID_MS_RESERVED, MICROSOFT_STRING " Reserved"},
 	{GUID_WIN_RECOVERY, "Windows Recovery Environment"},
-	#ifndef MINIMAL_BUILD
-		{GUID_MBR_SCHEME, "MBR Partition Scheme"},
-		{GUID_INTEL_FAST_FLASH, "Intel Fast Flash"},
-		{GUID_SONY_BOOT, "Sony Boot Partition"},
-		{GUID_LENOVO_BOOT, "Lenovo Boot Partition"},
-		{GUID_POWERPC_PREP, "PowerPC PReP Boot"},
-		{GUID_ONIE_BOOT, "ONIE Boot Partition"},
-		{GUID_ONIE_CONFIG, "ONIE Config Partition"},
-		{GUID_MS_LDM_METADATA, "Logical Disk Manager Metadata"},
-		{GUID_MS_LDM_DATA, "Logical Disk Manager Data"},
-		{GUID_MS_STORAGE_SPACES, "Microsoft Storage Spaces"},
-		{GUID_HP_UX_DATA, "HP-UX Data"},
-		{GUID_HP_UX_SERVICE, "HP-UX Service"},
-		{GUID_IBM_GPFS, "IBM General Parallel FS"},
-	#endif
+	{GUID_MBR_SCHEME, "MBR Partition Scheme"},
+	{GUID_INTEL_FAST_FLASH, "Intel Fast Flash"},
+	{GUID_SONY_BOOT, "Sony Boot Partition"},
+	{GUID_LENOVO_BOOT, "Lenovo Boot Partition"},
+	{GUID_POWERPC_PREP, "PowerPC PReP Boot"},
+	{GUID_ONIE_BOOT, "ONIE Boot Partition"},
+	{GUID_ONIE_CONFIG, "ONIE Config Partition"},
+	{GUID_MS_LDM_METADATA, "Logical Disk Manager Metadata"},
+	{GUID_MS_LDM_DATA, "Logical Disk Manager Data"},
+	{GUID_MS_STORAGE_SPACES, "Microsoft Storage Spaces"},
+	{GUID_HP_UX_DATA, "HP-UX Data"},
+	{GUID_HP_UX_SERVICE, "HP-UX Service"},
+	{GUID_IBM_GPFS, "IBM General Parallel FS"},
 	{{0}, NULL}
 };
 
@@ -77,6 +75,15 @@ void partition_register(partition_t* new_part) {
 	if (!new_part || !new_part->disk) return;
 
 	kernel_disk_dev_t* dev = new_part->disk;
+	const char* type_name = partition_get_name(new_part);
+
+	logbuf_write("[ DISK ] Registered partition #");
+	logbuf_putint(new_part->partition_id);
+	logbuf_write(" \"");
+	logbuf_write(type_name);
+	logbuf_write("\" Size: ");
+	logbuf_putint((new_part->sector_count * 512) / 1024 / 1024);
+	logbuf_write(" (MiB)\n");
 
 	if (dev->partitions == NULL) {
 		dev->partitions = (struct partition_s*)new_part;
@@ -87,8 +94,6 @@ void partition_register(partition_t* new_part) {
 		}
 		current->next = (struct partition_s*)new_part;
 	}
-
-	cuorefs_init(new_part);
 }
 
 void partition_refresh(kernel_disk_dev_t* dev) {
@@ -97,9 +102,6 @@ void partition_refresh(kernel_disk_dev_t* dev) {
 	while (current != NULL) {
 		partition_t* next = (partition_t*)current->next;
 
-		if (current->fs_metadata) {
-			free(current->fs_metadata);
-		}
 		free(current);
 
 		current = next;
@@ -113,11 +115,9 @@ void partition_refresh(kernel_disk_dev_t* dev) {
 		return;
 	}
 
-	if (buffer[510] == 0x55 && buffer[511] == 0xAA) {
-		if (buffer[450] == 0xEE) {
-			gpt_parse(dev);
-		} else {
-			mbr_parse(dev);
-		}
+	if (dev->read_sector(dev, 1, (uint16_t*)buffer) == 0 && memcmp(buffer, "EFI PART", 8) == 0) {
+		gpt_parse(dev);
+	} else {
+		mbr_parse(dev);
 	}
 }

@@ -12,9 +12,6 @@ typedef struct {
 	kernel_disk_dev_t* disk; // device this partition belongs to
 	bool	 is_gpt;
 
-	void* fs_metadata;
-	bool is_cuorefs;
-
 	struct partition_s* next;
 } partition_t;
 

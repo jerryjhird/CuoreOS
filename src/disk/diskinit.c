@@ -11,7 +11,6 @@ void generic_disk_init(kernel_disk_dev_t* dev) {
 
 	uint8_t return_code = mbr_parse(dev);
 	if (return_code == 2) {
-		logbuf_write("[ GPT  ] Initializing GPT\n");
 		gpt_parse(dev);
 	}
 }
