@@ -248,7 +248,7 @@ static void kernel_main(void) {
 		}
 	}
 
-	if (mp_response->cpu_count < 2) {
+	if (mp_response->cpu_count > 2) {
 		mailbox_send(get_idle_core(), time_sync, NULL);
 	}
 
