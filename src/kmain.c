@@ -64,6 +64,13 @@ volatile struct limine_mp_request mp_request = {
 	.revision = 0
 };
 
+#ifndef KERNEL_BUILD_SIGNATURE
+#define KERNEL_BUILD_SIGNATURE 0x0ULL
+#endif
+
+__attribute__((section(".csig"), used))
+const uint64_t compile_signature = KERNEL_BUILD_SIGNATURE;
+
 uint64_t hhdm_offset;
 
 void panic(const char* header_msg, const char* msg) {
@@ -210,6 +217,10 @@ static void kernel_main(void) {
 	if (mp_response->cpu_count > 2) {
 		mailbox_send_fc(time_sync, NULL);
 	}
+
+	logbuf_write("[ KRNL ] Signature: ");
+	logbuf_putint(compile_signature);
+	logbuf_write("\n");
 
 	logbuf_write("[ BOOT ] Time it took to boot (nano's): "); logbuf_putint(hpet_get_nanos()); logbuf_write("\n");
 

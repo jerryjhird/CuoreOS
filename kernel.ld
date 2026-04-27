@@ -16,6 +16,15 @@ SECTIONS
         *(.text .text.*)
     } :text
 
+    .csig : {
+        _sig_start = .;
+        KEEP(*(.csig))
+        . = _sig_start + 8;
+        _sig_end = .;
+    } :text
+
+    ASSERT(_sig_end - _sig_start == 8, ".csig section must be exactly 8 bytes!")
+
     .rodata : {
         *(.rodata .rodata.*)
     } :text
