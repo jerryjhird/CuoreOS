@@ -9,8 +9,6 @@
 #include "mem/heap.h"
 #include "builtinabs.h"
 
-extern acpi_fadt_t* fadt;
-
 static bool acpi_shutdown(kernel_power_dev_t* dev) {
 	(void)dev;
 	uintptr_t cnt_blk = fadt_get_pm1a_cnt();

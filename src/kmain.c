@@ -324,16 +324,16 @@ void _kstartc(void) {
 
 	// scan disks previously found by pci discovery
 	for (size_t i = 0; i < disk_devices_c; i++) {
-        kernel_disk_dev_t* dev = disk_devices[i];
+		kernel_disk_dev_t* dev = disk_devices[i];
 
-        if (dev == NULL) continue;
+		if (dev == NULL) continue;
 
-        logbuf_write("[ DISK ] Scanning ");
-        logbuf_write(dev->model);
-        logbuf_write("...\n");
+		logbuf_write("[ DISK ] Scanning ");
+		logbuf_write(dev->model);
+		logbuf_write("...\n");
 
-        generic_disk_init(dev); 
-    }
+		generic_disk_init(dev);
+	}
 
 	logbuf_flush(&uart16550_dev);
 

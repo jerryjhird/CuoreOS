@@ -2,27 +2,11 @@
 
 #include "mem/mem.h"
 #include "mem/paging.h"
-#include "acpi/acpi.h"
 #include <stdint.h>
 #include "builtinabs.h"
 
 static uint64_t hpet_base = 0;
 static uint32_t femtoseconds_per_tick = 0;
-
-struct hpet_table {
-	struct acpi_sdt_header header;
-	uint32_t event_timer_block_id;
-	struct {
-		uint8_t address_space_id;
-		uint8_t register_bit_width;
-		uint8_t register_bit_offset;
-		uint8_t reserved;
-		uint64_t address;
-	} __attribute__((packed)) address;
-	uint8_t hpet_number;
-	uint16_t minimum_tick;
-	uint8_t page_protection;
-} __attribute__((packed));
 
 void hpet_init(void) {
 	uintptr_t pml4_phys = vmm_get_pml4();

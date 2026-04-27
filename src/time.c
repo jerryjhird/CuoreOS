@@ -14,40 +14,46 @@ static const int days_before_month[] = {
 	0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
 };
 
-static time_t get_epoch_rtc(void) {
-	int s, m, h, d, mo, y;
-	int s2, m2, h2, d2, mo2, y2;
+static uint64_t get_epoch_rtc(void) {
+	rtc_time_t t1, t2;
 
-	// read until two consecutive reads match perfectly
-	// to prevent catching the RTC mid update (eg: 10:59:59 > 11:00:00)
 	do {
-		read_rtc(&s, &m, &h, &d, &mo, &y);
-		read_rtc(&s2, &m2, &h2, &d2, &mo2, &y2);
-	} while (s != s2 || m != m2 || h != h2 || d != d2 || mo != mo2 || y != y2);
+		read_rtc(&t1);
+		read_rtc(&t2);
+	} while (t1.second != t2.second || t1.minute != t2.minute ||
+			 t1.hour   != t2.hour   || t1.day	!= t2.day	||
+			 t1.month  != t2.month  || t1.year   != t2.year);
 
-	time_t year = y + 2000;
-	time_t total_days = (year - 1970) * 365;
+	uint64_t year = t1.year;
+
+	uint64_t total_days = (year - 1970) * 365;
 	total_days += (year - 1969) / 4;
-	total_days += days_before_month[mo - 1];
+	total_days -= (year - 1901) / 100;
+	total_days += (year - 1601) / 400;
 
-	if (mo > 2 && (year % 4 == 0)) {
-		total_days++;
+	total_days += days_before_month[t1.month - 1];
+
+	if (t1.month > 2) {
+		if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
+			total_days++;
+		}
 	}
 
-	total_days += (d - 1);
+	total_days += (t1.day - 1);
 
-	return (total_days * 86400) + (h * 3600) + (m * 60) + s;
+	return (total_days * 86400) + (t1.hour * 3600) + (t1.minute * 60) + t1.second;
 }
 
 // adjust RTC using HPET
 void time_sync(void) {
-	int start_sec, m, h, d, mo, y;
-	read_rtc(&start_sec, &m, &h, &d, &mo, &y);
-	int current_sec = start_sec;
+	rtc_time_t start_time, current_time;
 
-	while(current_sec == start_sec) {
+	read_rtc(&start_time);
+	current_time = start_time;
+
+	while (current_time.second == start_time.second) {
 		__asm__ volatile("pause");
-		read_rtc(&current_sec, &m, &h, &d, &mo, &y);
+		read_rtc(&current_time);
 	}
 
 	boot_hpet_ticks = hpet_get_ticks();
@@ -78,6 +84,10 @@ time_t get_epoch(void) {
 
 	return boot_epoch + (time_t)elapsed_sec;
 }
+
+//
+// sleep functions
+//
 
 void msleep(uint64_t ms) {
 	uint64_t total_ticks = ms * hpet_ticks_per_ms;

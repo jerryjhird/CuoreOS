@@ -57,6 +57,8 @@ typedef struct acpi_fadt {
 	acpi_gas_t x_gpe1_blk; // 64-bit gpe1 register block
 } __attribute__((packed)) acpi_fadt_t;
 
+extern acpi_fadt_t* fadt;
+
 void fadt_init(void);
 uint16_t fadt_get_s5_types(void);
 uintptr_t fadt_get_pm1a_cnt(void);

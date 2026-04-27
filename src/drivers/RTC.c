@@ -1,37 +1,57 @@
 #include "RTC.h"
-#include "cpu/io.h"
 
-#define CMOS_ADDR 0x70
-#define CMOS_DATA 0x71
+#include "CMOS.h"
+#include "acpi/fadt.h"
+#include <stddef.h>
 
-static uint8_t get_rtc_register(int reg) {
-	outb(CMOS_ADDR, reg);
-	return inb(CMOS_DATA);
-}
+#define BCD_TO_BIN(val) (((val) & 0x0F) + (((val) / 16) * 10))
 
 static int is_updating(void) {
-	outb(CMOS_ADDR, 0x0A);
-	return (inb(CMOS_DATA) & 0x80);
+	return (cmos_read(0x0A) & 0x80);
 }
 
-void read_rtc(int *second, int *minute, int *hour, int *day, int *month, int *year) {
+void read_rtc(rtc_time_t *time) {
+	uint8_t century = 0;
+	uint8_t registerB;
+
 	while (is_updating());
 
-	*second = get_rtc_register(0x00);
-	*minute = get_rtc_register(0x02);
-	*hour   = get_rtc_register(0x04);
-	*day	= get_rtc_register(0x07);
-	*month  = get_rtc_register(0x08);
-	*year   = get_rtc_register(0x09);
+	time->second = cmos_read(0x00);
+	time->minute = cmos_read(0x02);
+	time->hour   = cmos_read(0x04);
+	time->day	= cmos_read(0x07);
+	time->month  = cmos_read(0x08);
+	time->year   = cmos_read(0x09);
 
-	uint8_t registerB = get_rtc_register(0x0B);
+	if (fadt != NULL && fadt->century != 0) {
+		century = cmos_read(fadt->century);
+	}
+
+	registerB = cmos_read(0x0B);
 
 	if (!(registerB & 0x04)) {
-		*second = (*second & 0x0F) + ((*second / 16) * 10);
-		*minute = (*minute & 0x0F) + ((*minute / 16) * 10);
-		*hour   = ((*hour & 0x0F) + (((*hour & 0x70) / 16) * 10)) | (*hour & 0x80);
-		*day	= (*day & 0x0F) + ((*day / 16) * 10);
-		*month  = (*month & 0x0F) + ((*month / 16) * 10);
-		*year   = (*year & 0x0F) + ((*year / 16) * 10);
+		time->second = BCD_TO_BIN(time->second);
+		time->minute = BCD_TO_BIN(time->minute);
+		time->hour   = ((time->hour & 0x0F) + (((time->hour & 0x70) / 16) * 10)) | (time->hour & 0x80);
+		time->day	= BCD_TO_BIN(time->day);
+		time->month  = BCD_TO_BIN(time->month);
+		time->year   = BCD_TO_BIN(time->year);
+
+		if (fadt != NULL && fadt->century != 0) {
+			century = BCD_TO_BIN(century);
+		}
+	}
+
+	// handle 12 hour mode
+	if (!(registerB & 0x02) && (time->hour & 0x80)) {
+		time->hour = ((time->hour & 0x7F) + 12) % 24;
+	}
+
+	// final year calculation with FADT century offset
+	if (fadt != NULL && fadt->century != 0 && century != 0) {
+		time->year += (uint32_t)century * 100;
+	} else {
+		// fallback
+		time->year += 2000;
 	}
 }
