@@ -149,7 +149,8 @@ void pci_init(void) {
 			if ((id_reg & 0xFFFF) == 0xFFFF) continue;
 
 			uint32_t header = pci_read(bus, slot, 0, 0x0C);
-			int max_func = (header & 0x00800000) ? 8 : 1;
+			uint8_t header_type = (header >> 16) & 0xFF;
+			int max_func = (header_type & 0x80) ? 8 : 1;
 
 			for (uint8_t func = 0; func < max_func; func++) {
 				id_reg = pci_read(bus, slot, func, 0x00);
