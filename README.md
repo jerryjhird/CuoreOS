@@ -17,7 +17,7 @@ Hobby x86-64 ELF Kernel
 ### Planned Features
 - userspace
 - multi-core scheduling
-- serial terminal (serial input is already functional so this will be easy to implement i just need to get around to it)
+- IP stack
 
 ---
 ## Contributing
