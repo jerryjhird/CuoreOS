@@ -4,6 +4,7 @@
 #include "logbuf.h"
 #include <stddef.h>
 #include "acpi/mcfg.h"
+#include "dtable.h" // discovery table
 
 //
 // 32 bit access
@@ -79,8 +80,6 @@ void pci_write_byte(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset,
 	tmp |= ((uint32_t)data << ((offset & 3) * 8));
 	outl(PCI_CONFIG_DATA, tmp);
 }
-
-extern pci_driver_entry_t pci_discovery_table[];
 
 static pci_bar_t pci_get_bar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t bar_index) {
 	pci_bar_t bar = {0};
