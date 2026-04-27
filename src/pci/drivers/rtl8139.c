@@ -1,5 +1,7 @@
 typedef int dummy0 ;
 
+// driver for rtl8139 ethernet controller. supports PMIO and MMIO
+
 #ifdef KERNEL_MOD_RTL8139_ENABLED
 
 #include "rtl8139.h"
