@@ -22,8 +22,8 @@ config_groups = {
         "uefi_support": "true",
         "bios_support": "true",
     },
-    "modules": {
-        "mdname": "Modules",
+    "drivers": {
+        "mdname": "Drivers",
         "ide_support": "true",
         "ac97_support": "true"
     },
