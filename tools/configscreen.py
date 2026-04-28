@@ -20,6 +20,7 @@ config_groups = {
     },
     "Drivers": {
         "ide_support": "true",
+        "sata_support": "true",
         "ac97_support": "true",
         "rtl8139_support": "true"
     },
@@ -37,6 +38,9 @@ config_groups = {
         "limine_flags": "--depth=1 --branch v11.x-binary",
         "flanterm": "https://github.com/Mintsuki/Flanterm.git",
         "flanterm_flags": "--depth=1"
+    },
+    "Debugging": {
+        "do_kernel_device_tests": "false"
     }
 }
 

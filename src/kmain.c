@@ -28,6 +28,7 @@
 #include "acpi/fadt.h"
 #include "builtinabs.h"
 #include "disk/diskinit.h"
+#include "tests.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -314,9 +315,15 @@ void _kstartc(void) {
 
 		if (dev == NULL) continue;
 
+		#ifdef DO_KDEVTESTS
+			if (!dev__test__disk(dev)) {
+				panic("DISK", "Test Failed");
+			}
+		#endif
+
 		logbuf_write("[ DISK ] Scanning ");
 		logbuf_write(dev->model);
-		logbuf_write("...\n");
+		logbuf_write("\n");
 
 		generic_disk_init(dev);
 	}

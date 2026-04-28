@@ -1,6 +1,6 @@
 # CuoreOS Build System
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
-SYSTEM_CONFIG_VERSION := 0001
+SYSTEM_CONFIG_VERSION := 0002
 
 WHITELIST_GOALS := menuconfig clean
 ifeq ($(wildcard Config.mk),)
@@ -58,6 +58,7 @@ LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
 CFLAGS += $(CC_WARNINGS) $(CONFIG_ADDITIONAL_CFLAGS)
 LDFLAGS += $(CONFIG_ADDITIONAL_LDFLAGS)
 
+# Drivers
 ifeq ($(CONFIG_IDE_SUPPORT),true)
     CFLAGS += -DKERNEL_MOD_IDE_ENABLED
 endif
@@ -68,6 +69,15 @@ endif
 
 ifeq ($(CONFIG_RTL8139_SUPPORT),true)
 	CFLAGS += -DKERNEL_MOD_RTL8139_ENABLED
+endif
+
+ifeq ($(CONFIG_SATA_SUPPORT),true)
+	CFLAGS += -DKERNEL_MOD_AHCI_ENABLED
+endif
+
+# Debugging
+ifeq ($(CONFIG_DO_KERNEL_DEVICE_TESTS),true)
+	CFLAGS += -DDO_KDEVTESTS
 endif
 
 SIG := 0x$(shell head -c 8 /dev/urandom | xxd -p)

@@ -4,6 +4,7 @@
 #include "pci/drivers/ide.h"
 #include "pci/drivers/ac97.h"
 #include "pci/drivers/rtl8139.h"
+#include "pci/drivers/ahci.h"
 
 pci_driver_entry_t pci_discovery_table[] = {
 	// Host Bridge
@@ -48,8 +49,21 @@ pci_driver_entry_t pci_discovery_table[] = {
 			.init = NULL
 		#endif
 	},
+	{
+		.name = "Generic SATA Controller",
+		.group_id = 0,
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_STORAGE,
+		.subclass_id = PCI_SUBCLASS_SATA,
+		.progif = PCI_PROGIF_ANY,
 
-	// IDE with any vendor (disk controllers should be last in the table, as they initalize filesystems and it can make logs look messy)
+		#ifdef KERNEL_MOD_AHCI_ENABLED
+			.init = ahci_init
+		#else
+			.init = NULL
+		#endif
+	},
 	{
 		.name = "Generic IDE Controller",
 		.group_id = 0,
@@ -64,17 +78,6 @@ pci_driver_entry_t pci_discovery_table[] = {
 		#else
 			.init = NULL
 		#endif
-	},
-	{
-		.name = "Generic SATA Controller",
-		.group_id = 0,
-		.vendor_id = PCI_VENDOR_ANY,
-		.device_id = PCI_DEVICE_ANY,
-		.class_id = PCI_CLASS_STORAGE,
-		.subclass_id = PCI_SUBCLASS_SATA,
-		.progif = PCI_PROGIF_ANY,
-
-		.init = NULL
 	},
 	{ .vendor_id = 0, .device_id = 0, .name = NULL, .init = NULL }
 };
