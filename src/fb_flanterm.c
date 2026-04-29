@@ -5,7 +5,7 @@
 
 #include "fb_flanterm.h"
 
-#include "limine.h"
+#include "gui/fb.h"
 #include "devices.h"
 #include "mem/heap.h"
 #include <stdint.h>
@@ -19,7 +19,7 @@ kernel_char_dev_t flanterm_dev = {
 	false
 };
 
-void _c_flanterm_init(struct limine_framebuffer *fb) {
+void _c_flanterm_init(linear_framebuffer_t *fb) {
 	char_devices[char_devices_c++] = &flanterm_dev;
 
 	ft_ctx = flanterm_fb_init(
@@ -29,12 +29,12 @@ void _c_flanterm_init(struct limine_framebuffer *fb) {
 		fb->width,
 		fb->height,
 		fb->pitch,
-		fb->red_mask_size,
-		fb->red_mask_shift,
-		fb->green_mask_size,
-		fb->green_mask_shift,
-		fb->blue_mask_size,
-		fb->blue_mask_shift,
+		fb->pixelf.red_size,
+		fb->pixelf.red_shift,
+		fb->pixelf.green_size,
+		fb->pixelf.green_shift,
+		fb->pixelf.blue_size,
+		fb->pixelf.blue_shift,
 		NULL,
 		NULL, NULL,
 		NULL, NULL,

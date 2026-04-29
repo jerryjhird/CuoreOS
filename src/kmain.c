@@ -29,6 +29,8 @@
 #include "builtinabs.h"
 #include "disk/diskinit.h"
 #include "tests.h"
+#include "gui/wm.h"
+#include "gui/fb.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -103,7 +105,7 @@ void panic(const char* header_msg, const char* msg) {
 }
 
 ramfs_handle_t initramfs;
-
+linear_framebuffer_t gfb_limine_framebuffer;
 bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 
 static void uart16550_console_task(void) {
@@ -330,7 +332,17 @@ void _kstartc(void) {
 
 	logbuf_flush(&uart16550_dev);
 
-	_c_flanterm_init(framebuffer_request.response->framebuffers[0]);
+	GENERIC_FB_FROM_LIMINE_FB(&gfb_limine_framebuffer, framebuffer_request.response->framebuffers[0]);
+
+	wm_init(&gfb_limine_framebuffer);
+
+	int terminal_win_w = gfb_limine_framebuffer.width - (20 * 2);
+	int terminal_win_h = gfb_limine_framebuffer.height - (20 * 2) - WM_TITLEBAR_HEIGHT;
+	int terminal_win_x = 20; int terminal_win_y = 20;
+
+	window_t* terminal_window = wm_create_window(terminal_win_x, terminal_win_y, terminal_win_w, terminal_win_h);
+
+	_c_flanterm_init(terminal_window->buffer);
 
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
