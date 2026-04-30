@@ -283,7 +283,7 @@ void _kstartc(void) {
 	if (module_request.response->module_count <= 0) {
 		logbuf_write("[WARN] initramfs not found.\n");
 	} else {
-		initramfs = ramfs_init(module_request.response->modules[0]->address);
+		ramfs_init(&initramfs, module_request.response->modules[0]->address);
 	}
 
 	heap_init((void*)KERNEL_HEAP_START, HEAP_SIZE);

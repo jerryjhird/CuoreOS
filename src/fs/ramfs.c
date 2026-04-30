@@ -1,12 +1,10 @@
 #include "ramfs.h"
 #include "mem/mem.h" // IWYU pragma: keep
 
-ramfs_handle_t ramfs_init(void *ptr) {
-	ramfs_handle_t handle;
-	handle.base = ptr;
-	handle.header = (ramfs_header_t *)ptr;
-	handle.entries = (ramfs_entry_t *)((uintptr_t)ptr + sizeof(ramfs_header_t));
-	return handle;
+void ramfs_init(ramfs_handle_t *handle, void *ptr) {
+	handle->base = ptr;
+	handle->header = (ramfs_header_t *)ptr;
+	handle->entries = (ramfs_entry_t *)((uintptr_t)ptr + sizeof(ramfs_header_t));
 }
 
 ramfs_file_t ramfs_get_file(ramfs_handle_t *handle, const char *name) {

@@ -30,5 +30,5 @@ typedef struct {
 	uint64_t size;
 } ramfs_file_t;
 
-ramfs_handle_t ramfs_init(void *ptr);
+void ramfs_init(ramfs_handle_t *handle, void *ptr);
 ramfs_file_t ramfs_get_file(ramfs_handle_t *handle, const char *name);
