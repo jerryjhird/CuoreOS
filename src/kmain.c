@@ -8,7 +8,7 @@
 #include "mem/mem.h"
 #include "kstate.h"
 #include "devices.h"
-#include "fb_flanterm.h"
+#include "graphics/ui/fb_flanterm.h"
 #include "cpu/GDT.h"
 #include "apic/lapic.h"
 #include "apic/ioapic.h"
@@ -29,8 +29,8 @@
 #include "builtinabs.h"
 #include "disk/diskinit.h"
 #include "tests.h"
-#include "gui/wm.h"
-#include "gui/fb.h"
+#include "graphics/ui/wm.h"
+#include "graphics/fb.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,

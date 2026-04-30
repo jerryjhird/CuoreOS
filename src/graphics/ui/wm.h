@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fb.h"
+#include "graphics/fb.h"
 #include <stdbool.h>
 
 typedef struct window {

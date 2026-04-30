@@ -195,10 +195,10 @@ endif
 run: runu
 
 QEMU_MACHINE ?= pc
-GENERIC_QEMU_FLAGS = -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -machine $(QEMU_MACHINE) -boot d
-DISK_QEMU_FLAG = -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
-AUDIO_CARD_QEMU_FLAG = -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
-NET_QEMU_FLAG = -netdev user,id=u1 -device rtl8139,netdev=u1 -object filter-dump,id=f1,netdev=u1,file=network_capture.pcap
+GENERIC_QEMU_FLAGS ?= -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -machine $(QEMU_MACHINE) -boot d
+DISK_QEMU_FLAG ?= -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
+AUDIO_CARD_QEMU_FLAG ?= -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
+NET_QEMU_FLAG ?= -netdev user,id=u1 -device rtl8139,netdev=u1 -object filter-dump,id=f1,netdev=u1,file=network_capture.pcap
 
 runu:
 	qemu-system-x86_64 -bios $(QEMU_UEFI_FIRMWARE) $(GENERIC_QEMU_FLAGS) $(DISK_QEMU_FLAG) $(AUDIO_CARD_QEMU_FLAG) $(NET_QEMU_FLAG)

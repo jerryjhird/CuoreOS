@@ -1,5 +1,5 @@
 #include "wm.h"
-#include "fb.h"
+#include "graphics/fb.h"
 #include "mem/heap.h"
 #include <string.h>
 

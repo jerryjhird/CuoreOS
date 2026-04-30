@@ -5,7 +5,7 @@
 
 #include "fb_flanterm.h"
 
-#include "gui/fb.h"
+#include "graphics/fb.h"
 #include "devices.h"
 #include "mem/heap.h"
 #include <stdint.h>
