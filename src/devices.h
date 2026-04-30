@@ -82,6 +82,22 @@ typedef struct kernel_net_dev_t {
 	bool link_up;
 } kernel_net_dev_t;
 
+typedef enum {
+	VOLATILE, // standard RAM like
+	PERSISTENT, // NVDIMM or flash
+	MMIO_GATE, // bridge to other hardware
+	HOST_TO_GUEST // e.g ivshmem
+} extmem_type_t;
+
+typedef struct kernel_extmem_dev_t {
+	char model[32];
+	extmem_type_t type;
+	void*	 virt_addr;
+	uintptr_t phys_addr;
+	size_t	size;
+	void* private_data;
+} kernel_extmem_dev_t;
+
 void dev_puts(kernel_char_dev_t* dev, const char* s);
 void dev_putint(kernel_char_dev_t* dev, uint64_t n);
 
@@ -96,6 +112,9 @@ extern size_t disk_devices_c;
 
 extern kernel_power_dev_t* power_devices[MAX_POWER_DEVICES];
 extern size_t power_devices_c;
+
+extern kernel_extmem_dev_t* extmem_devices[MAX_EXTMEM_DEVICES];
+extern size_t extmem_devices_c;
 
 #define GET_CURRENT_CPU(target) __asm__ volatile ("mov %%gs:0, %0" : "=r"(target))
 extern kernel_cpu_dev_t* cpu_devices[SMP_MAX_CORES];

@@ -12,6 +12,9 @@ size_t disk_devices_c = 0;
 kernel_power_dev_t *power_devices[MAX_POWER_DEVICES];
 size_t power_devices_c = 0;
 
+kernel_extmem_dev_t *extmem_devices[MAX_EXTMEM_DEVICES];
+size_t extmem_devices_c = 0;
+
 kernel_net_dev_t *active_net_device;
 kernel_audio_dev_t* active_audio_device;
 

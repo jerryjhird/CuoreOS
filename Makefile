@@ -1,6 +1,6 @@
 # CuoreOS Build System
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
-SYSTEM_CONFIG_VERSION := 0002
+SYSTEM_CONFIG_VERSION := 0003
 
 WHITELIST_GOALS := menuconfig clean
 ifeq ($(wildcard Config.mk),)
@@ -81,7 +81,7 @@ ifeq ($(CONFIG_DO_KERNEL_DEVICE_TESTS),true)
 endif
 
 SIG := 0x$(shell head -c 8 /dev/urandom | xxd -p)
-CFLAGS += -DKERNEL_BUILD_SIGNATURE=$(SIG) -DAP_STACK_SIZE=$(CONFIG_AP_STACK_SIZE) -DSMP_MAX_CORES=$(CONFIG_MAX_CORES) -DMAX_CHAR_DEVICES=$(CONFIG_MAX_CHAR_DEVICES) -DMAX_DISK_DEVICES=$(CONFIG_MAX_DISK_DEVICES) -DMAX_POWER_DEVICES=$(CONFIG_MAX_POWER_DEVICES)
+CFLAGS += -DKERNEL_BUILD_SIGNATURE=$(SIG) -DAP_STACK_SIZE=$(CONFIG_AP_STACK_SIZE) -DSMP_MAX_CORES=$(CONFIG_MAX_CORES) -DMAX_CHAR_DEVICES=$(CONFIG_MAX_CHAR_DEVICES) -DMAX_DISK_DEVICES=$(CONFIG_MAX_DISK_DEVICES) -DMAX_POWER_DEVICES=$(CONFIG_MAX_POWER_DEVICES) -DMAX_EXTMEM_DEVICES=$(CONFIG_MAX_EXTERNAL_MEMORY_DEVICES)
 
 .PHONY: all clean run style format compile_commands menuconfig print_config
 all: print_config deps_setup $(OBJS) $(KERNEL_ELF) compile_commands.json $(DISK_IMG) $(INITRD) $(BOOT_ISO)
@@ -200,10 +200,24 @@ DISK_QEMU_FLAG ?= -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
 AUDIO_CARD_QEMU_FLAG ?= -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
 NET_QEMU_FLAG ?= -netdev user,id=u1 -device rtl8139,netdev=u1 -object filter-dump,id=f1,netdev=u1,file=network_capture.pcap
 
+QEMU_DEBUG ?=
+ifeq ($(QEMU_DEBUG),true)
+    SHM_OBJ = memory-backend-file,id=mb1,size=4M,mem-path=/dev/shm/CUORE_SHM,share=on
+    SHM_DEV = ivshmem-plain,memdev=mb1
+    GENERIC_QEMU_FLAGS += -object $(SHM_OBJ) -device $(SHM_DEV)
+
+    define SETUP_SHM
+        rm -f /dev/shm/CUORE_SHM
+        truncate -s 4M /dev/shm/CUORE_SHM
+    endef
+endif
+
 runu:
+	$(DEBUG_OP)
 	qemu-system-x86_64 -bios $(QEMU_UEFI_FIRMWARE) $(GENERIC_QEMU_FLAGS) $(DISK_QEMU_FLAG) $(AUDIO_CARD_QEMU_FLAG) $(NET_QEMU_FLAG)
 
 runb:
+	$(DEBUG_OP)
 	qemu-system-x86_64 $(GENERIC_QEMU_FLAGS) $(DISK_QEMU_FLAG) $(AUDIO_CARD_QEMU_FLAG) $(NET_QEMU_FLAG)
 
 format:

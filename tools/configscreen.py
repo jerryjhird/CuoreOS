@@ -22,12 +22,14 @@ config_groups = {
         "ide_support": "true",
         "sata_support": "true",
         "ac97_support": "true",
-        "rtl8139_support": "true"
+        "rtl8139_support": "true",
+        "ivshem_support": "true"
     },
     "Devices": {
         "max_char_devices": "9",
         "max_disk_devices": "9",
-        "max_power_devices": "9"
+        "max_power_devices": "9",
+        "max_external_memory_devices": "9"
     },
     "Symmetric Multiprocessing": {
         "ap_stack_size": "16384",
