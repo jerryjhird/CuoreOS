@@ -4,7 +4,8 @@
 #include "logbuf.h"
 #include <stddef.h>
 #include "acpi/mcfg.h"
-#include "dtable.h" // discovery table
+
+extern pci_driver_entry_t pci_discovery_table[];
 
 //
 // 32 bit access

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "pci/pci.h"
 #include "pci/drivers/ide.h"
 #include "pci/drivers/ac97.h"
@@ -18,7 +16,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.progif = PCI_PROGIF_ANY,
 
 		.init = NULL // no driver for this
-	},
+		},
 	{
 		.name = "AC'97 Audio Controller",
 		.group_id = 1, // this will ensure that if we have more audio drivers, the first one in the table will be initalized and others will not
