@@ -54,13 +54,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	irq_install_handler(logical_id, 32, clock_tick_irq);
 
 	SPIN_LOCK(&temp_spinlock);
-	logbuf_write("[ SMP  ] Core ");
-	logbuf_putint(logical_id);
-	logbuf_write(" Initialized = lapic: ");
-	logbuf_putint(mp->lapic_id);
-	logbuf_write(" | sp: ");
-	logbuf_puthex64(sp);
-	logbuf_write("\n");
+		logbuf_printf("[ SMP  ] Core %u Initialized = lapic: %u | sp: %p\n", (unsigned int)logical_id, (unsigned int)mp->lapic_id, (void*)sp);
 	SPIN_UNLOCK(&temp_spinlock);
 
 	__atomic_fetch_add(&cpu_devices_c, 1, __ATOMIC_SEQ_CST);

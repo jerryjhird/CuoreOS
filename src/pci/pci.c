@@ -239,9 +239,7 @@ void pci_init(void) {
 					pci_enable_capabilities(dev->bus, dev->slot, dev->func);
 					entry->init(*dev);
 				} else {
-					logbuf_write("[ PCI  ] Found ");
-					logbuf_write(entry->name);
-					logbuf_write("\n");
+					logbuf_printf("[ PCI  ] Found %s\n", entry->name);
 				}
 
 				if (entry->group_id != 0) break;
@@ -252,23 +250,14 @@ void pci_init(void) {
 	for (int j = 0; j < count; j++) {
 		pci_dev_t* dev = &discovered[j];
 		if (!dev->claimed) {
-			logbuf_write("[ PCI  ] Unhandled: ");
-			logbuf_puthex(dev->bus);
-			logbuf_write(":");
-			logbuf_puthex(dev->slot);
-			logbuf_write(".");
-			logbuf_puthex(dev->func);
-
-			logbuf_write(" ID ");
-			logbuf_puthex(dev->vendor_id);
-			logbuf_write(":");
-			logbuf_puthex(dev->device_id);
-
-			logbuf_write(" Class ");
-			logbuf_puthex(dev->class_id);
-			logbuf_write("/");
-			logbuf_puthex(dev->subclass_id);
-			logbuf_write("\n");
+			logbuf_printf("[ PCI  ] Unhandled: %02x:%02x.%d ID %04x:%04x Class %02x/%02x\n",
+						  (unsigned int)dev->bus,
+						  (unsigned int)dev->slot,
+						  (unsigned int)dev->func,
+						  (unsigned int)dev->vendor_id,
+						  (unsigned int)dev->device_id,
+						  (unsigned int)dev->class_id,
+						  (unsigned int)dev->subclass_id);
 		}
 	}
 

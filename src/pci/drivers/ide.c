@@ -116,12 +116,9 @@ void ide_init(pci_dev_t pdev) {
 	dev->read_sector = ide_read_sector;
 	dev->write_sector = ide_write_sector;
 
-	logbuf_write("[ IDE  ] Found \"");
-	logbuf_write(dev->model);
-	logbuf_write("\" (");
-	logbuf_putint(dev->total_sectors / 2048);
-	logbuf_write(" MiB)\n");
+	logbuf_printf("[ IDE  ] Found \"%s\" (%llu MiB)\n",  dev->model, (unsigned long long)(dev->total_sectors / 2048));
 
 	disk_devices[disk_devices_c++] = dev;
 }
+
 #endif

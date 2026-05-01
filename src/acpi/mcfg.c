@@ -24,11 +24,7 @@ void mcfg_init(void) {
 		primary_entry = &mcfg_ptr->entries[0];
 	}
 
-	logbuf_write("[ MCFG ] Found MCFG at ");
-	logbuf_puthex((uintptr_t)mcfg_ptr);
-	logbuf_write(", entries: ");
-	logbuf_putint(mcfg_entry_count);
-	logbuf_write("\n");
+	logbuf_printf("[ MCFG ] Found MCFG at %p, entries: %zu\n", (void*)mcfg_ptr, (size_t)mcfg_entry_count);
 }
 
 void* mcfg_get_device_addr(uint16_t segment, uint8_t bus, uint8_t slot, uint8_t func) {

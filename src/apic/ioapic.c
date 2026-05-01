@@ -30,13 +30,7 @@ void ioapic_map_irq(uint8_t irq_pin, uint8_t vector, uint8_t cpu_apic_id, uint32
 	ioapic_write(low_index, low_entry);
 
 	#ifdef DEBUG
-		logbuf_write("[IOAPIC] mapped pin: ");
-		logbuf_putint(irq_pin);
-		logbuf_write(", vector:");
-		logbuf_putint(vector);
-		logbuf_write(", flags:");
-		logbuf_putint(flags);
-		logbuf_write("\n");
+		logbuf_printf("[IOAPIC] mapped pin: %u, vector: %#02x, flags: %#08x\n", (unsigned int)irq_pin, (unsigned int)vector, (unsigned int)flags);
 	#endif
 }
 

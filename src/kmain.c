@@ -175,13 +175,7 @@ static void kernel_main(void) {
 		logbuf_write("[ SMP  ] Multiple processors found\n");
 
 		if (mp_response->cpu_count > SMP_MAX_CORES) {
-			logbuf_write("[ WARN ] the config used to compile this kernel limits usage to ");
-			logbuf_putint(SMP_MAX_CORES);
-			logbuf_write(" of ");
-			logbuf_putint(mp_response->cpu_count);
-			logbuf_write(" available cores.\n[ WARN ] ");
-			logbuf_putint(mp_response->cpu_count - SMP_MAX_CORES);
-			logbuf_write(" cores will remain inactive.\n");
+			logbuf_printf("[ WARN ] the config used to compile this kernel limits usage to %zu of %zu available cores.\n" "[ WARN ] %zu cores will remain inactive.\n", (size_t)SMP_MAX_CORES, (size_t)mp_response->cpu_count, (size_t)(mp_response->cpu_count - SMP_MAX_CORES));
 		}
 
 		for (uint64_t i = 0; i < mp_response->cpu_count; i++) {
@@ -211,9 +205,7 @@ static void kernel_main(void) {
 		logbuf_write("[ RNG  ] rdrand not supported\n");
 	} else {
 		if (rdrand64(&random)) {
-			logbuf_write("[ RNG  ] ");
-			logbuf_putint(random);
-			logbuf_write("\n");
+			logbuf_printf("[ RNG  ] %llu\n", random);
 		}
 	}
 
@@ -221,11 +213,8 @@ static void kernel_main(void) {
 		mailbox_send_fc(time_sync, NULL);
 	}
 
-	logbuf_write("[ KRNL ] Signature: ");
-	logbuf_putint(compile_signature);
-	logbuf_write("\n");
-
-	logbuf_write("[ BOOT ] Time it took to boot (nano's): "); logbuf_putint(hpet_get_nanos()); logbuf_write("\n");
+	logbuf_printf("[ KRNL ] Signature: %llu\n", (unsigned long long)compile_signature);
+	logbuf_printf("[ BOOT ] Time it took to boot (nano's): %llu\n", (unsigned long long)hpet_get_nanos());
 
 	logbuf_flush(&uart16550_dev);
 	logbuf_flush(&flanterm_dev);
@@ -323,10 +312,7 @@ void _kstartc(void) {
 			}
 		#endif
 
-		logbuf_write("[ DISK ] Scanning ");
-		logbuf_write(dev->model);
-		logbuf_write("\n");
-
+		logbuf_printf("[ DISK ] Scanning %s\n", dev->model);
 		generic_disk_init(dev);
 	}
 

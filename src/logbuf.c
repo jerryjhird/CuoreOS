@@ -87,13 +87,7 @@ void logbuf_putint(uint64_t n) {
 #define FLAG_LEFT (1 << 2) // -
 #define FLAG_SPACE (1 << 3) // ' '
 #define FLAG_SIGN (1 << 4) // +
-
-#define FLAG_ZERO_PAD (1 << 0)
-#define FLAG_LEFT_JUSTIFY (1 << 1)
-#define FLAG_PLUS (1 << 2)
-#define FLAG_SPACE (1 << 3)
-#define FLAG_HASH (1 << 4)
-#define FLAG_UPPERCASE (1 << 5)
+#define FLAG_UPPER (1 << 5) // uppercase hex
 
 enum {
 	LEN_DEFAULT,
@@ -145,13 +139,13 @@ static void logbuf_printf_number_h(uint64_t val, int base, int width, uint8_t fl
 	int length = i;
 	int padding = width - length;
 
-	if (!(flags & FLAG_LEFT_JUSTIFY) && (flags & FLAG_ZERO_PAD)) {
+	if (!(flags & FLAG_LEFT) && (flags & FLAG_ZERO)) {
 		while (padding > 0) {
 			logbuf_putc('0');
 			padding--;
 			width--;
 		}
-	} else if (!(flags & FLAG_LEFT_JUSTIFY)) {
+	} else if (!(flags & FLAG_LEFT)) {
 		while (padding > 0) {
 			logbuf_putc(' ');
 			padding--;
@@ -163,7 +157,7 @@ static void logbuf_printf_number_h(uint64_t val, int base, int width, uint8_t fl
 		logbuf_putc(buf[--i]);
 	}
 
-	if ((flags & FLAG_LEFT_JUSTIFY)) {
+	if ((flags & FLAG_LEFT)) {
 		while (width > length) {
 			logbuf_putc(' ');
 			width--;
