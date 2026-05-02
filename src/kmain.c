@@ -31,8 +31,8 @@
 #include "tests.h"
 #include "graphics/ui/wm.h"
 #include "graphics/fb.h"
-// #include "net/eth.h"
-// #include "net/net.h"
+#include "net/eth.h"
+#include "net/net.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -220,8 +220,11 @@ static void kernel_main(void) {
 
 	// if (active_net_device) {
 	// 	eth_init(active_net_device);
-	// 	active_net_device->ip_addr = 0x0F02000A; // qemu ip
-	// 	nping(active_net_device, 0x0202000A); // qemu gateway
+	// 	active_net_device->ip_addr	  = 0x0F02000A; // QEMU IP
+	// 	active_net_device->gateway	  = 0x0202000A; // QEMU Gateway
+	// 	active_net_device->subnet_mask  = 0x00FFFFFF; // 255.255.255.0
+
+	// 	nping(active_net_device, 0x08080808); // ping google
 	// }
 
 	logbuf_flush(&uart16550_dev);

@@ -4,6 +4,7 @@
 #include "net/eth.h"
 #include "net/arp.h"
 #include "mem/mem.h"
+#include "logbuf.h"
 
 uint16_t ipv4_checksum(void* vdata, size_t length) {
 	uint32_t sum = 0;
@@ -36,7 +37,13 @@ void ipv4_send(kernel_net_dev_t* dev, net_buf_t* buf, uint32_t dest_ip, uint8_t 
 	ip->checksum = 0;
 	ip->checksum = ipv4_checksum(ip, sizeof(ipv4_header_t));
 
-	uint8_t* dest_mac = arp_lookup(dev, dest_ip);
+	uint32_t next_hop_ip = dest_ip;
+
+	if ((dest_ip & dev->subnet_mask) != (dev->ip_addr & dev->subnet_mask)) {
+		next_hop_ip = dev->gateway;
+	}
+
+	uint8_t* dest_mac = arp_lookup(dev, next_hop_ip);
 
 	if (dest_mac) {
 		eth_send(dev, buf, dest_mac, ETH_TYPE_IPV4);
