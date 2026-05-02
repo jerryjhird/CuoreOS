@@ -135,6 +135,9 @@ void rtl8139_init(pci_dev_t pdev) {
 	rtl_write32(state, RTL_REG_RCR, 0x8F);
 	rtl_write8(state, RTL_REG_COMMAND, RTL_CMD_TX_ENABLE | RTL_CMD_RX_ENABLE);
 
+	uint8_t vector = ioapic_map_irq_to_free_vector(pdev.irq, 0, 0);
+	irq_install_handler(0, vector, rtl8139_irq_handler);
+
 	kernel_net_dev_t* ndev = zalloc(sizeof(kernel_net_dev_t));
 	for (int i = 0; i < 6; i++) ndev->mac[i] = rtl_read8(state, RTL_REG_MAC + i);
 
@@ -142,9 +145,6 @@ void rtl8139_init(pci_dev_t pdev) {
 	ndev->private_data = state;
 	ndev->send_packet = rtl_send_packet;
 	active_net_device = ndev;
-
-	uint8_t vector = ioapic_map_irq_to_free_vector(pdev.irq, 0, 0);
-	irq_install_handler(0, vector, rtl8139_irq_handler);
 
 	logbuf_printf("[ ETH  ] Initialized %s with MAC: %M\n", ndev->model, ndev->mac);
 }

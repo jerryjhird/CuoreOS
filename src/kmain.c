@@ -31,6 +31,8 @@
 #include "tests.h"
 #include "graphics/ui/wm.h"
 #include "graphics/fb.h"
+// #include "net/eth.h"
+// #include "net/net.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -216,26 +218,15 @@ static void kernel_main(void) {
 	logbuf_printf("[ KRNL ] Signature: %llu\n", (unsigned long long)compile_signature);
 	logbuf_printf("[ BOOT ] Time it took to boot (nano's): %llu\n", (unsigned long long)hpet_get_nanos());
 
+	// if (active_net_device) {
+	// 	eth_init(active_net_device);
+	// 	active_net_device->ip_addr = 0x0F02000A; // qemu ip
+	// 	nping(active_net_device, 0x0202000A); // qemu gateway
+	// }
+
 	logbuf_flush(&uart16550_dev);
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
-
-	if (active_net_device) {
-		msleep(10); // give the card time to initalize
-		uint8_t frame[60];
-		memset(frame, 0, sizeof(frame));
-
-		memset(frame, 0xFF, 6);
-		memcpy(frame + 6, active_net_device->mac, 6);
-
-		frame[12] = 0x08;
-		frame[13] = 0x00;
-
-		const char* msg = "hello world";
-		memcpy(frame + 14, msg, 12);
-
-		active_net_device->send_packet(active_net_device, frame, sizeof(frame));
-	}
 
 	scheduler_init();
 	scheduler_create_task(uart16550_console_task, 1);

@@ -71,6 +71,10 @@ typedef struct kernel_net_dev_t {
 	char model[32];
 	uint8_t mac[6];
 
+	uint32_t ip_addr;
+	uint32_t subnet_mask;
+	uint32_t gateway;
+
 	// driver interface
 	void (*send_packet)(struct kernel_net_dev_t* dev, void* data, size_t len);
 	void (*set_promiscuous)(struct kernel_net_dev_t* dev, bool enabled);

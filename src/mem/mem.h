@@ -3,6 +3,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define HTONS(n) (((((unsigned short)(n) & 0xFF)) << 8) | (((unsigned short)(n) & 0xFF00) >> 8))
+#define NTOHS(n) HTONS(n)
+#define HTONL(n) (((n & 0xFF000000) >> 24) | ((n & 0x00FF0000) >> 8) | ((n & 0x0000FF00) << 8)  | ((n & 0x000000FF) << 24))
+#define NTOHL(n) HTONL(n)
+
 #define PAGE_SIZE 4096
 extern uint64_t hhdm_offset;
 
