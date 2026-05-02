@@ -2,7 +2,7 @@
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
 SYSTEM_CONFIG_VERSION := 0003
 
-WHITELIST_GOALS := menuconfig clean
+WHITELIST_GOALS := menuconfig clean clean-cache format
 ifeq ($(wildcard Config.mk),)
     ifeq ($(filter $(WHITELIST_GOALS),$(MAKECMDGOALS)),)
         $(error [!] Config.mk is missing. Run 'make menuconfig' first)
@@ -83,7 +83,7 @@ endif
 SIG := 0x$(shell head -c 8 /dev/urandom | xxd -p)
 CFLAGS += -DKERNEL_BUILD_SIGNATURE=$(SIG) -DAP_STACK_SIZE=$(CONFIG_AP_STACK_SIZE) -DSMP_MAX_CORES=$(CONFIG_MAX_CORES) -DMAX_CHAR_DEVICES=$(CONFIG_MAX_CHAR_DEVICES) -DMAX_DISK_DEVICES=$(CONFIG_MAX_DISK_DEVICES) -DMAX_POWER_DEVICES=$(CONFIG_MAX_POWER_DEVICES) -DMAX_EXTMEM_DEVICES=$(CONFIG_MAX_EXTERNAL_MEMORY_DEVICES)
 
-.PHONY: all clean run style format compile_commands menuconfig print_config
+.PHONY: all clean run style format compile_commands.json menuconfig print_config
 all: print_config deps_setup $(OBJS) $(KERNEL_ELF) compile_commands.json $(DISK_IMG) $(INITRD) $(BOOT_ISO)
 
 $(OBJS): | deps_setup
@@ -225,4 +225,11 @@ format:
 	./format tools/
 
 clean:
-	rm -rf $(BUILDDIR)
+	rm -rf $(BUILDDIR) compile_commands.json network_capture.pcap
+
+clean-cache: clean
+#   we use this for compile time dependencies and qemu runtime dependencies like the disk image
+	rm -rf $(CACHEDIR)
+
+#   some external tools use this
+	rm -rf .cache
