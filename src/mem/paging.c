@@ -28,13 +28,27 @@ uint64_t* vmm_get_pte(uint64_t* pml4, uintptr_t virt, int allocate) {
 	return &table[index];
 }
 
-void vmm_map_page(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags) {
+void vmm_map_page_noflush(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags) {
 	uint64_t* pte = vmm_get_pte(pml4, virt, 1);
-	if (!pte) return;
+	if (!pte) { return; }
+	*pte = (phys & ~0xFFFULL) | flags;
+}
 
-	*pte = (phys & ~0xFFF) | flags;
+void vmm_map_page(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags) {
+	vmm_map_page_noflush(pml4, virt, phys, flags);
+	vmm_flush_tlb_page(virt);
+}
 
-	__asm__ volatile("invlpg (%0)" :: "r"(virt) : "memory");
+void vmm_unmap_page_noflush(uint64_t* pml4, uintptr_t virt) {
+	uint64_t* pte = vmm_get_pte(pml4, virt, 0);
+	if (pte && (*pte & 1)) {
+		*pte = 0;
+	}
+}
+
+void vmm_unmap_page(uint64_t* pml4, uintptr_t virt) {
+	vmm_unmap_page_noflush(pml4, virt);
+	vmm_flush_tlb_page(virt);
 }
 
 uintptr_t vmm_get_phys(uint64_t* pml4, uintptr_t vaddr) {
