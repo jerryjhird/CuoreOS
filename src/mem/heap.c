@@ -21,7 +21,7 @@
 // Pool configuration for small objects
 #define POOL_COUNT 3
 static size_t pool_sizes[POOL_COUNT] = { 32, 64, 128 };
-static uintptr_t heap_current_top = KERNEL_HEAP_START;
+static uintptr_t heap_current_top = 0;
 
 typedef struct PoolNode {
 	struct PoolNode* next;
@@ -78,8 +78,10 @@ static bool heap_grow(size_t size_needed) {
 	uintptr_t grow_vaddr = heap_current_top;
 
 	for (size_t i = 0; i < pages; i++) {
-		vmm_map_page(pml4_virt, grow_vaddr + (i * 4096), phys + (i * 4096), KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		vmm_map_page_noflush(pml4_virt, grow_vaddr + (i * 4096), phys + (i * 4096), KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
 	}
+
+	vmm_flush_tlb_all();
 
 	BlockHeader *curr = head;
 	while (curr->next) curr = curr->next;
@@ -156,10 +158,12 @@ void heap_init(void* start_address, size_t total_size) {
 	// map each page
 	uint64_t* pml4_virt = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
 	for (size_t i = 0; i < pages; i++) {
-		vmm_map_page(pml4_virt, vaddr, paddr, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		vmm_map_page_noflush(pml4_virt, vaddr, paddr, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
 		vaddr += 4096;
 		paddr += 4096;
 	}
+
+	vmm_flush_tlb_all();
 
 	head = (BlockHeader*)start_address;
 	head->magic = HEAP_MAGIC;

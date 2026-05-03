@@ -241,7 +241,7 @@ static void kernel_main(void) {
 }
 
 // 256 pages = 1MB
-#define HEAP_PAGES 4096
+#define HEAP_PAGES 256
 #define HEAP_SIZE (HEAP_PAGES << 12)
 
 void _kstartc(void);
@@ -269,7 +269,7 @@ void _kstartc(void) {
 		ramfs_init(&initramfs, module_request.response->modules[0]->address);
 	}
 
-	heap_init((void*)KERNEL_HEAP_START, HEAP_SIZE);
+	heap_init((void*)0xFFFFFFFF90000000, HEAP_SIZE);
 
 	uint32_t idx = __atomic_fetch_add(&cpu_devices_c, 1, __ATOMIC_SEQ_CST);
 	kernel_cpu_dev_t *my_cpu = zalloc(sizeof(kernel_cpu_dev_t));
