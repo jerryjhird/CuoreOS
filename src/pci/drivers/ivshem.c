@@ -1,3 +1,8 @@
+typedef int dummy0;
+
+// driver for ivshmem
+
+#ifdef KERNEL_MOD_IVSHMEM_ENABLED
 #include "ivshem.h"
 #include "pci/pci.h"
 #include "mem/paging.h"
@@ -15,11 +20,13 @@ void ivshmem_init(pci_dev_t dev) {
 	uint64_t* pml4_virt = (uint64_t*)(pml4_phys + hhdm_offset);
 
 	for (size_t i = 0; i < shm_size; i += 4096) {
-		vmm_map_page(pml4_virt,
+		vmm_map_page_noflush(pml4_virt,
 					 phys_addr + i + hhdm_offset,
 					 phys_addr + i,
 					 PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
 	}
+
+	vmm_flush_tlb_all();
 
 	void* virt_addr = (void*)(phys_addr + hhdm_offset);
 
@@ -46,3 +53,4 @@ void ivshmem_init(pci_dev_t dev) {
 		((char*)virt_addr)[i] = sig[i];
 	}
 }
+#endif
