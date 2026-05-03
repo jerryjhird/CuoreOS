@@ -5,6 +5,7 @@
 #include "mem/mem.h"
 #include "net/netbuf.h"
 #include "net/protocol/ntp.h"
+#include "net/protocol/dns.h"
 
 void udp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src, uint16_t dest, void* data, size_t len) {
 	size_t total_needed = sizeof(eth_header_t) + sizeof(ipv4_header_t) + sizeof(udp_header_t) + len;
@@ -27,22 +28,20 @@ void udp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src, uint16_t de
 void udp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip_hdr, void* transport_data, size_t len) {
 	udp_header_t* udp = (udp_header_t*)transport_data;
 
-	uint16_t src_port = NTOHS(udp->src_port);
 	uint16_t dest_port = NTOHS(udp->dest_port);
 	uint16_t udp_len = NTOHS(udp->length);
 
 	if (udp_len > len || udp_len < sizeof(udp_header_t)) return;
 
 	void* payload = (void*)(udp + 1);
-	size_t payload_len = udp_len - sizeof(udp_header_t);
 
 	switch (dest_port) {
 		case 68:
-			// dhcp_handle(dev, payload, payload_len);
+			// dhcp_handle(dev, payload);
 			break;
 
 		case 69: {
-			// tftp_handle(dev, payload, payload_len);
+			// tftp_handle(dev, payload);
 			break;
 		}
 
@@ -51,7 +50,7 @@ void udp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip_hdr, void* transport_da
 			break;
 
 		case 123:
-			ntp_handle(payload, payload_len);
+			ntp_handle(payload);
 			break;
 
 		default:

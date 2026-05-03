@@ -39,4 +39,4 @@ extern ntp_callback_t g_ntp_callback;
 #define NTP_SET_CALLBACK(func) (g_ntp_callback = (ntp_callback_t)(func))
 
 void ntp_send_request(kernel_net_dev_t* dev, uint32_t server_ip);
-void ntp_handle(void* data, size_t len);
+void ntp_handle(void* data);

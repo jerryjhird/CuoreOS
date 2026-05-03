@@ -27,7 +27,7 @@ static void ntp_debug_callback(ntp_info_t* info) {
 	dev_puts(&uart16550_dev, " units\n");
 
 	dev_puts(&uart16550_dev, "Leap(S): ");
-	dev_puts(&uart16550_dev, info->leap_warning ? "Warning" : "None");
+	dev_puts(&uart16550_dev, info->leap_warning ? "Warning\n" : "None\n");
 }
 #endif
 
@@ -43,9 +43,7 @@ void ntp_send_request(kernel_net_dev_t* dev,  uint32_t target_ip) {
 	udp_send(dev, target_ip, 123, 123, &packet, sizeof(ntp_packet_t));
 }
 
-void ntp_handle(void* data, size_t len) {
-	if (len < sizeof(ntp_packet_t)) return;
-
+void ntp_handle(void* data) {
 	ntp_packet_t* packet = (ntp_packet_t*)data;
 	uint32_t ntp_s = NTOHL(packet->trans_ts_s);
 
