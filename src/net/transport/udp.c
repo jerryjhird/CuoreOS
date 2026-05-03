@@ -46,7 +46,7 @@ void udp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip_hdr, void* transport_da
 		}
 
 		case 53:
-			// dns_handle(something);
+			dns_handle(payload);
 			break;
 
 		case 123:

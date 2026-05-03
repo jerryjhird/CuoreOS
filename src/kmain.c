@@ -34,6 +34,7 @@
 #include "net/link/eth.h"
 #include "net/net.h"
 #include "net/protocol/ntp.h"
+#include "net/protocol/dns.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -227,7 +228,13 @@ static void kernel_main(void) {
 		active_net_device->subnet_mask  = IP_ADDR(255, 255, 255, 0);
 
 		nping(active_net_device, IP_ADDR(8, 8, 8, 8));
-		ntp_send_request(active_net_device, IP_ADDR(216, 239, 35, 0));
+
+		uint32_t google_time = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "time.google.com");
+		if (google_time != 0) {
+			ntp_send_request(active_net_device, google_time);
+		} else {
+			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
+		}
 	}
 
 	logbuf_flush(&uart16550_dev);
