@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "devices.h"
-#include "netbuf.h"
+#include "net/netbuf.h"
 
 #define ETH_ADDR_LEN 6
 #define ETH_TYPE_ARP 0x0806

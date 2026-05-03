@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "devices.h"
-#include "ipv4.h"
+#include "net/ip/ipv4.h"
 
 typedef struct {
 	uint16_t src_port;

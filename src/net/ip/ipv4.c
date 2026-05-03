@@ -1,10 +1,12 @@
 #include "ipv4.h"
 
 #include "icmp.h"
-#include "net/eth.h"
+#include "net/link/eth.h"
 #include "net/arp.h"
+#include "net/transport/udp.h"
 #include "mem/mem.h"
 #include "logbuf.h"
+#include <stddef.h>
 
 uint16_t ipv4_checksum(void* vdata, size_t length) {
 	uint32_t sum = 0;
@@ -63,7 +65,7 @@ void ipv4_handle(kernel_net_dev_t* dev, net_buf_t* buf) {
 			icmp_handle(dev, buf, ip);
 			break;
 		case 17: // UDP
-			// udp_handle(dev, buf, ip);
+			udp_handle(dev, ip, buf->data, buf->len);
 			break;
 	}
 }

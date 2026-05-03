@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "netbuf.h"
-#include "eth.h"
+#include "link/eth.h"
 
 #define ARP_HTYPE_ETHERNET 1
 #define ARP_PTYPE_IPV4 0x0800

@@ -1,6 +1,6 @@
 #include "eth.h"
-#include "arp.h"
-#include "ip/ipv4.h"
+#include "net/arp.h"
+#include "net/ip/ipv4.h"
 #include "mem/mem.h"
 
 void eth_receive(kernel_net_dev_t* dev, void* data, size_t len) {

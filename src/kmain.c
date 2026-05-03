@@ -31,8 +31,9 @@
 #include "tests.h"
 #include "graphics/ui/wm.h"
 #include "graphics/fb.h"
-#include "net/eth.h"
+#include "net/link/eth.h"
 #include "net/net.h"
+#include "net/protocol/ntp.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -218,14 +219,16 @@ static void kernel_main(void) {
 	logbuf_printf("[ KRNL ] Signature: %llu\n", (unsigned long long)compile_signature);
 	logbuf_printf("[ BOOT ] Time it took to boot (nano's): %llu\n", (unsigned long long)hpet_get_nanos());
 
-	// if (active_net_device) {
-	// 	eth_init(active_net_device);
-	// 	active_net_device->ip_addr	  = 0x0F02000A; // QEMU IP
-	// 	active_net_device->gateway	  = 0x0202000A; // QEMU Gateway
-	// 	active_net_device->subnet_mask  = 0x00FFFFFF; // 255.255.255.0
+	if (active_net_device) {
+		eth_init(active_net_device);
 
-	// 	nping(active_net_device, 0x08080808); // ping google
-	// }
+		active_net_device->ip_addr	  = IP_ADDR(10, 0, 2, 15);
+		active_net_device->gateway	  = IP_ADDR(10, 0, 2, 2);
+		active_net_device->subnet_mask  = IP_ADDR(255, 255, 255, 0);
+
+		nping(active_net_device, IP_ADDR(8, 8, 8, 8));
+		ntp_send_request(active_net_device, IP_ADDR(216, 239, 35, 0));
+	}
 
 	logbuf_flush(&uart16550_dev);
 	logbuf_flush(&flanterm_dev);

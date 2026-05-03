@@ -1,9 +1,10 @@
 #include "udp.h"
+
 #include "devices.h"
-#include "ipv4.h"
-#include "net/eth.h"
+#include "net/link/eth.h"
 #include "mem/mem.h"
 #include "net/netbuf.h"
+#include "net/protocol/ntp.h"
 
 void udp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src, uint16_t dest, void* data, size_t len) {
 	size_t total_needed = sizeof(eth_header_t) + sizeof(ipv4_header_t) + sizeof(udp_header_t) + len;
@@ -47,6 +48,10 @@ void udp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip_hdr, void* transport_da
 
 		case 53:
 			// dns_handle(something);
+			break;
+
+		case 123:
+			ntp_handle(payload, payload_len);
 			break;
 
 		default:
