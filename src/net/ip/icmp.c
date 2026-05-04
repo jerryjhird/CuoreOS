@@ -22,6 +22,7 @@ void icmp_handle(kernel_net_dev_t* dev, net_buf_t* buf, ipv4_header_t* ip_hdr) {
 	if (icmp->type == ICMP_TYPE_ECHO_REPLY) {
 		if (g_icmp_reply_handler) {
 			g_icmp_reply_handler(ip_hdr->src, icmp->sequence, ip_hdr->ttl, buf->len);
+			g_icmp_reply_handler = NULL;
 		}
 	}
 

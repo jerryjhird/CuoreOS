@@ -21,6 +21,7 @@ typedef struct {
 } dns_entry_t;
 
 extern volatile uint32_t dns_response;
+extern uint16_t query_id_counter;
 
 void dns_init(void);
 uint32_t dns_lookup(const char* hostname);

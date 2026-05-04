@@ -4,7 +4,7 @@
 #include "mem/mem.h"
 #include "_time.h"
 
-static uint16_t query_id_counter = 0xbeef;
+uint16_t query_id_counter = 0xbeef;
 volatile uint32_t dns_response = 0;
 
 static uint8_t* dns_encode_name(uint8_t* dest, const char* src) {

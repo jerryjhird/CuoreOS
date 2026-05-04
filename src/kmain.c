@@ -35,6 +35,7 @@
 #include "net/net.h"
 #include "net/protocol/ntp.h"
 #include "net/protocol/dns.h"
+#include "net/transport/tcp.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -235,6 +236,20 @@ static void kernel_main(void) {
 		} else {
 			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
 		}
+
+		uint32_t QOTDSERVER = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "djxmmx.net");
+		if (QOTDSERVER != 0) {
+			QOTDSend(active_net_device, QOTDSERVER);
+		} else {
+			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
+		}
+
+		// uint32_t STARWARS_SERVER = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "towel.blinkenlights.nl");
+		// if (STARWARS_SERVER != 0) {
+		// 	telnet_client(active_net_device, STARWARS_SERVER);
+		// } else {
+		// 	dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
+		// }
 	}
 
 	logbuf_flush(&uart16550_dev);

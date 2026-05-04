@@ -4,8 +4,8 @@
 #include "net/link/eth.h"
 #include "net/arp.h"
 #include "net/transport/udp.h"
+#include "net/transport/tcp.h"
 #include "mem/mem.h"
-#include "logbuf.h"
 #include <stddef.h>
 
 uint16_t ipv4_checksum(void* vdata, size_t length) {
@@ -63,6 +63,9 @@ void ipv4_handle(kernel_net_dev_t* dev, net_buf_t* buf) {
 	switch (ip->proto) {
 		case 1: // ICMP
 			icmp_handle(dev, buf, ip);
+			break;
+		case 6: // TCP
+			tcp_handle(dev, ip, buf->data, buf->len);
 			break;
 		case 17: // UDP
 			udp_handle(dev, ip, buf->data, buf->len);
