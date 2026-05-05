@@ -1,8 +1,10 @@
 #include "tcp.h"
+
 #include "devices.h"
 #include "mem/mem.h"
 #include "net/ip/ipv4.h"
 #include "net/protocol/dns.h"
+#include "net/socket.h"
 
 volatile tcp_connection_t g_tcp = { .state = TCP_CLOSED };
 
@@ -29,7 +31,7 @@ static uint16_t checksum_fin(uint32_t sum) {
 	return (uint16_t)~sum;
 }
 
-void tcp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src_port, uint16_t dest_port, uint8_t flags, void* payload, size_t payload_len) {
+void tcp_send(kernel_net_dev_t* dev, socket_t* s, uint8_t flags, void* payload, size_t payload_len) {
 	size_t total_tcp_len = sizeof(tcp_header_t) + payload_len;
 	net_buf_t* buf = net_buf_alloc(total_tcp_len);
 
@@ -38,15 +40,15 @@ void tcp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src_port, uint16
 
 	tcp_header_t* tcp = (tcp_header_t*)buf->data;
 
-	tcp->src_port = HTONS(src_port);
-	tcp->dest_port = HTONS(dest_port);
-	tcp->seq = HTONL(g_tcp.seq);
-	tcp->ack = HTONL(g_tcp.ack);
-	tcp->res_off = (5 << 4); // 20 byte header, no options
+	tcp->src_port = HTONS(s->local_port);
+	tcp->dest_port = HTONS(s->remote_port);
+	tcp->seq = HTONL(s->tcp.seq);
+	tcp->ack = HTONL(s->tcp.ack);
+	tcp->res_off = (5 << 4);
 	tcp->flags = flags;
-	tcp->window	= HTONS(65535);
+	tcp->window = HTONS(65535);
 	tcp->checksum = 0;
-	tcp->urgent	= 0;
+	tcp->urgent = 0;
 
 	if (payload && payload_len > 0) {
 		memcpy(buf->data + sizeof(tcp_header_t), payload, payload_len);
@@ -54,8 +56,8 @@ void tcp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src_port, uint16
 
 	tcp_pseudo_header_t ph;
 	ph.src_ip = dev->ip_addr;
-	ph.dest_ip = dest_ip;
-	ph.zero	= 0;
+	ph.dest_ip = s->remote_ip;
+	ph.zero = 0;
 	ph.proto = 6; // TCP
 	ph.tcp_len = HTONS((uint16_t)total_tcp_len);
 
@@ -63,113 +65,97 @@ void tcp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src_port, uint16
 	sum += checksum_accumulate(tcp, total_tcp_len);
 	tcp->checksum = checksum_fin(sum);
 
-	ipv4_send(dev, buf, dest_ip, 6);
+	ipv4_send(dev, buf, s->remote_ip, 6);
 }
 
 void tcp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip, void* data, size_t len) {
 	tcp_header_t* tcp = (tcp_header_t*)data;
 
+	uint16_t local_port = HTONS(tcp->dest_port);
+	uint16_t remote_port = HTONS(tcp->src_port);
+
+	socket_t* s = find_socket(local_port, remote_port, ip->src);
+	if (!s) return;
+
 	uint16_t ip_total_len = HTONS(ip->len);
 	uint8_t ip_header_len = (ip->version_ihl & 0x0F) * 4;
-
 	uint16_t tcp_segment_len = ip_total_len - ip_header_len;
+	uint8_t tcp_header_len = (tcp->res_off >> 4) * 4;
 
 	uint32_t remote_seq = HTONL(tcp->seq);
 	uint32_t remote_ack = HTONL(tcp->ack);
-	uint16_t remote_src_port = HTONS(tcp->src_port);
+	uint32_t payload_len = (tcp_segment_len > tcp_header_len) ? (tcp_segment_len - tcp_header_len) : 0;
 
-	uint8_t tcp_header_len = (tcp->res_off >> 4) * 4;
-
-	uint32_t payload_len = 0;
-	if (tcp_segment_len > tcp_header_len) {
-		payload_len = tcp_segment_len - tcp_header_len;
-	}
-
-	if (tcp->flags & 0x04) {
-		g_tcp.state = TCP_CLOSED;
-		g_tcp.connection_closed = true;
+	if (tcp->flags & 0x04) { // RST
+		s->tcp.state = TCP_CLOSED;
+		s->is_active = false;
 		return;
 	}
 
-	switch (g_tcp.state) {
+	switch (s->tcp.state) {
 		case TCP_SYN_SENT:
-			if ((tcp->flags & 0x12) == 0x12) {
-				g_tcp.ack = remote_seq + 1;
-
-				g_tcp.seq = remote_ack;
-				g_tcp.state = TCP_ESTABLISHED;
-
-				// ACK
-				tcp_send(dev, ip->src, g_tcp.local_port, remote_src_port, 0x10, NULL, 0);
+			if ((tcp->flags & 0x12) == 0x12) { // SYN-ACK
+				s->tcp.ack = remote_seq + 1;
+				s->tcp.seq = remote_ack;
+				s->tcp.state = TCP_ESTABLISHED;
+				tcp_send(dev, s, 0x10, NULL, 0); // ACK
 			}
 			break;
 
-		case TCP_ESTABLISHED: {
-			if (remote_seq != g_tcp.ack) {
-				tcp_send(dev, ip->src, g_tcp.local_port, remote_src_port, 0x10, NULL, 0);
+		case TCP_ESTABLISHED:
+			if (remote_seq != s->tcp.ack) {
+				tcp_send(dev, s, 0x10, NULL, 0); // Re-ACK
 				return;
 			}
 
 			if (payload_len > 0 || (tcp->flags & 0x01)) {
-				g_tcp.ack = remote_seq + payload_len;
+				s->tcp.ack += payload_len;
 
-				if (tcp->flags & 0x01) {
-					g_tcp.ack += 1;
-
-					// reply FIN-ACK
-					tcp_send(dev, ip->src, g_tcp.local_port, remote_src_port, 0x11, NULL, 0);
-					g_tcp.seq += 1;
-
-					g_tcp.state = TCP_CLOSED;
-					g_tcp.connection_closed = true;
+				if (tcp->flags & 0x01) { // FIN
+					s->tcp.ack += 1;
+					tcp_send(dev, s, 0x11, NULL, 0); // FIN-ACK
+					s->tcp.state = TCP_CLOSED;
+					s->is_active = false;
 				} else {
-					// 0x10
-					tcp_send(dev, ip->src, g_tcp.local_port, remote_src_port, 0x10, NULL, 0);
+					tcp_send(dev, s, 0x10, NULL, 0); // ACK
 				}
 
-				if (payload_len > 0 && g_tcp.on_data) {
-					g_tcp.on_data((uint8_t*)data + tcp_header_len, payload_len);
+				if (payload_len > 0 && s->on_data) {
+					s->on_data((uint8_t*)data + tcp_header_len, payload_len);
 				}
-			}
-			break;
-		}
-
-		case TCP_FIN_WAIT:
-			if (tcp->flags & 0x01) {
-				g_tcp.ack = remote_seq + 1;
-				tcp_send(dev, ip->src, g_tcp.local_port, remote_src_port, 0x10, NULL, 0);
-				g_tcp.state = TCP_CLOSED;
-				g_tcp.connection_closed = true;
 			}
 			break;
 	}
 }
 
-void tcp_connect(kernel_net_dev_t* dev, uint32_t ip, uint16_t port) {
-	g_tcp.local_port = 49152 + (query_id_counter % 1000);
-	g_tcp.remote_port = port;
-	g_tcp.remote_ip  = ip;
-	g_tcp.state   = TCP_SYN_SENT;
+socket_t* tcp_connect(kernel_net_dev_t* dev, uint32_t ip, uint16_t port) {
+	socket_t* s = alloc_socket(SOCKET_TYPE_TCP);
 
-	g_tcp.seq = 0;
+	s->local_port = 49152 + (query_id_counter++ % 1000);
+	s->remote_port = port;
+	s->remote_ip = ip;
+	s->tcp.state = TCP_SYN_SENT;
+	s->tcp.seq = 0;
+	s->tcp.ack = 0;
 
-	// send SYN
-	tcp_send(dev, ip, g_tcp.local_port, port, 0x02, NULL, 0);
-	g_tcp.seq += 1;
+	tcp_send(dev, s, 0x02, NULL, 0); // SYN
+	s->tcp.seq += 1;
+	return s;
 }
 
-void tcp_disconnect(kernel_net_dev_t* dev) {
-	if (g_tcp.state == TCP_CLOSED || g_tcp.state == TCP_FIN_WAIT) return;
+void tcp_disconnect(kernel_net_dev_t* dev, socket_t* s) {
+	if (!s || s->tcp.state == TCP_CLOSED || s->tcp.state == TCP_FIN_WAIT) {
+		return;
+	}
 
-	tcp_send(dev, g_tcp.remote_ip, g_tcp.local_port, g_tcp.remote_port, 0x11, NULL, 0);
+	tcp_send(dev, s, 0x11, NULL, 0);
 
-	g_tcp.seq += 1;
-	g_tcp.state = TCP_FIN_WAIT;
+	s->tcp.seq += 1;
+	s->tcp.state = TCP_FIN_WAIT;
 }
 
-void tcp_write(kernel_net_dev_t* dev, void* data, size_t len) {
-	if (g_tcp.state != TCP_ESTABLISHED) return;
-
-	tcp_send(dev, g_tcp.remote_ip, g_tcp.local_port, g_tcp.remote_port, 0x18, data, len);
-	g_tcp.seq += len;
+void tcp_write(kernel_net_dev_t* dev, socket_t* s, void* data, size_t len) {
+	if (!s || s->tcp.state != TCP_ESTABLISHED) return;
+	tcp_send(dev, s, 0x18, data, len); // PSH-ACK
+	s->tcp.seq += len;
 }

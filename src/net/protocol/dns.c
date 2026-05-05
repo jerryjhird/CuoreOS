@@ -57,7 +57,7 @@ void dns_query(kernel_net_dev_t* dev, uint32_t dns_server, const char* hostname)
 	*(uint16_t*)(void*)end_ptr = HTONS(1); end_ptr += 2;
 
 	size_t packet_len = (size_t)(end_ptr - packet);
-	udp_send(dev, dns_server, 53, 53, packet, packet_len);
+	udp_send_nosock(dev, dns_server, 53, 53, packet, packet_len);
 }
 
 uint32_t dns_query_blocking(kernel_net_dev_t* dev, uint32_t dns_server, const char* hostname) {

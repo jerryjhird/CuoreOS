@@ -1,6 +1,9 @@
+#pragma once
+
 #include <stdint.h>
 #include "devices.h"
 #include "net/ip/ipv4.h"
+#include "net/socket.h"
 
 typedef struct {
 	uint16_t src_port;
@@ -47,7 +50,7 @@ extern volatile tcp_connection_t g_tcp;
 
 void tcp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip, void* data, size_t len);
 
-void tcp_connect(kernel_net_dev_t* dev, uint32_t ip, uint16_t port);
-void tcp_disconnect(kernel_net_dev_t* dev);
-void tcp_write(kernel_net_dev_t* dev, void* data, size_t len);
-void tcp_send(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src_port, uint16_t dest_port, uint8_t flags, void* payload, size_t payload_len);
+socket_t* tcp_connect(kernel_net_dev_t* dev, uint32_t ip, uint16_t port);
+void tcp_disconnect(kernel_net_dev_t* dev, socket_t* s);
+void tcp_write(kernel_net_dev_t* dev, socket_t* s, void* data, size_t len);
+void tcp_send(kernel_net_dev_t* dev, socket_t* s, uint8_t flags, void* payload, size_t payload_len);

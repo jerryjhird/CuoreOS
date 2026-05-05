@@ -32,10 +32,10 @@
 #include "graphics/ui/wm.h"
 #include "graphics/fb.h"
 #include "net/link/eth.h"
-#include "net/net.h"
 #include "net/protocol/ntp.h"
 #include "net/protocol/dns.h"
-#include "net/transport/tcp.h"
+#include "net/protocol/telnet.h"
+#include "net/arp.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -228,7 +228,7 @@ static void kernel_main(void) {
 		active_net_device->gateway	  = IP_ADDR(10, 0, 2, 2);
 		active_net_device->subnet_mask  = IP_ADDR(255, 255, 255, 0);
 
-		nping(active_net_device, IP_ADDR(8, 8, 8, 8));
+		arp_send_request(active_net_device, active_net_device->gateway);
 
 		uint32_t google_time = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "time.google.com");
 		if (google_time != 0) {
@@ -237,16 +237,9 @@ static void kernel_main(void) {
 			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
 		}
 
-		uint32_t QOTDSERVER = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "djxmmx.net");
-		if (QOTDSERVER != 0) {
-			QOTDSend(active_net_device, QOTDSERVER);
-		} else {
-			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
-		}
-
 		// uint32_t STARWARS_SERVER = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "towel.blinkenlights.nl");
 		// if (STARWARS_SERVER != 0) {
-		// 	telnet_client(active_net_device, STARWARS_SERVER);
+		// 	telnet_client(active_net_device, STARWARS_SERVER, 23);
 		// } else {
 		// 	dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
 		// }

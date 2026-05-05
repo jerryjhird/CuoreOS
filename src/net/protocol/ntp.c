@@ -40,7 +40,7 @@ void ntp_send_request(kernel_net_dev_t* dev,  uint32_t target_ip) {
 
 	memset(&packet, 0, sizeof(ntp_packet_t));
 	packet.flags = 0x1B;
-	udp_send(dev, target_ip, 123, 123, &packet, sizeof(ntp_packet_t));
+	udp_send_nosock(dev, target_ip, 123, 123, &packet, sizeof(ntp_packet_t));
 }
 
 void ntp_handle(void* data) {
