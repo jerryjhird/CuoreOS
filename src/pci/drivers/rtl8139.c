@@ -9,7 +9,7 @@ typedef int dummy0 ;
 #include "mem/pma.h"
 #include "cpu/io.h"
 #include "mem/heap.h"
-#include "builtinabs.h"
+#include "abs.h"
 #include "mem/mem.h"
 #include "logbuf.h"
 #include "apic/ioapic.h"

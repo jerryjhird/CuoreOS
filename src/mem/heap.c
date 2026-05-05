@@ -9,7 +9,7 @@
 #include "kstate.h"
 #include "stdio.h"
 #include "mem/paging.h"
-#include "builtinabs.h"
+#include "abs.h"
 
 #define ALIGNMENT 16
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~(ALIGNMENT-1))

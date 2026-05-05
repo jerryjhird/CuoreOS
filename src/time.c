@@ -3,7 +3,7 @@
 #include "devices.h"
 #include "drivers/RTC.h"
 #include "drivers/HPET.h"
-#include "builtinabs.h"
+#include "abs.h"
 
 static time_t boot_epoch = 0;
 static uint64_t boot_hpet_ticks = 0;

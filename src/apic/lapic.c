@@ -1,6 +1,6 @@
 #include "lapic.h"
 #include "cpu/MSR.h"
-#include "builtinabs.h"
+#include "abs.h"
 
 static uintptr_t lapic_base = 0;
 

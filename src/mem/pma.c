@@ -6,7 +6,7 @@
 #include <limine.h>
 #include "kstate.h"
 #include "mem.h" // IWYU pragma: keep
-#include "builtinabs.h"
+#include "abs.h"
 
 static uint8_t *pma_bitmap = NULL;
 static size_t pma_total_pages = 0;

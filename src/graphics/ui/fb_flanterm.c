@@ -9,7 +9,7 @@
 #include "devices.h"
 #include "mem/heap.h"
 #include <stdint.h>
-#include "builtinabs.h"
+#include "abs.h"
 
 struct flanterm_context *ft_ctx = NULL;
 

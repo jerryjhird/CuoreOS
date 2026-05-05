@@ -1,7 +1,7 @@
 #include "acpi.h"
 #include "mem/mem.h" // IWYU pragma: keep
 #include "kstate.h"
-#include "builtinabs.h"
+#include "abs.h"
 #include "logbuf.h"
 
 static struct acpi_sdt_header* xsdt = NULL;

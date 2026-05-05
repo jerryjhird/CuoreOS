@@ -3,7 +3,7 @@
 #include "mem/mem.h"
 #include "mem/paging.h"
 #include <stdint.h>
-#include "builtinabs.h"
+#include "abs.h"
 
 static uint64_t hpet_base = 0;
 static uint32_t femtoseconds_per_tick = 0;

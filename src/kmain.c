@@ -26,7 +26,7 @@
 #include "multimedia/beep.h"
 #include "acpi/mcfg.h"
 #include "acpi/fadt.h"
-#include "builtinabs.h"
+#include "abs.h"
 #include "disk/diskinit.h"
 #include "tests.h"
 #include "graphics/ui/wm.h"

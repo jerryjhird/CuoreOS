@@ -4,7 +4,7 @@
 #include "mem/mem.h"
 #include "mem/pma.h"
 #include "mem/heap.h"
-#include "builtinabs.h"
+#include "abs.h"
 #include <stdint.h>
 
 typedef struct {

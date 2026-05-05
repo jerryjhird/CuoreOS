@@ -7,7 +7,7 @@
 #include "devices.h"
 #include "cpu/io.h"
 #include "mem/heap.h"
-#include "builtinabs.h"
+#include "abs.h"
 
 static bool acpi_shutdown(kernel_power_dev_t* dev) {
 	(void)dev;

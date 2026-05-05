@@ -3,7 +3,7 @@
 #include "logbuf.h"
 #include <stddef.h>
 #include "mem/mem.h"
-#include "builtinabs.h"
+#include "abs.h"
 
 static struct mcfg_table* mcfg_ptr = NULL;
 static size_t mcfg_entry_count = 0;
