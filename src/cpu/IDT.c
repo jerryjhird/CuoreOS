@@ -6,8 +6,9 @@
 #include "apic/lapic.h"
 #include "IRQ.h"
 #include "devices.h"
-#include "kstate.h"
-#include "mem/mem.h" // IWYU pragma: keep
+#include "panic.h"
+#include "abs.h"
+#include "mem/mem.h"
 
 struct idt_entry {
 	uint16_t offset_low;

@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include "mem/pma.h"
 #include "mem/heap.h"
-#include "kstate.h"
+#include "panic.h"
 #include "mem/mem.h"
 #include <string.h>
 #include "devices.h"

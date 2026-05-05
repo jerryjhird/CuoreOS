@@ -1,9 +1,9 @@
 #include "madt.h"
 #include "acpi/acpi.h"
 #include "ioapic.h"
-#include "kstate.h"
 #include <stddef.h>
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/mem.h"
+#include "panic.h"
 
 static uintptr_t lapic_phys = 0;
 static uintptr_t ioapic_phys = 0;

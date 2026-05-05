@@ -1,10 +1,9 @@
 #include "partition.h"
 
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/mem.h" 
 #include "guid_list.h"
-#include "kstate.h"
 #include "logbuf.h"
-#include "mem/heap.h" // IWYU pragma: keep
+#include "mem/heap.h"
 #include "mbr.h"
 #include "gpt.h"
 
@@ -15,7 +14,6 @@ typedef struct {
 
 static const partition_type_lookup_t partition_lookup_table[] = {
 	{0x00, GUID_EMPTY, "Empty"},
-	{0x7F, GUID_CUORE_BASIC_DATA, "Cuore Basic Data"}, // CuoreFS no longer exists but keep it for now
 	{0x06, GUID_MS_BASIC_DATA, "FAT16"},
 	{0x0B, GUID_MS_BASIC_DATA, "FAT32 (CHS)"},
 	{0x0C, GUID_MS_BASIC_DATA, "FAT32 (LBA)"},
@@ -31,11 +29,10 @@ static const gpt_name_lookup_t guid_name_table[] = {
 	{GUID_EMPTY, "Empty/Unknown"},
 	{GUID_EFI_SYSTEM, "EFI System Partition"},
 	{GUID_BIOS_BOOT, "BIOS Boot Partition"},
-	{GUID_CUORE_BASIC_DATA, "Cuore Basic Data"}, // CuoreFS no longer exists but keep it for now
-	{GUID_MS_BASIC_DATA, MICROSOFT_STRING " Basic Data"},
+	{GUID_MS_BASIC_DATA, "Microslop Basic Data"},
 	{GUID_LINUX_SWAP, "Linux Swap"},
 	{GUID_LINUX_FILESYSTEM, "Linux Filesystem"},
-	{GUID_MS_RESERVED, MICROSOFT_STRING " Reserved"},
+	{GUID_MS_RESERVED, "Microslop Reserved"},
 	{GUID_WIN_RECOVERY, "Windows Recovery Environment"},
 	{GUID_MBR_SCHEME, "MBR Partition Scheme"},
 	{GUID_INTEL_FAST_FLASH, "Intel Fast Flash"},

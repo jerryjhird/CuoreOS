@@ -5,8 +5,9 @@
 #include <stdbool.h>
 #include <limine.h>
 #include "kstate.h"
-#include "mem.h" // IWYU pragma: keep
+#include "mem.h"
 #include "abs.h"
+#include "panic.h"
 
 static uint8_t *pma_bitmap = NULL;
 static size_t pma_total_pages = 0;

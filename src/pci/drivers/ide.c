@@ -8,7 +8,7 @@ typedef int dummy0; // satisfy ISO C / -Wpedantic
 #include "pci/pci.h"
 #include "cpu/io.h"
 #include "logbuf.h"
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/mem.h"
 #include "mem/heap.h"
 #include "_time.h"
 #include "ide.h"

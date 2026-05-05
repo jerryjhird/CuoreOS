@@ -8,4 +8,5 @@
 	#define UNLIKELY(x) (x)
 #endif
 
+#define UNUSED(x) ((void)(x))
 #define IP_ADDR(a, b, c, d) ((a) | (b << 8) | (c << 16) | (d << 24))

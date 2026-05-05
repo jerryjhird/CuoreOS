@@ -1,7 +1,7 @@
 #include "mbr.h"
 #include "partition.h"
-#include "mem/heap.h" // IWYU pragma: keep
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/heap.h"
+#include "mem/mem.h"
 #include "partition.h"
 
 typedef struct {

@@ -2,7 +2,6 @@
 #include <stdarg.h>
 #include "logbuf.h"
 #include "devices.h"
-#include "bitmask.h"
 #include <sys/types.h>
 
 char logbuf_buffer[LOGBUF_SIZE];

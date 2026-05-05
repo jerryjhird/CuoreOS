@@ -1,5 +1,5 @@
 #include "acpi.h"
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/mem.h"
 #include "kstate.h"
 #include "abs.h"
 #include "logbuf.h"

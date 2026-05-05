@@ -2,7 +2,6 @@
 
 #include "apic/lapic.h"
 #include <stdint.h>
-#include "kstate.h"
 #include "devices.h"
 
 // send to a specific cpu

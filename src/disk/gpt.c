@@ -3,8 +3,7 @@
 #include "guid_list.h"
 #include "partition.h"
 #include "logbuf.h"
-#include "mem/heap.h" // IWYU pragma: keep
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/heap.h"
 #include "crc32.h"
 #include <string.h>
 

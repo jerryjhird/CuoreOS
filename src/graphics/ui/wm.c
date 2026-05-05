@@ -3,8 +3,6 @@
 #include "mem/heap.h"
 #include <string.h>
 
-void panic(const char* header_msg, const char* msg);
-
 static linear_framebuffer_t* target_fb;
 static window_t* window_stack_bottom = NULL;
 static uint32_t next_window_id = 1;

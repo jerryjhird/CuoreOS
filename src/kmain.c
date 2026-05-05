@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "panic.h"
 #include "drivers/HPET.h"
 #include "drivers/UART16550.h"
 #include "logbuf.h"
@@ -6,7 +7,6 @@
 #include "limine.h"
 #include "mem/pma.h"
 #include "mem/mem.h"
-#include "kstate.h"
 #include "devices.h"
 #include "graphics/ui/fb_flanterm.h"
 #include "cpu/GDT.h"
@@ -111,7 +111,6 @@ void panic(const char* header_msg, const char* msg) {
 
 ramfs_handle_t initramfs;
 linear_framebuffer_t gfb_limine_framebuffer;
-bool supported_disk_exists = false; // when a disk we have a driver for is found by pci discovery this will be set to true
 
 static void uart16550_console_task(void) {
 	while (1) {

@@ -1,5 +1,5 @@
 #include "ramfs.h"
-#include "mem/mem.h" // IWYU pragma: keep
+#include "mem/mem.h"
 
 void ramfs_init(ramfs_handle_t *handle, void *ptr) {
 	handle->base = ptr;

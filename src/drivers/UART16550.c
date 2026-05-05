@@ -1,12 +1,9 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "bitmask.h"
 #include "devices.h"
-#include "kstate.h"
 #include "drivers/UART16550.h"
 #include "cpu/io.h"
 #include "cpu/IRQ.h"
-#include "apic/lapic.h"
 
 #define UART_COM1 0x3F8
 

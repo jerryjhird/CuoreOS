@@ -9,14 +9,11 @@ typedef int dummy0 ;
 #include "mem/pma.h"
 #include "cpu/io.h"
 #include "mem/heap.h"
-#include "abs.h"
 #include "mem/mem.h"
 #include "logbuf.h"
 #include "apic/ioapic.h"
 #include "devices.h"
 #include "mem/paging.h"
-
-void panic(const char* header_msg, const char* msg);
 
 static void rtl_write32(rtl8139_state_t* s, uint16_t reg, uint32_t val) {
 	if (s->is_mmio) *(volatile uint32_t*)(s->base + reg) = val;

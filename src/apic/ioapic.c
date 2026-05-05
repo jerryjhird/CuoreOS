@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <limine.h>
-#include "kstate.h"
 #include "ioapic.h"
 #include "logbuf.h"
 #include "madt.h"

@@ -6,10 +6,10 @@
 #include <stdarg.h>
 #include "mem.h"
 #include "pma.h"
-#include "kstate.h"
 #include "stdio.h"
 #include "mem/paging.h"
 #include "abs.h"
+#include "panic.h"
 
 #define ALIGNMENT 16
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~(ALIGNMENT-1))
@@ -58,8 +58,6 @@ static FixedPool pools[POOL_COUNT];
 #define MAX_POOL_PAGES 64
 static uintptr_t pool_page_registry[MAX_POOL_PAGES];
 static int registered_pool_pages = 0;
-
-void panic(const char* header_msg, const char* msg);
 
 static inline uint8_t get_ptr_type(void* ptr, uint64_t** out_pte) {
 	uint64_t* pml4_v = (uint64_t*)(vmm_get_pml4() + hhdm_offset);

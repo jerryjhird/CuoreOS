@@ -3,8 +3,7 @@
 #include "netbuf.h"
 #include "mem/heap.h"
 #include <stdint.h>
-
-void panic(const char* header_msg, const char* msg);
+#include "panic.h"
 
 net_buf_t* net_buf_alloc(uint32_t size) {
 	net_buf_t* buf = (net_buf_t*)malloc(sizeof(net_buf_t));
