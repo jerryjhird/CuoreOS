@@ -14,11 +14,6 @@ typedef struct {
 
 static void beep_cleanup_hook(void* arg) {
 	beep_metadata_t* meta = (beep_metadata_t*)arg;
-
-	#ifdef DEBUG
-		dev_puts(&uart16550_dev, "[ BEEP ] beeeeepppp\n");
-	#endif
-
 	pma_free_pages(meta->phys_addr, meta->pages);
 	free(meta);
 }
