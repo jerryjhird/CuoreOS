@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "cpu/IRQ.h"
 #include "cpu/smp/mailbox.h"
+#include "scheduler.h"
 
 // character device capabilities
 #define CHAR_DEV_CAP_ON_ERROR (1ULL << 0) // device should be used to display error's (e.g cpu exceptions, panics etc)
@@ -19,7 +20,8 @@ typedef struct kernel_char_dev_t {
 // cpu core
 typedef enum { CPU_IDLE = 0, CPU_BUSY, CPU_HALTED, CPU_PANIC } cpu_status_t;
 typedef struct kernel_cpu_dev_t {
-	struct kernel_cpu_dev_t *self;
+	struct kernel_cpu_dev_t *self; // @ gs:0
+	task_t *current_task; // @ gs:8
 	uint32_t logical_id;
 	uint32_t lapic_id;
 	uint64_t ticks;
@@ -121,6 +123,8 @@ extern kernel_extmem_dev_t* extmem_devices[MAX_EXTMEM_DEVICES];
 extern size_t extmem_devices_c;
 
 #define GET_CURRENT_CPU(target) __asm__ volatile ("mov %%gs:0, %0" : "=r"(target))
+#define GET_CURRENT_TASK(target) __asm__ volatile ("mov %%gs:8, %0" : "=r"(target))
+#define SET_CURRENT_TASK(bootstrap_task) __asm__ volatile ("mov %0, %%gs:8" : : "r"(bootstrap_task));
 extern kernel_cpu_dev_t* cpu_devices[SMP_MAX_CORES];
 extern volatile uint32_t cpu_devices_c;
 

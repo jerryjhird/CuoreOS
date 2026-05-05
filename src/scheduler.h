@@ -10,8 +10,6 @@ typedef struct task {
 	void* stack_base;
 } task_t;
 
-extern task_t *current_task;
-
 void scheduler_init(void);
 void scheduler_start(void);
 void scheduler_yield(void);

@@ -9,24 +9,26 @@
 #include <string.h>
 #include "devices.h"
 
-task_t *current_task = NULL;
-
 static struct trap_frame* scheduler_timer_handler(struct trap_frame* tf) {
+	task_t* current_task;
+	GET_CURRENT_TASK(current_task);
+
 	current_task->rsp = (uint64_t)tf;
-
 	task_t* old_task = current_task;
-	current_task = current_task->next;
+	task_t* next_task = current_task->next;
 
-	// unlink the bootstrap task
-	if (old_task->upid == 0 && old_task != current_task) {
+	if (old_task->upid == 0 && old_task != next_task) {
 		old_task->prev->next = old_task->next;
 		old_task->next->prev = old_task->prev;
+		free(old_task);
 	}
 
-	return (struct trap_frame*)current_task->rsp;
+	SET_CURRENT_TASK(next_task);
+	return (struct trap_frame*)next_task->rsp;
 }
 
 task_t* get_task_by_upid(uint64_t target_upid) {
+	task_t* current_task; GET_CURRENT_TASK(current_task);
 	if (current_task == NULL) return NULL;
 	task_t* start = current_task;
 	task_t* curr = start;
@@ -38,10 +40,6 @@ task_t* get_task_by_upid(uint64_t target_upid) {
 }
 
 task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid) {
-	if (get_task_by_upid(requested_upid) != NULL) {
-		panic("SCHEDULER", "UPID COLLISION");
-	}
-
 	task_t* new_task = (task_t*)zalloc(sizeof(task_t));
 	new_task->upid = requested_upid;
 
@@ -62,6 +60,7 @@ task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid
 
 	// enroll task
 	__asm__ volatile ("cli");
+	task_t* current_task; GET_CURRENT_TASK(current_task);
 	if (current_task == NULL) {
 		current_task = new_task;
 		new_task->next = new_task;
@@ -81,6 +80,7 @@ task_t* scheduler_create_task(void (*entry_point)(void), uint64_t requested_upid
 void scheduler_exit_task(void) {
 	__asm__ volatile ("cli");
 
+	task_t* current_task; GET_CURRENT_TASK(current_task);
 	task_t* task = current_task;
 
 	if (task->next == task) {
@@ -96,6 +96,7 @@ void scheduler_exit_task(void) {
 }
 
 void scheduler_start(void) {
+	task_t* current_task; GET_CURRENT_TASK(current_task);
 	if (current_task == NULL) {
 		panic("SCHEDULER", "INITALIZED WITH NO TASKS");
 	}
@@ -114,7 +115,9 @@ void scheduler_init(void) {
 	task_t* bootstrap_task = (task_t*)zalloc(sizeof(task_t));
 	bootstrap_task->upid = 0;
 
-	current_task = bootstrap_task;
+	task_t* current_task; GET_CURRENT_TASK(current_task);
+
+	SET_CURRENT_TASK(bootstrap_task);
 	bootstrap_task->next = bootstrap_task;
 	bootstrap_task->prev = bootstrap_task;
 
