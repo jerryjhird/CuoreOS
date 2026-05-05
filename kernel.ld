@@ -3,8 +3,9 @@ ENTRY(_kstart)
 
 PHDRS
 {
-    text PT_LOAD FLAGS(5);   /* R + X */
-    data PT_LOAD FLAGS(6);   /* R + W */
+    text   PT_LOAD FLAGS(5);   /* R + X */
+    rodata PT_LOAD FLAGS(4);   /* R */
+    data   PT_LOAD FLAGS(6);   /* R + W */
 }
 
 SECTIONS
@@ -25,9 +26,11 @@ SECTIONS
 
     ASSERT(_sig_end - _sig_start == 8, ".csig section must be exactly 8 bytes!")
 
+    . = ALIGN(0x1000);
+
     .rodata : {
         *(.rodata .rodata.*)
-    } :text
+    } :rodata
 
     . = ALIGN(0x1000);
 
@@ -38,8 +41,9 @@ SECTIONS
     .bss : {
         *(.bss .bss.*)
         *(COMMON)
-        . = ALIGN(0x1000);
     } :data
+
+    . = ALIGN(0x1000);
 
     .stack : {
         . = ALIGN(16);
