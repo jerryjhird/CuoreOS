@@ -3,7 +3,11 @@
 #include "pci/pci.h"
 
 #define SATA_SIG_ATA	0x00000101
-#define HBA_PxIS_TFES   (1 << 30)
+
+#define HBA_PxIS_IFS (1 << 27)
+#define HBA_PxIS_HBFS (1 << 29)
+#define HBA_PxIS_TFES (1 << 30)
+
 #define HBA_PxCMD_ST	0x0001
 #define HBA_PxCMD_FRE   0x0010
 #define HBA_PxCMD_FR	0x4000

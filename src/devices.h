@@ -37,8 +37,8 @@ typedef struct kernel_disk_dev_t {
 	char model[41]; // for model name
 	uint64_t total_sectors;
    	uint16_t port_base;
-	uint8_t (*read_sector)(struct kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer);
-	uint8_t (*write_sector)(struct kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer);
+	uint8_t (*read_sectors)(struct kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer);
+	uint8_t (*write_sectors)(struct kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer);
 	void* private_data;
 } kernel_disk_dev_t;
 

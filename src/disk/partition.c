@@ -1,6 +1,6 @@
 #include "partition.h"
 
-#include "mem/mem.h" 
+#include "mem/mem.h"
 #include "guid_list.h"
 #include "logbuf.h"
 #include "mem/heap.h"
@@ -102,11 +102,11 @@ void partition_refresh(kernel_disk_dev_t* dev) {
 	uint8_t buffer[512];
 	for (int i = 0; i < 512; i++) buffer[i] = 0;
 
-	if (dev->read_sector(dev, 0, (uint16_t*)buffer) != 0) {
+	if (dev->read_sectors(dev, 0, 1, (uint16_t*)buffer) != 0) {
 		return;
 	}
 
-	if (dev->read_sector(dev, 1, (uint16_t*)buffer) == 0 && memcmp(buffer, "EFI PART", 8) == 0) {
+	if (dev->read_sectors(dev, 1, 1, (uint16_t*)buffer) == 0 && memcmp(buffer, "EFI PART", 8) == 0) {
 		gpt_parse(dev);
 	} else {
 		mbr_parse(dev);

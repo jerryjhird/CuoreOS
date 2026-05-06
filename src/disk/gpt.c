@@ -3,14 +3,16 @@
 #include "guid_list.h"
 #include "partition.h"
 #include "logbuf.h"
-#include "mem/heap.h"
+#include "mem/pma.h"
 #include "crc32.h"
 #include <string.h>
+#include "mem/mem.h"
+#include "mem/heap.h"
 
 void gpt_parse(kernel_disk_dev_t* dev) {
 	uint8_t buffer[512];
 
-	if (dev->read_sector(dev, 1, (uint16_t*)buffer) != 0) return;
+	if (dev->read_sectors(dev, 1, 1, (uint16_t*)buffer) != 0) return;
 	gpt_header_t* header = (gpt_header_t*)buffer;
 
 	if (memcmp(header->signature, "EFI PART", 8) != 0) return;
@@ -25,27 +27,27 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 	header->header_crc32 = read_crc;
 
 	uint32_t array_size = header->num_partition_entries * header->sizeof_partition_entry;
-	uint8_t* array_buffer = (uint8_t*)malloc(array_size);
 
-	if (!array_buffer) return;
+	size_t pages_needed = (array_size + PAGE_SIZE - 1) / PAGE_SIZE;
+	uintptr_t array_phys = pma_alloc_pages(pages_needed);
+	uint16_t* array_buffer = (uint16_t*)(array_phys + hhdm_offset);
 
 	uint32_t sectors_to_read = array_size / 512;
-	for (uint32_t s = 0; s < sectors_to_read; s++) {
-		uint8_t bounce[512];
-		dev->read_sector(dev, header->partition_entry_lba + s, (uint16_t*)bounce);
-		memcpy(array_buffer + (s * 512), bounce, 512);
+	if (dev->read_sectors(dev, header->partition_entry_lba, sectors_to_read, array_buffer) != 0) {
+		pma_free_pages(array_phys, pages_needed);
+		return;
 	}
 
 	if (crc32(array_buffer, array_size) != header->partition_entry_array_crc32) {
 		logbuf_write("[ GPT  ] Partition Entry Array CRC32 Mismatch!\n");
-		free(array_buffer);
+		pma_free_pages(array_phys, pages_needed);
 		return;
 	}
 
 	uint32_t entry_size = header->sizeof_partition_entry;
 
 	for (uint32_t i = 0; i < header->num_partition_entries; i++) {
-		gpt_entry_t* gpt_p = (gpt_entry_t*)(array_buffer + (i * entry_size));
+		gpt_entry_t* gpt_p = (gpt_entry_t*)((uint8_t*)array_buffer + (i * entry_size));
 
 		if (memcmp(gpt_p->partition_type_guid, (uint8_t[])GUID_EMPTY, 16) == 0) {
 			continue;
@@ -65,7 +67,7 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 		partition_register(entry);
 	}
 
-	free(array_buffer);
+	pma_free_pages(array_phys, pages_needed);
 }
 
 void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid) {
@@ -75,7 +77,10 @@ void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid
 	uint8_t sector[512];
 	uint32_t array_crc;
 
-	uint8_t* full_array = malloc(16384);
+	size_t array_pages = (16384 + PAGE_SIZE - 1) / PAGE_SIZE;
+	uintptr_t array_phys = pma_alloc_pages(array_pages);
+	uint16_t* full_array = (uint16_t*)(array_phys + hhdm_offset);
+
 	memset(full_array, 0, 16384);
 	gpt_entry_t* entry = (gpt_entry_t*)full_array;
 
@@ -108,20 +113,10 @@ void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid
 
 	sector[510] = 0x55;
 	sector[511] = 0xAA;
-	dev->write_sector(dev, 0, (uint16_t*)sector);
+	dev->write_sectors(dev, 0, 1, (uint16_t*)sector);
 
-	for (int i = 0; i < 32; i++) {
-		uint8_t bounce[512];
-		memcpy(bounce, full_array + (i * 512), 512);
-		dev->write_sector(dev, 2 + i, (uint16_t*)bounce);
-	}
-
-	// backup partition table
-	for (int i = 0; i < 32; i++) {
-		uint8_t bounce[512];
-		memcpy(bounce, full_array + (i * 512), 512);
-		dev->write_sector(dev, (disk_sectors - 33) + i, (uint16_t*)bounce);
-	}
+	dev->write_sectors(dev, 2, 32, full_array);
+	dev->write_sectors(dev, (disk_sectors - 33), 32, full_array);
 
 	// primary header
 	memset(sector, 0, 512);
@@ -141,7 +136,7 @@ void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid
 
 	header->header_crc32 = 0;
 	header->header_crc32 = crc32(header, 92);
-	dev->write_sector(dev, 1, (uint16_t*)sector);
+	dev->write_sectors(dev, 1, 1, (uint16_t*)sector);
 
 	// backup header
 	header->my_lba = disk_sectors - 1;
@@ -150,7 +145,7 @@ void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid
 
 	header->header_crc32 = 0;
 	header->header_crc32 = crc32(header, 92);
-	dev->write_sector(dev, disk_sectors - 1, (uint16_t*)sector);
+	dev->write_sectors(dev, disk_sectors - 1, 1, (uint16_t*)sector);
 
-	free(full_array);
+	pma_free_pages(array_phys, array_pages);
 }

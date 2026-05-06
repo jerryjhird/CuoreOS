@@ -1,3 +1,4 @@
+#include <stdint.h>
 typedef int dummy0; // satisfy ISO C / -Wpedantic
 
 // driver for IDE disks. only supports PMIO
@@ -13,42 +14,52 @@ typedef int dummy0; // satisfy ISO C / -Wpedantic
 #include "_time.h"
 #include "ide.h"
 
-static uint8_t ide_read_sector(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer) {
+static uint8_t ide_read_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
 	uint16_t base = dev->port_base;
+	uint8_t count8 = (uint8_t)count;
+
+	if (count8 == 0) return 0;
 
 	outb(base + IDE_REG_DRIVE_SEL, (IDE_SEL_MASTER | IDE_SEL_LBA) | ((lba >> 24) & 0x0F));
-	outb(base + IDE_REG_SECTOR_CNT, 1);
+	outb(base + IDE_REG_SECTOR_CNT, count8);
 	outb(base + IDE_REG_LBA_LOW,   (uint8_t)lba);
 	outb(base + IDE_REG_LBA_MID,   (uint8_t)(lba >> 8));
 	outb(base + IDE_REG_LBA_HIGH,  (uint8_t)(lba >> 16));
 	outb(base + IDE_REG_COMMAND,   IDE_CMD_READ);
 
-	while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
-	while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
+	for (uint32_t i = 0; i < count8; i++) {
+		while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
+		while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
 
-	if (inb(base + IDE_REG_STATUS) & 0x21) return 1;
+		if (inb(base + IDE_REG_STATUS) & 0x21) return 1;
+		insw(base + IDE_REG_DATA, buffer + (i * 256), 256);
+	}
 
-	insw(base + IDE_REG_DATA, buffer, 256);
 	return 0;
 }
 
-static uint8_t ide_write_sector(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer) {
+static uint8_t ide_write_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
 	uint16_t base = dev->port_base;
+	uint8_t count8 = (uint8_t)count;
+
+	if (count8 == 0) return 0;
 
 	outb(base + IDE_REG_DRIVE_SEL, (IDE_SEL_MASTER | IDE_SEL_LBA) | ((lba >> 24) & 0x0F));
-	outb(base + IDE_REG_SECTOR_CNT, 1);
+	outb(base + IDE_REG_SECTOR_CNT, count8);
 	outb(base + IDE_REG_LBA_LOW,   (uint8_t)lba);
 	outb(base + IDE_REG_LBA_MID,   (uint8_t)(lba >> 8));
 	outb(base + IDE_REG_LBA_HIGH,  (uint8_t)(lba >> 16));
 	outb(base + IDE_REG_COMMAND,   IDE_CMD_WRITE);
 
-	while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
-	while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
+	for (uint32_t i = 0; i < count8; i++) {
+		while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
+		while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
+		if (inb(base + IDE_REG_STATUS) & 0x21) return 1;
+		outsw(base + IDE_REG_DATA, buffer + (i * 256), 256);
+		usleep(1);
+	}
 
-	if (inb(base + IDE_REG_STATUS) & 0x21) return 1;
-
-	outsw(base + IDE_REG_DATA, buffer, 256);
-	outb(base + IDE_REG_COMMAND, 0xE7); // Cache Flush
+	outb(base + IDE_REG_COMMAND, 0xE7);
 	while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
 
 	return 0;
@@ -113,8 +124,8 @@ void ide_init(pci_dev_t pdev) {
 	}
 
 	dev->port_base = base;
-	dev->read_sector = ide_read_sector;
-	dev->write_sector = ide_write_sector;
+	dev->read_sectors = ide_read_sectors;
+	dev->write_sectors = ide_write_sectors;
 
 	logbuf_printf("[ IDE  ] Found \"%s\" (%llu MiB)\n",  dev->model, (unsigned long long)(dev->total_sectors / 2048));
 

@@ -28,7 +28,7 @@ static void ahci_start_cmd(hba_port_t *port) {
 	port->cmd |= HBA_PxCMD_ST;
 }
 
-static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer, uint8_t ata_cmd, bool write) {
+static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer, uint16_t count, uint8_t ata_cmd, bool write) {
 	ahci_driver_state_t* priv = (ahci_driver_state_t*)dev->private_data;
 	hba_port_t* port = priv->port;
 
@@ -52,27 +52,27 @@ static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buf
 
 	tbl->prdt[0].dba = (uint32_t)phys_buffer;
 	tbl->prdt[0].dbau = (uint32_t)(phys_buffer >> 32);
-	tbl->prdt[0].dbc = 511;
-	tbl->prdt[0].i = 1;
+	tbl->prdt[0].dbc = (count * 512) - 1;
+	tbl->prdt[0].i = 1; // IOC
 
 	tbl->cfis[0] = 0x27;
 	tbl->cfis[1] = 0x80;
 	tbl->cfis[2] = ata_cmd;
 
 	if (ata_cmd == 0xEC) {
-		tbl->cfis[4] = 0;
-		tbl->cfis[5] = 0;
-		tbl->cfis[6] = 0;
-		tbl->cfis[7] = 0;
-		tbl->cfis[8] = 0;
-		tbl->cfis[12] = 0;
+		tbl->cfis[12] = 1;
 	} else {
 		tbl->cfis[4] = (uint8_t)lba;
 		tbl->cfis[5] = (uint8_t)(lba >> 8);
 		tbl->cfis[6] = (uint8_t)(lba >> 16);
 		tbl->cfis[7] = 1 << 6;
+
 		tbl->cfis[8] = (uint8_t)(lba >> 24);
-		tbl->cfis[12] = 1;
+		tbl->cfis[9] = (uint8_t)(lba >> 32);
+		tbl->cfis[10] = (uint8_t)(lba >> 40);
+
+		tbl->cfis[12] = (uint8_t)(count & 0xFF);
+		tbl->cfis[13] = (uint8_t)((count >> 8) & 0xFF);
 	}
 
 	while (port->tfd & (0x80 | 0x08));
@@ -80,17 +80,17 @@ static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buf
 
 	while (1) {
 		if (!(port->ci & (1 << slot))) break;
-		if (port->is & HBA_PxIS_TFES) return 1;
+		if (port->is & (HBA_PxIS_TFES | HBA_PxIS_HBFS | HBA_PxIS_IFS)) return 1;
 	}
 	return 0;
 }
 
-static uint8_t ahci_read(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer) {
-	return ahci_exec_cmd(dev, lba, buffer, 0x25, false);
+static uint8_t ahci_read(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
+	return ahci_exec_cmd(dev, lba, buffer, (uint16_t)count, 0x25, false);
 }
 
-static uint8_t ahci_write(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer) {
-	return ahci_exec_cmd(dev, lba, buffer, 0x35, true);
+static uint8_t ahci_write(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
+	return ahci_exec_cmd(dev, lba, buffer, (uint16_t)count, 0x35, true);
 }
 
 void ahci_init(pci_dev_t pdev) {
@@ -146,14 +146,14 @@ void ahci_init(pci_dev_t pdev) {
 		priv->pml4 = (uint64_t*)((cr3 & ~0xFFFULL) + hhdm_offset);
 
 		ddev->private_data = priv;
-		ddev->read_sector = ahci_read;
-		ddev->write_sector = ahci_write;
+		ddev->read_sectors = ahci_read;
+		ddev->write_sectors = ahci_write;
 
 		uintptr_t id_phys = pma_alloc_pages(1);
 		uint16_t* id_data = (uint16_t*)(id_phys + hhdm_offset);
 		memset(id_data, 0, 512);
 
-		if (ahci_exec_cmd(ddev, 0, id_data, 0xEC, false) == 0) {
+		if (ahci_exec_cmd(ddev, 0, id_data, 1, 0xEC, false) == 0) {
 			for (int k = 0; k < 20; k++) {
 				ddev->model[k * 2]	 = (char)(id_data[27 + k] >> 8);
 				ddev->model[k * 2 + 1] = (char)(id_data[27 + k] & 0xFF);

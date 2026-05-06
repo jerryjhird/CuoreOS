@@ -18,7 +18,8 @@ bool dev__test__disk(kernel_disk_dev_t* dev) {
 		test_buffer[i] = (uint16_t)(0xABCD + i);
 	}
 
-	if (dev->write_sector(dev, 100, test_buffer) != 0) {
+	// test write (1 sector)
+	if (dev->write_sectors(dev, 100, 1, test_buffer) != 0) {
 		logbuf_write("[ TEST ] FAILED: Write operation\n");
 		retcode = false;
 		goto cleanup;
@@ -26,23 +27,26 @@ bool dev__test__disk(kernel_disk_dev_t* dev) {
 
 	memset(test_buffer, 0, 512);
 
-	if (dev->read_sector(dev, 100, test_buffer) != 0) {
+	// test read (1 sector)
+	if (dev->read_sectors(dev, 100, 1, test_buffer) != 0) {
 		logbuf_write("[ TEST ] FAILED: Read operation\n");
 		retcode = false;
 		goto cleanup;
 	}
 
+	// verify data integrity
 	if (test_buffer[0] != 0xABCD || test_buffer[10] != 0xABCD + 10) {
 		logbuf_write("[ TEST ] FAILED: Invalid data read back after write\n");
 		retcode = false;
 		goto cleanup;
 	}
 
+	// test zeroing
 	memset(test_buffer, 0, 512);
-	dev->write_sector(dev, 100, test_buffer);
+	dev->write_sectors(dev, 100, 1, test_buffer);
 
 	memset(test_buffer, 0xFF, 512);
-	dev->read_sector(dev, 100, test_buffer);
+	dev->read_sectors(dev, 100, 1, test_buffer);
 
 	if (test_buffer[0] == 0 && test_buffer[255] == 0) {
 		logbuf_write("[ TEST ] SUCCESS: ");
