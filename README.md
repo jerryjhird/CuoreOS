@@ -11,13 +11,11 @@ Hobby x86-64 ELF Kernel
 
 ### Features in Development
 - binary loading
-- offloading tasks to cores other than the BSP
 - core specific log buffers
 
 ### Planned Features
 - userspace
-- multi-core scheduling
-- IP stack
+- VFS
 
 ---
 ## Contributing
