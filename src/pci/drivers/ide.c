@@ -5,18 +5,20 @@ typedef int dummy0; // satisfy ISO C / -Wpedantic
 
 #ifdef KERNEL_MOD_IDE_ENABLED
 #include "devices.h"
-#include "devices.h"
 #include "pci/pci.h"
 #include "cpu/io.h"
 #include "logbuf.h"
 #include "mem/mem.h"
 #include "mem/heap.h"
+#include "mem/dmalloc.h"
 #include "_time.h"
 #include "ide.h"
+#include <string.h>
 
-static uint8_t ide_read_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
+static uint8_t ide_read_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer) {
 	uint16_t base = dev->port_base;
 	uint8_t count8 = (uint8_t)count;
+	uint16_t* ptr = (uint16_t*)buffer.virt;
 
 	if (count8 == 0) return 0;
 
@@ -32,15 +34,16 @@ static uint8_t ide_read_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t c
 		while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
 
 		if (inb(base + IDE_REG_STATUS) & 0x21) return 1;
-		insw(base + IDE_REG_DATA, buffer + (i * 256), 256);
+		insw(base + IDE_REG_DATA, ptr + (i * 256), 256);
 	}
 
 	return 0;
 }
 
-static uint8_t ide_write_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
+static uint8_t ide_write_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer) {
 	uint16_t base = dev->port_base;
 	uint8_t count8 = (uint8_t)count;
+	uint16_t* ptr = (uint16_t*)buffer.virt;
 
 	if (count8 == 0) return 0;
 
@@ -55,7 +58,7 @@ static uint8_t ide_write_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t 
 		while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
 		while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ));
 		if (inb(base + IDE_REG_STATUS) & 0x21) return 1;
-		outsw(base + IDE_REG_DATA, buffer + (i * 256), 256);
+		outsw(base + IDE_REG_DATA, ptr + (i * 256), 256);
 		usleep(1);
 	}
 

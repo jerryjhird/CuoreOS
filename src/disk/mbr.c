@@ -2,27 +2,27 @@
 #include "partition.h"
 #include "mem/heap.h"
 #include "mem/mem.h"
-#include "partition.h"
-
-typedef struct {
-	uint8_t type;
-	const char* name;
-} partition_type_t;
+#include "mem/dmalloc.h"
+#include <string.h>
 
 uint8_t mbr_parse(kernel_disk_dev_t* dev) {
-	uint8_t sector_buffer[512];
+	dmalloc_ret_t sector_res = dmalloc32(512);
+	if (!sector_res.virt) return 1;
 
-	if (dev->read_sectors(dev, 0, 1, (uint16_t*)sector_buffer) != 0) {
+	if (dev->read_sectors(dev, 0, 1, sector_res) != 0) {
+		dmfree(sector_res.virt);
 		return 1;
 	}
 
-	mbr_t* mbr = (mbr_t*)sector_buffer;
+	mbr_t* mbr = (mbr_t*)sector_res.virt;
 	if (mbr->signature != 0xAA55) {
+		dmfree(sector_res.virt);
 		return 1;
 	}
 
 	for (int i = 0; i < 4; i++) {
 		if (mbr->partitions[i].partition_type == 0xEE) {
+			dmfree(sector_res.virt);
 			return 2;
 		}
 	}
@@ -43,12 +43,16 @@ uint8_t mbr_parse(kernel_disk_dev_t* dev) {
 		partition_register(entry);
 	}
 
+	dmfree(sector_res.virt);
 	return 0;
 }
 
 void mbr_install(kernel_disk_dev_t *dev, uint8_t type_id) {
-	uint8_t sector[512];
-	memset(sector, 0, sizeof(sector));
+	dmalloc_ret_t sector_res = dmalloc32(512);
+	if (!sector_res.virt) return;
+
+	uint8_t* sector = (uint8_t*)sector_res.virt;
+	memset(sector, 0, 512);
 
 	uint8_t *partition_entry = &sector[446];
 
@@ -72,8 +76,10 @@ void mbr_install(kernel_disk_dev_t *dev, uint8_t type_id) {
 	sector[510] = 0x55;
 	sector[511] = 0xAA;
 
-	dev->write_sectors(dev, 0, 1, (uint16_t *)sector);
+	dev->write_sectors(dev, 0, 1, sector_res);
 
-	memset(sector, 0, sizeof(sector));
-	dev->write_sectors(dev, 2048, 1, (uint16_t *)sector);
+	memset(sector, 0, 512);
+	dev->write_sectors(dev, 2048, 1, sector_res);
+
+	dmfree(sector_res.virt);
 }

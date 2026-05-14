@@ -5,21 +5,21 @@ typedef int dummy0;
 #include "tests.h"
 
 #include "logbuf.h"
-#include "mem/pma.h"
+#include "mem/dmalloc.h"
 #include "mem/mem.h"
 
 bool dev__test__disk(kernel_disk_dev_t* dev) {
 	bool retcode = true;
 
-	uintptr_t phys_addr = pma_alloc_pages(1);
-	uint16_t* test_buffer = (uint16_t*)(phys_addr + hhdm_offset);
+	dmalloc_ret_t dma = dmalloc32(512);
+	uint16_t* test_buffer = (uint16_t*)dma.virt;
 
 	for (int i = 0; i < 256; i++) {
 		test_buffer[i] = (uint16_t)(0xABCD + i);
 	}
 
 	// test write (1 sector)
-	if (dev->write_sectors(dev, 100, 1, test_buffer) != 0) {
+	if (dev->write_sectors(dev, 100, 1, dma) != 0) {
 		logbuf_write("[ TEST ] FAILED: Write operation\n");
 		retcode = false;
 		goto cleanup;
@@ -28,14 +28,14 @@ bool dev__test__disk(kernel_disk_dev_t* dev) {
 	memset(test_buffer, 0, 512);
 
 	// test read (1 sector)
-	if (dev->read_sectors(dev, 100, 1, test_buffer) != 0) {
+	if (dev->read_sectors(dev, 100, 1, dma) != 0) {
 		logbuf_write("[ TEST ] FAILED: Read operation\n");
 		retcode = false;
 		goto cleanup;
 	}
 
 	// verify data integrity
-	if (test_buffer[0] != 0xABCD || test_buffer[10] != 0xABCD + 10) {
+	if (test_buffer[0] != 0xABCD || test_buffer[10] != (uint16_t)(0xABCD + 10)) {
 		logbuf_write("[ TEST ] FAILED: Invalid data read back after write\n");
 		retcode = false;
 		goto cleanup;
@@ -43,22 +43,20 @@ bool dev__test__disk(kernel_disk_dev_t* dev) {
 
 	// test zeroing
 	memset(test_buffer, 0, 512);
-	dev->write_sectors(dev, 100, 1, test_buffer);
+	dev->write_sectors(dev, 100, 1, dma);
 
 	memset(test_buffer, 0xFF, 512);
-	dev->read_sectors(dev, 100, 1, test_buffer);
+	dev->read_sectors(dev, 100, 1, dma);
 
 	if (test_buffer[0] == 0 && test_buffer[255] == 0) {
-		logbuf_write("[ TEST ] SUCCESS: ");
-		logbuf_write(dev->model);
-		logbuf_write(" test passed\n");
+		logbuf_printf("[ TEST ] SUCCESS: %s test passed\n", dev->model);
 	} else {
 		logbuf_write("[ TEST ] FAILED: clear verification failed.\n");
 		retcode = false;
 	}
 
 cleanup:
-	pma_free_pages(phys_addr, 1);
+	dmfree(dma.virt);
 	return retcode;
 }
 

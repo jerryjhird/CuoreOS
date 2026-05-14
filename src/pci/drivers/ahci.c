@@ -11,6 +11,7 @@ typedef int dummy0;
 #include "mem/pma.h"
 #include "mem/mem.h"
 #include "mem/paging.h"
+#include "mem/dmalloc.h"
 #include "devices.h"
 #include <stdint.h>
 #include <string.h>
@@ -28,7 +29,7 @@ static void ahci_start_cmd(hba_port_t *port) {
 	port->cmd |= HBA_PxCMD_ST;
 }
 
-static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buffer, uint16_t count, uint8_t ata_cmd, bool write) {
+static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, dmalloc_ret_t buffer, uint16_t count, uint8_t ata_cmd, bool write) {
 	ahci_driver_state_t* priv = (ahci_driver_state_t*)dev->private_data;
 	hba_port_t* port = priv->port;
 
@@ -37,7 +38,7 @@ static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buf
 	for (int i = 0; i < 32; i++) { if (!(slots & (1 << i))) { slot = i; break; } }
 	if (slot == -1) return 1;
 
-	uintptr_t phys_buffer = vmm_get_phys(priv->pml4, (uintptr_t)buffer);
+	uintptr_t phys_buffer = buffer.phys;
 	if (!phys_buffer) return 1;
 
 	uintptr_t clb_phys = ((uintptr_t)port->clbu << 32) | port->clb;
@@ -62,14 +63,16 @@ static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buf
 	if (ata_cmd == 0xEC) {
 		tbl->cfis[12] = 1;
 	} else {
-		tbl->cfis[4] = (uint8_t)lba;
-		tbl->cfis[5] = (uint8_t)(lba >> 8);
-		tbl->cfis[6] = (uint8_t)(lba >> 16);
+		uint64_t lba64 = (uint64_t)lba;
+
+		tbl->cfis[4] = (uint8_t)lba64;
+		tbl->cfis[5] = (uint8_t)(lba64 >> 8);
+		tbl->cfis[6] = (uint8_t)(lba64 >> 16);
 		tbl->cfis[7] = 1 << 6;
 
-		tbl->cfis[8] = (uint8_t)(lba >> 24);
-		tbl->cfis[9] = (uint8_t)(lba >> 32);
-		tbl->cfis[10] = (uint8_t)(lba >> 40);
+		tbl->cfis[8] = (uint8_t)(lba64 >> 24);
+		tbl->cfis[9] = (uint8_t)(lba64 >> 32);
+		tbl->cfis[10] = (uint8_t)(lba64 >> 40);
 
 		tbl->cfis[12] = (uint8_t)(count & 0xFF);
 		tbl->cfis[13] = (uint8_t)((count >> 8) & 0xFF);
@@ -85,11 +88,11 @@ static uint8_t ahci_exec_cmd(kernel_disk_dev_t* dev, uint32_t lba, uint16_t* buf
 	return 0;
 }
 
-static uint8_t ahci_read(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
+static uint8_t ahci_read(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer) {
 	return ahci_exec_cmd(dev, lba, buffer, (uint16_t)count, 0x25, false);
 }
 
-static uint8_t ahci_write(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer) {
+static uint8_t ahci_write(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer) {
 	return ahci_exec_cmd(dev, lba, buffer, (uint16_t)count, 0x35, true);
 }
 
@@ -149,34 +152,35 @@ void ahci_init(pci_dev_t pdev) {
 		ddev->read_sectors = ahci_read;
 		ddev->write_sectors = ahci_write;
 
-		uintptr_t id_phys = pma_alloc_pages(1);
-		uint16_t* id_data = (uint16_t*)(id_phys + hhdm_offset);
-		memset(id_data, 0, 512);
+		dmalloc_ret_t id_res = dmalloc32(512);
+		if (id_res.virt) {
+			memset((void*)id_res.virt, 0, 512);
+			uint16_t* id_data = (uint16_t*)id_res.virt;
 
-		if (ahci_exec_cmd(ddev, 0, id_data, 1, 0xEC, false) == 0) {
-			for (int k = 0; k < 20; k++) {
-				ddev->model[k * 2]	 = (char)(id_data[27 + k] >> 8);
-				ddev->model[k * 2 + 1] = (char)(id_data[27 + k] & 0xFF);
+			if (ahci_exec_cmd(ddev, 0, id_res, 1, 0xEC, false) == 0) {
+				for (int k = 0; k < 20; k++) {
+					ddev->model[k * 2]   = (char)(id_data[27 + k] >> 8);
+					ddev->model[k * 2 + 1] = (char)(id_data[27 + k] & 0xFF);
+				}
+				ddev->model[40] = '\0';
+
+				for (int k = 39; k > 0 && ddev->model[k] == ' '; k--) ddev->model[k] = '\0';
+
+				uint64_t lba48_sectors = 0;
+				memcpy(&lba48_sectors, &id_data[100], sizeof(uint64_t));
+
+				uint32_t lba28_sectors = 0;
+				memcpy(&lba28_sectors, &id_data[60], sizeof(uint32_t));
+
+				ddev->total_sectors = lba48_sectors;
+				if (ddev->total_sectors == 0) {
+					ddev->total_sectors = lba28_sectors;
+				}
+			} else {
+				memcpy(ddev->model, "SATA DRIVE(Unknown Model)", 26);
 			}
-			ddev->model[40] = '\0';
-
-			for (int k = 39; k > 0 && ddev->model[k] == ' '; k--) ddev->model[k] = '\0';
-
-			uint64_t lba48_sectors = 0;
-			memcpy(&lba48_sectors, &id_data[100], sizeof(uint64_t));
-
-			uint32_t lba28_sectors = 0;
-			memcpy(&lba28_sectors, &id_data[60], sizeof(uint32_t));
-
-			ddev->total_sectors = lba48_sectors;
-			if (ddev->total_sectors == 0) {
-				ddev->total_sectors = lba28_sectors;
-			}
-		} else {
-			memcpy(ddev->model, "SATA DRIVE(Unknown Model)", 26);
+			dmfree(id_res.virt);
 		}
-
-		pma_free_pages(id_phys, 1);
 
 		logbuf_write("[ SATA ] Initialized ");
 		logbuf_write(ddev->model);

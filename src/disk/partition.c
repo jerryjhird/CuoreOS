@@ -4,8 +4,10 @@
 #include "guid_list.h"
 #include "logbuf.h"
 #include "mem/heap.h"
+#include "mem/dmalloc.h"
 #include "mbr.h"
 #include "gpt.h"
+#include <string.h>
 
 typedef struct {
 	uint8_t guid[16];
@@ -92,23 +94,26 @@ void partition_refresh(kernel_disk_dev_t* dev) {
 
 	while (current != NULL) {
 		partition_t* next = (partition_t*)current->next;
-
 		free(current);
-
 		current = next;
 	}
 	dev->partitions = NULL;
 
-	uint8_t buffer[512];
-	for (int i = 0; i < 512; i++) buffer[i] = 0;
+	dmalloc_ret_t sector_res = dmalloc32(512);
+	if (!sector_res.virt) return;
 
-	if (dev->read_sectors(dev, 0, 1, (uint16_t*)buffer) != 0) {
+	memset((void*)sector_res.virt, 0, 512);
+
+	if (dev->read_sectors(dev, 0, 1, sector_res) != 0) {
+		dmfree(sector_res.virt);
 		return;
 	}
 
-	if (dev->read_sectors(dev, 1, 1, (uint16_t*)buffer) == 0 && memcmp(buffer, "EFI PART", 8) == 0) {
+	if (dev->read_sectors(dev, 1, 1, sector_res) == 0 && memcmp((void*)sector_res.virt, "EFI PART", 8) == 0) {
 		gpt_parse(dev);
 	} else {
 		mbr_parse(dev);
 	}
+
+	dmfree(sector_res.virt);
 }

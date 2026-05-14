@@ -6,6 +6,7 @@
 #include "cpu/IRQ.h"
 #include "cpu/smp/mailbox.h"
 #include "scheduler.h"
+#include "mem/dmalloc.h"
 
 // character device capabilities
 #define CHAR_DEV_CAP_ON_ERROR (1ULL << 0) // device should be used to display error's (e.g cpu exceptions, panics etc)
@@ -37,8 +38,8 @@ typedef struct kernel_disk_dev_t {
 	char model[41]; // for model name
 	uint64_t total_sectors;
    	uint16_t port_base;
-	uint8_t (*read_sectors)(struct kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer);
-	uint8_t (*write_sectors)(struct kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, uint16_t* buffer);
+	uint8_t (*read_sectors)(struct kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer);
+	uint8_t (*write_sectors)(struct kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer);
 	void* private_data;
 } kernel_disk_dev_t;
 

@@ -11,13 +11,6 @@
 #include "abs.h"
 #include "panic.h"
 
-#define ALIGNMENT 16
-#define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~(ALIGNMENT-1))
-#define HEAP_MAGIC 0xCAFEBABE
-#define MIN_SPLIT_SIZE 16
-#define PAGES_PER_GROWTH 4
-#define KERNEL_HEAP_FLAGS (PTE_PRESENT | PTE_WRITABLE | PTE_NX)
-
 // Pool configuration for small objects
 #define POOL_COUNT 3
 static size_t pool_sizes[POOL_COUNT] = { 32, 64, 128 };
@@ -189,7 +182,7 @@ void* malloc(size_t size) {
 		}
 	}
 
-	size = ALIGN(size);
+	size = ALIGN(HEAP_ALIGNMENT, size);
 	retry:;
 	BlockHeader *curr = last_fit ? last_fit : head;
 	BlockHeader *start = curr;
@@ -276,9 +269,9 @@ static void _free(void* ptr, uint8_t type) {
 
 void* realloc(void* ptr, size_t new_size) {
 	if (UNLIKELY(!ptr)) return malloc(new_size);
-	if (UNLIKELY(new_size == 0)) { _free(ptr, PTE_STATE_HEAP_BLOCK); return NULL; } // fixed: use internal free logic or your public free
+	if (UNLIKELY(new_size == 0)) { _free(ptr, PTE_STATE_HEAP_BLOCK); return NULL; }
 
-	new_size = ALIGN(new_size);
+	new_size = ALIGN(HEAP_ALIGNMENT, new_size);
 
 	uint64_t* pml4_v = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
 	uint64_t* pte = vmm_get_pte(pml4_v, (uintptr_t)ptr, 0);

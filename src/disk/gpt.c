@@ -8,46 +8,52 @@
 #include <string.h>
 #include "mem/mem.h"
 #include "mem/heap.h"
+#include "mem/dmalloc.h"
 
 void gpt_parse(kernel_disk_dev_t* dev) {
-	uint8_t buffer[512];
+	dmalloc_ret_t sector_res = dmalloc32(512);
 
-	if (dev->read_sectors(dev, 1, 1, (uint16_t*)buffer) != 0) return;
-	gpt_header_t* header = (gpt_header_t*)buffer;
+	if (dev->read_sectors(dev, 1, 1, sector_res) != 0) {
+		dmfree(sector_res.virt);
+		return;
+	}
 
-	if (memcmp(header->signature, "EFI PART", 8) != 0) return;
+	gpt_header_t* header = (gpt_header_t*)sector_res.virt;
+	if (memcmp(header->signature, "EFI PART", 8) != 0) {
+		dmfree(sector_res.virt);
+		return;
+	}
 
 	uint32_t read_crc = header->header_crc32;
 	header->header_crc32 = 0;
 
 	if (crc32(header, header->header_size) != read_crc) {
 		logbuf_write("[ GPT  ] Header CRC32 Mismatch! Aborting.\n");
+		dmfree(sector_res.virt);
 		return;
 	}
 	header->header_crc32 = read_crc;
 
 	uint32_t array_size = header->num_partition_entries * header->sizeof_partition_entry;
+	dmalloc_ret_t array_res = dmalloc32(array_size);
 
-	size_t pages_needed = (array_size + PAGE_SIZE - 1) / PAGE_SIZE;
-	uintptr_t array_phys = pma_alloc_pages(pages_needed);
-	uint16_t* array_buffer = (uint16_t*)(array_phys + hhdm_offset);
-
-	uint32_t sectors_to_read = array_size / 512;
-	if (dev->read_sectors(dev, header->partition_entry_lba, sectors_to_read, array_buffer) != 0) {
-		pma_free_pages(array_phys, pages_needed);
+	uint32_t sectors_to_read = (array_size + 511) / 512;
+	if (dev->read_sectors(dev, header->partition_entry_lba, sectors_to_read, array_res) != 0) {
+		dmfree(array_res.virt);
+		dmfree(sector_res.virt);
 		return;
 	}
 
-	if (crc32(array_buffer, array_size) != header->partition_entry_array_crc32) {
+	if (crc32((void*)array_res.virt, array_size) != header->partition_entry_array_crc32) {
 		logbuf_write("[ GPT  ] Partition Entry Array CRC32 Mismatch!\n");
-		pma_free_pages(array_phys, pages_needed);
+		dmfree(array_res.virt);
+		dmfree(sector_res.virt);
 		return;
 	}
 
 	uint32_t entry_size = header->sizeof_partition_entry;
-
 	for (uint32_t i = 0; i < header->num_partition_entries; i++) {
-		gpt_entry_t* gpt_p = (gpt_entry_t*)((uint8_t*)array_buffer + (i * entry_size));
+		gpt_entry_t* gpt_p = (gpt_entry_t*)(array_res.virt + (i * entry_size));
 
 		if (memcmp(gpt_p->partition_type_guid, (uint8_t[])GUID_EMPTY, 16) == 0) {
 			continue;
@@ -67,19 +73,20 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 		partition_register(entry);
 	}
 
-	pma_free_pages(array_phys, pages_needed);
+	dmfree(array_res.virt);
+	dmfree(sector_res.virt);
 }
 
 void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid) {
 	uint64_t disk_sectors = dev->total_sectors;
 	if (disk_sectors < 68) return;
 
-	uint8_t sector[512];
-	uint32_t array_crc;
+	dmalloc_ret_t sector_res = dmalloc32(512);
+	dmalloc_ret_t array_res = dmalloc32(16384);
 
-	size_t array_pages = (16384 + PAGE_SIZE - 1) / PAGE_SIZE;
-	uintptr_t array_phys = pma_alloc_pages(array_pages);
-	uint16_t* full_array = (uint16_t*)(array_phys + hhdm_offset);
+	uint8_t* sector = (uint8_t*)sector_res.virt;
+	uint8_t* full_array = (uint8_t*)array_res.virt;
+	uint32_t array_crc;
 
 	memset(full_array, 0, 16384);
 	gpt_entry_t* entry = (gpt_entry_t*)full_array;
@@ -113,10 +120,10 @@ void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid
 
 	sector[510] = 0x55;
 	sector[511] = 0xAA;
-	dev->write_sectors(dev, 0, 1, (uint16_t*)sector);
+	dev->write_sectors(dev, 0, 1, sector_res);
 
-	dev->write_sectors(dev, 2, 32, full_array);
-	dev->write_sectors(dev, (disk_sectors - 33), 32, full_array);
+	dev->write_sectors(dev, 2, 32, array_res);
+	dev->write_sectors(dev, (disk_sectors - 33), 32, array_res);
 
 	// primary header
 	memset(sector, 0, 512);
@@ -136,16 +143,16 @@ void gpt_install(kernel_disk_dev_t* dev, const char* fs_name, uint8_t* type_guid
 
 	header->header_crc32 = 0;
 	header->header_crc32 = crc32(header, 92);
-	dev->write_sectors(dev, 1, 1, (uint16_t*)sector);
+	dev->write_sectors(dev, 1, 1, sector_res);
 
-	// backup header
 	header->my_lba = disk_sectors - 1;
 	header->alternate_lba = 1;
 	header->partition_entry_lba = disk_sectors - 33;
 
 	header->header_crc32 = 0;
 	header->header_crc32 = crc32(header, 92);
-	dev->write_sectors(dev, disk_sectors - 1, 1, (uint16_t*)sector);
+	dev->write_sectors(dev, disk_sectors - 1, 1, sector_res);
 
-	pma_free_pages(array_phys, array_pages);
+	dmfree(array_res.virt);
+	dmfree(sector_res.virt);
 }
