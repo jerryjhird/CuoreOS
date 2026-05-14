@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mem/dmalloc.h"
 #include <stdint.h>
 
 typedef struct {
@@ -8,6 +9,7 @@ typedef struct {
 	uint8_t* tail;
 	uint8_t* end;
 	uint32_t len;
+	dmalloc_ret_t dm_handle;
 } net_buf_t;
 
 net_buf_t* net_buf_alloc(uint32_t size);
