@@ -7,6 +7,7 @@
 #include "net/protocol/ntp.h"
 #include "net/protocol/dns.h"
 #include "net/socket.h"
+#include "abs.h"
 
 void udp_send(kernel_net_dev_t* dev, volatile socket_t* s, void* data, size_t len) {
 	if (!s || s->type != SOCKET_TYPE_UDP) return;
@@ -45,6 +46,9 @@ void udp_send_nosock(kernel_net_dev_t* dev, uint32_t dest_ip, uint16_t src, uint
 }
 
 void udp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip_hdr, void* transport_data, size_t len) {
+	UNUSED(dev);
+	UNUSED(len);
+
 	udp_header_t* udp = (udp_header_t*)transport_data;
 	uint16_t local_port = HTONS(udp->dest_port);
 	uint16_t remote_port = HTONS(udp->src_port);
@@ -69,7 +73,7 @@ void udp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip_hdr, void* transport_da
 	}
 
 	// check for sockets
-	socket_t* s = find_socket(local_port, remote_port, ip_hdr->src);
+	volatile socket_t* s = find_socket(local_port, remote_port, ip_hdr->src);
 
 	if (s && s->type == SOCKET_TYPE_UDP && s->on_data) {
 		s->on_data(payload, payload_len);

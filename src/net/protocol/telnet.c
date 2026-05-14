@@ -4,7 +4,7 @@
 #include "devices.h"
 #include "net/transport/tcp.h"
 
-socket_t* telnet_socket = NULL;
+volatile socket_t* telnet_socket = NULL;
 
 static void telnet_callback(uint8_t* data, size_t len) {
 	for (size_t i = 0; i < len; i++) {

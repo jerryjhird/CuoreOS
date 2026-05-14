@@ -5,6 +5,7 @@
 #include "net/ip/ipv4.h"
 #include "net/protocol/dns.h"
 #include "net/socket.h"
+#include "abs.h"
 
 volatile tcp_connection_t g_tcp = { .state = TCP_CLOSED };
 
@@ -31,7 +32,7 @@ static uint16_t checksum_fin(uint32_t sum) {
 	return (uint16_t)~sum;
 }
 
-void tcp_send(kernel_net_dev_t* dev, socket_t* s, uint8_t flags, void* payload, size_t payload_len) {
+void tcp_send(kernel_net_dev_t* dev, volatile socket_t* s, uint8_t flags, void* payload, size_t payload_len) {
 	size_t total_tcp_len = sizeof(tcp_header_t) + payload_len;
 	net_buf_t* buf = net_buf_alloc(total_tcp_len);
 
@@ -69,12 +70,13 @@ void tcp_send(kernel_net_dev_t* dev, socket_t* s, uint8_t flags, void* payload, 
 }
 
 void tcp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip, void* data, size_t len) {
+	UNUSED(len);
 	tcp_header_t* tcp = (tcp_header_t*)data;
 
 	uint16_t local_port = HTONS(tcp->dest_port);
 	uint16_t remote_port = HTONS(tcp->src_port);
 
-	socket_t* s = find_socket(local_port, remote_port, ip->src);
+	volatile socket_t* s = find_socket(local_port, remote_port, ip->src);
 	if (!s) return;
 
 	uint16_t ip_total_len = HTONS(ip->len);
@@ -128,8 +130,8 @@ void tcp_handle(kernel_net_dev_t* dev, ipv4_header_t* ip, void* data, size_t len
 	}
 }
 
-socket_t* tcp_connect(kernel_net_dev_t* dev, uint32_t ip, uint16_t port) {
-	socket_t* s = alloc_socket(SOCKET_TYPE_TCP);
+volatile socket_t* tcp_connect(kernel_net_dev_t* dev, uint32_t ip, uint16_t port) {
+	volatile socket_t* s = alloc_socket(SOCKET_TYPE_TCP);
 
 	s->local_port = 49152 + (query_id_counter++ % 1000);
 	s->remote_port = port;
