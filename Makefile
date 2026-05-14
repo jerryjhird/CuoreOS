@@ -16,6 +16,14 @@ else
     endif
 endif
 
+TOOLS_NEEDED := qemu-img xorriso xxd git sed
+MISSING_TOOLS := $(strip $(foreach tool,$(TOOLS_NEEDED),\
+    $(if $(shell command -v $(tool) 2>/dev/null),,$(tool))))
+
+ifneq ($(MISSING_TOOLS),)
+$(error Install the following utilities: $(MISSING_TOOLS))
+endif
+
 CC := $(CONFIG_CC)
 QEMU_UEFI_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
 
