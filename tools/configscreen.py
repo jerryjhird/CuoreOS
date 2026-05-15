@@ -23,7 +23,7 @@ config_groups = {
         "sata_support": "true",
         "ac97_support": "true",
         "rtl8139_support": "true",
-        "ivshem_support": "true"
+        "ivshmem_support": "true"
     },
     "Devices": {
         "max_char_devices": "9",

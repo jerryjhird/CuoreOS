@@ -1,6 +1,6 @@
 # CuoreOS Build System
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
-SYSTEM_CONFIG_VERSION := 0003
+SYSTEM_CONFIG_VERSION := 0004
 
 WHITELIST_GOALS := menuconfig clean clean-cache format
 ifeq ($(wildcard Config.mk),)
@@ -81,6 +81,10 @@ endif
 
 ifeq ($(CONFIG_SATA_SUPPORT),true)
 	CFLAGS += -DKERNEL_MOD_AHCI_ENABLED
+endif
+
+ifeq ($(CONFIG_IVSHMEM_SUPPORT), true)
+	CFLAGS += -DKERNEL_MOD_IVSHMEM_ENABLED
 endif
 
 # Debugging
