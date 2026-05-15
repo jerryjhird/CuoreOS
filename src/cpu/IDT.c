@@ -40,6 +40,7 @@ static void idt_set_gate(int n, uint64_t handler, uint16_t sel, uint8_t flags) {
 
 void exception_main(struct trap_frame *tf, const char *description);
 
+// we dont use dev_printf here because unsafe environment
 __attribute__((used))
 void exception_main(struct trap_frame *tf, const char *description) {
 	__asm__ volatile ("cli");

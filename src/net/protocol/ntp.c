@@ -8,26 +8,19 @@ ntp_callback_t ntp_update_cb = NULL; // when NTP response is received this will 
 
 #ifdef DEBUG
 static void ntp_debug_callback(ntp_info_t* info) {
-	dev_puts(&uart16550_dev, "\n( NTP DEBUG HANDLER )\n");
-
-	dev_puts(&uart16550_dev, "unix TS: ");
-	dev_putint(&uart16550_dev, info->utc_timestamp);
-	dev_puts(&uart16550_dev, "\n");
-
-	dev_puts(&uart16550_dev, "stratum: ");
-	dev_putint(&uart16550_dev, (uint64_t)info->stratum);
-	dev_puts(&uart16550_dev, "\n");
-
-	dev_puts(&uart16550_dev,  "ver: ");
-	dev_putint(&uart16550_dev, (uint64_t)info->version);
-	dev_puts(&uart16550_dev,  "\n");
-
-	dev_puts(&uart16550_dev, "delay: ");
-	dev_putint(&uart16550_dev, (uint64_t)info->root_delay);
-	dev_puts(&uart16550_dev, " units\n");
-
-	dev_puts(&uart16550_dev, "Leap(S): ");
-	dev_puts(&uart16550_dev, info->leap_warning ? "Warning\n" : "None\n");
+    dev_printf(&uart16550_dev, 
+        "\n( NTP DEBUG HANDLER )\n"
+        "unix TS: %llu\n"
+        "stratum: %u\n"
+        "ver:     %u\n"
+        "delay:   %u units\n"
+        "Leap(S): %s\n",
+        (unsigned long long)info->utc_timestamp,
+        (unsigned int)info->stratum,
+        (unsigned int)info->version,
+        (unsigned int)info->root_delay,
+        info->leap_warning ? "Warning" : "None"
+    );
 }
 #endif
 

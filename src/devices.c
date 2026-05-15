@@ -1,5 +1,8 @@
 #include "devices.h"
 
+#include <stdarg.h>
+#include "stdio.h"
+
 kernel_char_dev_t *char_devices[MAX_CHAR_DEVICES];
 size_t char_devices_c = 0;
 
@@ -22,6 +25,13 @@ void dev_puts(kernel_char_dev_t* dev, const char* s) {
 	while (*s) {
 		dev->putc(*s++);
 	}
+}
+
+void dev_printf(kernel_char_dev_t *dev, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vprintfcb(dev->putc, fmt, args);
+    va_end(args);
 }
 
 void dev_putint(kernel_char_dev_t* dev, uint64_t n) {
