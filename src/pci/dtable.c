@@ -20,6 +20,10 @@
 #include "pci/drivers/ivshem.h"
 #endif
 
+#ifdef KERNEL_MOD_E1000_ENABLED
+#include "pci/drivers/e1000.h"
+#endif
+
 pci_driver_entry_t pci_discovery_table[] = {
 	// Host Bridge
 	{
@@ -34,7 +38,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.init = NULL // no driver for this
 	},
 	{
-		.name = "ivshmem",
+		.name = "IVSHMEM",
 		.group_id = 0,
 		.vendor_id = PCI_VENDOR_REDHAT,
 		.device_id = PCI_DEVICE_IVSHMEM,
@@ -58,6 +62,21 @@ pci_driver_entry_t pci_discovery_table[] = {
 
 		#ifdef KERNEL_MOD_AC97_ENABLED
 			.init = ac97_init
+		#else
+			.init = NULL
+		#endif
+	},
+	{
+		.name = "Intel E1000 Ethernet Controller",
+		.group_id = 2, // Matches RTL8139 group to prevent dual-init of primary NICs
+		.vendor_id = PCI_VENDOR_INTEL,
+		.device_id = PCI_DEVICE_E1000_QEMU,
+		.class_id = PCI_CLASS_NETWORK,
+		.subclass_id = PCI_SUBCLASS_ETHERNET,
+		.progif = PCI_PROGIF_ANY,
+
+		#ifdef KERNEL_MOD_E1000_ENABLED
+			.init = e1000_init
 		#else
 			.init = NULL
 		#endif
