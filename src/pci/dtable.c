@@ -1,28 +1,12 @@
 #include "pci/pci.h"
+#include <stddef.h>
 
-#ifdef KERNEL_MOD_IDE_ENABLED
 #include "pci/drivers/ide.h"
-#endif
-
-#ifdef KERNEL_MOD_RTL8139_ENABLED
 #include "pci/drivers/rtl8139.h"
-#endif
-
-#ifdef KERNEL_MOD_AC97_ENABLED
 #include "pci/drivers/ac97.h"
-#endif
-
-#ifdef KERNEL_MOD_AHCI_ENABLED
 #include "pci/drivers/ahci.h"
-#endif
-
-#ifdef KERNEL_MOD_IVSHMEM_ENABLED
 #include "pci/drivers/ivshem.h"
-#endif
-
-#ifdef KERNEL_MOD_E1000_ENABLED
 #include "pci/drivers/e1000.h"
-#endif
 
 pci_driver_entry_t pci_discovery_table[] = {
 	// Host Bridge
@@ -68,7 +52,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 	},
 	{
 		.name = "Intel E1000 Ethernet Controller",
-		.group_id = 2, // Matches RTL8139 group to prevent dual-init of primary NICs
+		.group_id = 2,
 		.vendor_id = PCI_VENDOR_INTEL,
 		.device_id = PCI_DEVICE_E1000_QEMU,
 		.class_id = PCI_CLASS_NETWORK,

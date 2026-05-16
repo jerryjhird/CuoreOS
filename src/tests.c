@@ -1,5 +1,7 @@
 typedef int dummy0;
 
+#include "Config.h"
+
 #ifdef DO_KDEVTESTS
 
 #include "tests.h"

@@ -1,6 +1,7 @@
 typedef int dummy0;
 
 // driver for AC'97 sound cards. supports PMIO and MMIO
+#include "Config.h"
 
 #ifdef KERNEL_MOD_AC97_ENABLED
 

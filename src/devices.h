@@ -7,6 +7,7 @@
 #include "cpu/smp/mailbox.h"
 #include "scheduler.h"
 #include "mem/dmalloc.h"
+#include "Config.h"
 
 // character device capabilities
 #define CHAR_DEV_CAP_ON_ERROR (1ULL << 0) // device should be used to display error's (e.g cpu exceptions, panics etc)

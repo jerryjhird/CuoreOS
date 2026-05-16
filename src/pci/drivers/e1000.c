@@ -1,5 +1,8 @@
 typedef int dummy0;
 
+// driver for E1000 eth. supports MMIO
+#include "Config.h"
+
 #ifdef KERNEL_MOD_E1000_ENABLED
 #include "e1000.h"
 #include "mem/paging.h"

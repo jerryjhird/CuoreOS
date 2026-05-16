@@ -1,6 +1,7 @@
 typedef int dummy0;
 
 // driver for ivshmem
+#include "Config.h"
 
 #ifdef KERNEL_MOD_IVSHMEM_ENABLED
 #include "ivshem.h"

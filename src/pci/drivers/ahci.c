@@ -1,6 +1,7 @@
 typedef int dummy0;
 
 // driver for SATA disks. only supports MMIO
+#include "Config.h"
 
 #ifdef KERNEL_MOD_AHCI_ENABLED
 #include "ahci.h"

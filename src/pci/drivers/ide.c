@@ -2,6 +2,7 @@
 typedef int dummy0; // satisfy ISO C / -Wpedantic
 
 // driver for IDE disks. only supports PMIO
+#include "Config.h"
 
 #ifdef KERNEL_MOD_IDE_ENABLED
 #include "devices.h"
