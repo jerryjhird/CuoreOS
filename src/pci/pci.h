@@ -40,6 +40,7 @@
 // memory controller class 0x05
 #define PCI_CLASS_MEMORY	   0x05
 #define PCI_SUBCLASS_RAM_CTRL  0x00
+#define PCI_SUBCLASS_CXL_DEVICE 0x02
 
 // bridge class 0x06
 #define PCI_CLASS_BRIDGE 0x06
@@ -53,6 +54,10 @@
 // processor class 0x0B
 #define PCI_CLASS_PROCESSOR 0x0B
 #define PCI_SUBCLASS_X86	0x40  // Co-processors often live here
+
+// accelerator class 0x12
+#define PCI_CLASS_ACCELERATOR 0x12
+#define PCI_SUBCLASS_ACCEL_CXL 0x00
 
 // any
 #define PCI_VENDOR_ANY 0xFFFF

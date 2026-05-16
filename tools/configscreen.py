@@ -24,7 +24,8 @@ config_groups = {
         "ac97_support": "true",
         "rtl8139_support": "true",
         "e1000_support": "true",
-        "ivshmem_support": "true"
+        "ivshmem_support": "true",
+        "cxl_support": "true"
     },
     "Devices": {
         "max_char_devices": "9",
@@ -91,6 +92,7 @@ HEADER_TEMPLATE = """
 {rtl8139_support_C} KERNEL_MOD_RTL8139_ENABLED
 {ivshmem_support_C} KERNEL_MOD_IVSHMEM_ENABLED
 {e1000_support_C} KERNEL_MOD_E1000_ENABLED
+{cxl_support_C} KERNEL_MOD_CXL_ENABLED
 
 // dev
 #define MAX_CHAR_DEVICES {max_char_devices}

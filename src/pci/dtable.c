@@ -6,6 +6,7 @@
 #include "pci/drivers/ac97.h"
 #include "pci/drivers/ahci.h"
 #include "pci/drivers/ivshmem.h"
+#include "pci/drivers/cxl.h"
 #include "pci/drivers/e1000.h"
 
 pci_driver_entry_t pci_discovery_table[] = {
@@ -20,6 +21,34 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.progif = PCI_PROGIF_ANY,
 
 		.init = NULL // no driver for this
+	},
+	{
+		.name = "Compute Express Link Memory",
+		.group_id = 0,
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_MEMORY,
+		.subclass_id = PCI_SUBCLASS_CXL_DEVICE,
+		.progif = PCI_PROGIF_ANY,
+		#ifdef KERNEL_MOD_CXL_ENABLED
+			.init = cxl_init
+		#else
+			.init = NULL
+		#endif
+	},
+	{
+		.name = "Compute Express Link Accelerator",
+		.group_id = 0,
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_ACCELERATOR,
+		.subclass_id = PCI_SUBCLASS_ACCEL_CXL,
+		.progif = PCI_PROGIF_ANY,
+		#ifdef KERNEL_MOD_CXL_ENABLED
+			.init = cxl_init
+		#else
+			.init = NULL
+		#endif
 	},
 	{
 		.name = "IVSHMEM",
