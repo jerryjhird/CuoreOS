@@ -91,18 +91,19 @@ typedef struct kernel_net_dev_t {
 } kernel_net_dev_t;
 
 typedef enum {
-	VOLATILE, // standard RAM like
-	PERSISTENT, // NVDIMM or flash
-	MMIO_GATE, // bridge to other hardware
-	HOST_TO_GUEST // e.g ivshmem
+	IVSHMEM_NON_PERSISTENT,
+	IVSHMEM_PERSISTENT,
+	CXL_TYPE2_ACCEL_MEM,
+	CXL_TYPE3_VOLATILE,
+	CXL_TYPE3_PERSISTENT
 } extmem_type_t;
 
 typedef struct kernel_extmem_dev_t {
-	char model[32];
 	extmem_type_t type;
-	void*	 virt_addr;
-	uintptr_t phys_addr;
+	uint64_t virt_addr;
+	uint64_t phys_addr;
 	size_t	size;
+
 	void* private_data;
 } kernel_extmem_dev_t;
 
