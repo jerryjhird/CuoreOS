@@ -28,10 +28,10 @@ void dev_puts(kernel_char_dev_t* dev, const char* s) {
 }
 
 void dev_printf(kernel_char_dev_t *dev, const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    vprintfcb(dev->putc, fmt, args);
-    va_end(args);
+	va_list args;
+	va_start(args, fmt);
+	vprintfcb(dev->putc, fmt, args);
+	va_end(args);
 }
 
 void dev_putint(kernel_char_dev_t* dev, uint64_t n) {

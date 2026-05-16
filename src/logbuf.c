@@ -83,10 +83,10 @@ void logbuf_putint(uint64_t n) {
 }
 
 void logbuf_printf(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    vprintfcb(logbuf_putc, fmt, args);
-    va_end(args);
+	va_list args;
+	va_start(args, fmt);
+	vprintfcb(logbuf_putc, fmt, args);
+	va_end(args);
 }
 
 void logbuf_flush(kernel_char_dev_t *target) {

@@ -82,27 +82,27 @@ const uint64_t compile_signature = KERNEL_BUILD_SIGNATURE;
 uint64_t hhdm_offset;
 
 void panic(const char* header_msg, const char* msg) {
-    if (char_devices_c > 0) {
-        for (size_t i = 0; i < char_devices_c; i++) {
-            kernel_char_dev_t* dev = char_devices[i];
+	if (char_devices_c > 0) {
+		for (size_t i = 0; i < char_devices_c; i++) {
+			kernel_char_dev_t* dev = char_devices[i];
 
-            if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR) && dev->initialized) {
-                dev_printf(dev, "\n*** KERNEL PANIC: %s ***\n%s\n\n", header_msg, msg);
-            }
-        }
-    } else { 
+			if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR) && dev->initialized) {
+				dev_printf(dev, "\n*** KERNEL PANIC: %s ***\n%s\n\n", header_msg, msg);
+			}
+		}
+	} else {
 		const char* prefix = "\n*** KERNEL PANIC: ";
-        const char* suffix = " ***\n";
-        const char* newline = "\n\n";
+		const char* suffix = " ***\n";
+		const char* newline = "\n\n";
 
-        for (const char* p = prefix; *p; p++) uart16550_putc(*p);
-        for (const char* p = header_msg; *p; p++) uart16550_putc(*p);
-        for (const char* p = suffix; *p; p++) uart16550_putc(*p);
-        for (const char* p = msg; *p; p++) uart16550_putc(*p);
-        for (const char* p = newline; *p; p++) uart16550_putc(*p);
-    }
+		for (const char* p = prefix; *p; p++) uart16550_putc(*p);
+		for (const char* p = header_msg; *p; p++) uart16550_putc(*p);
+		for (const char* p = suffix; *p; p++) uart16550_putc(*p);
+		for (const char* p = msg; *p; p++) uart16550_putc(*p);
+		for (const char* p = newline; *p; p++) uart16550_putc(*p);
+	}
 
-    for(;;) { __asm__ ("hlt"); }
+	for(;;) { __asm__ ("hlt"); }
 }
 
 ramfs_handle_t initramfs;

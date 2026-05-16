@@ -8,19 +8,19 @@ ntp_callback_t ntp_update_cb = NULL; // when NTP response is received this will 
 
 #ifdef DEBUG
 static void ntp_debug_callback(ntp_info_t* info) {
-    dev_printf(&uart16550_dev, 
-        "\n( NTP DEBUG HANDLER )\n"
-        "unix TS: %llu\n"
-        "stratum: %u\n"
-        "ver:     %u\n"
-        "delay:   %u units\n"
-        "Leap(S): %s\n",
-        (unsigned long long)info->utc_timestamp,
-        (unsigned int)info->stratum,
-        (unsigned int)info->version,
-        (unsigned int)info->root_delay,
-        info->leap_warning ? "Warning" : "None"
-    );
+	dev_printf(&uart16550_dev,
+		"\n( NTP DEBUG HANDLER )\n"
+		"unix TS: %llu\n"
+		"stratum: %u\n"
+		"ver: %u\n"
+		"delay:   %u units\n"
+		"Leap(S): %s\n",
+		(unsigned long long)info->utc_timestamp,
+		(unsigned int)info->stratum,
+		(unsigned int)info->version,
+		(unsigned int)info->root_delay,
+		info->leap_warning ? "Warning" : "None"
+	);
 }
 #endif
 
