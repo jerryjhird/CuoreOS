@@ -4,7 +4,7 @@ typedef int dummy0;
 #include "Config.h"
 
 #ifdef KERNEL_MOD_IVSHMEM_ENABLED
-#include "ivshem.h"
+#include "ivshmem.h"
 #include "pci/pci.h"
 #include "mem/paging.h"
 #include <stddef.h>

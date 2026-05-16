@@ -5,7 +5,7 @@
 #include "pci/drivers/rtl8139.h"
 #include "pci/drivers/ac97.h"
 #include "pci/drivers/ahci.h"
-#include "pci/drivers/ivshem.h"
+#include "pci/drivers/ivshmem.h"
 #include "pci/drivers/e1000.h"
 
 pci_driver_entry_t pci_discovery_table[] = {
