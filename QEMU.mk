@@ -2,8 +2,9 @@ QEMU_USE_CXL ?= false
 QEMU_USE_SHM ?= false
 
 QEMU_MACHINE ?= q35
+QEMU_CORE_COUNT ?= 1 # single-core by default as multicore can be unstable right now
 
-GENERIC_QEMU_FLAGS := -display sdl -cpu qemu64,+rdrand,+rdseed -smp 6 -m 256M -serial stdio -cdrom $(BOOT_ISO) -boot d
+GENERIC_QEMU_FLAGS := -display sdl -cpu qemu64,+rdrand,+rdseed -smp $(QEMU_CORE_COUNT) -m 256M -serial stdio -cdrom $(BOOT_ISO) -boot d
 DISK_QEMU_FLAG := -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
 QEMU_AUDIO_FLAGS := -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
 NET_QEMU_FLAG := -netdev user,id=u1 -device rtl8139,netdev=u1 -object filter-dump,id=f1,netdev=u1,file=network_capture.pcap

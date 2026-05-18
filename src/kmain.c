@@ -169,9 +169,7 @@ static void kernel_main(void) {
 		cores_to_boot = SMP_MAX_CORES;
 	}
 
-	if (mp_response->cpu_count < 2) {
-		logbuf_write("[ SMP  ] Only 1 CPU detected\n");
-	} else {
+	if (mp_response->cpu_count >= 2) {
 		logbuf_write("[ SMP  ] Multiple processors found\n");
 
 		if (mp_response->cpu_count > SMP_MAX_CORES) {
