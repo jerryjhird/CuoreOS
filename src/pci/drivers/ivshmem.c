@@ -7,42 +7,56 @@ typedef int dummy0;
 #include "ivshmem.h"
 #include "pci/pci.h"
 #include "mem/paging.h"
+#include "mem/vmm.h"
 #include <stddef.h>
 #include "logbuf.h"
 #include "mem/mem.h"
 #include "devices.h"
 #include "mem/heap.h"
+#include "panic.h"
 
 void ivshmem_init(pci_dev_t dev) {
-	uint64_t phys_addr = dev.bars[2].base;
-	size_t shm_size = dev.bars[2].size;
+	if (!dev.bars[2].base || !dev.bars[2].size) {
+		panic("IVSHMEM", "bar2 invalid or not present");
+	}
 
-	uintptr_t pml4_phys = vmm_get_pml4();
-	uint64_t* pml4_virt = (uint64_t*)(pml4_phys + hhdm_offset);
+	uintptr_t phys = dev.bars[2].base;
+	size_t size = dev.bars[2].size;
+	size_t pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
 
-	for (size_t i = 0; i < shm_size; i += 4096) {
-		vmm_map_page_noflush(pml4_virt,
-					 phys_addr + i + hhdm_offset,
-					 phys_addr + i,
-					 PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
+	uintptr_t virt = vmm_alloc_pages(pages);
+	if (!virt) { panic("IVSHMEM", "vmm failed to allocate virtual region"); }
+
+	uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
+	for (size_t i = 0; i < pages; i++) {
+		vmm_map_page_noflush(pml4,
+			virt + i * PAGE_SIZE,
+			phys + i * PAGE_SIZE,
+			PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
 	}
 
 	vmm_flush_tlb_all();
 
-	uint64_t virt_addr = phys_addr + hhdm_offset;
-
-	kernel_extmem_dev_t* ext_dev = zalloc(sizeof(kernel_extmem_dev_t));
-
-	ext_dev->type = IVSHMEM_NON_PERSISTENT; // assume non persistent
-	ext_dev->virt_addr = virt_addr;
-	ext_dev->phys_addr = phys_addr;
-	ext_dev->size = shm_size;
-	ext_dev->private_data = NULL;
-
-	if (extmem_devices_c < MAX_EXTMEM_DEVICES) {
-		extmem_devices[extmem_devices_c++] = ext_dev;
+	if (extmem_devices_c >= MAX_EXTMEM_DEVICES) {
+		panic("IVSHMEM", "extmem device table full");
 	}
 
-	logbuf_write("[ SHM  ] IVSHMEM initialized\n");
+	kernel_extmem_dev_t *ext = zalloc(sizeof(kernel_extmem_dev_t));
+
+	ext->type = IVSHMEM_NON_PERSISTENT;
+	ext->virt_addr = virt;
+	ext->phys_addr = phys;
+	ext->size = size;
+	ext->private_data = NULL;
+
+	extmem_devices[extmem_devices_c++] = ext;
+
+	logbuf_printf("[ SHM  ] Initialized IVSHMEM\n"
+						"	  Physical base: %#lx\n"
+						"	  Virtual base:	%#lx\n"
+						"	  Size: %zu MB\n",
+			  			phys,
+			  			virt,
+			  			size / (1024 * 1024));
 }
 #endif
