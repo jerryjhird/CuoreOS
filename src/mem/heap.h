@@ -9,7 +9,7 @@
 #define PAGES_PER_GROWTH 4
 #define KERNEL_HEAP_FLAGS (PTE_PRESENT | PTE_WRITABLE | PTE_NX)
 
-void heap_init(void* start_address, size_t total_size);
+void heap_init(size_t size);
 void* malloc(size_t size); // allocate memory
 void* realloc(void* ptr, size_t new_size);
 void* zalloc(size_t size); // allocate memory and zero it

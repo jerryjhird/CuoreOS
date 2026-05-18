@@ -289,7 +289,7 @@ void _kstartc(void) {
 		ramfs_init(&initramfs, module_request.response->modules[0]->address);
 	}
 
-	heap_init((void*)0xFFFFFFFF90000000, HEAP_SIZE);
+	heap_init(HEAP_SIZE);
 
 	uint32_t idx = __atomic_fetch_add(&cpu_devices_c, 1, __ATOMIC_SEQ_CST);
 	kernel_cpu_dev_t *my_cpu = zalloc(sizeof(kernel_cpu_dev_t));
