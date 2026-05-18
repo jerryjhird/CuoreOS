@@ -35,6 +35,7 @@
 #include "net/protocol/ntp.h"
 #include "net/protocol/dns.h"
 #include "net/protocol/telnet.h"
+#include "mem/vmm.h"
 #include "net/arp.h"
 #include "binfmt/elf64.h"
 
@@ -280,6 +281,7 @@ void _kstartc(void) {
 	gdt_init();
 	idt_init();
 	pma_init();
+	vmm_init();
 
 	if (module_request.response->module_count <= 0) {
 		logbuf_write("[WARN] initramfs not found.\n");
