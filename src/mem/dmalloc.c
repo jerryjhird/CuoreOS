@@ -1,7 +1,6 @@
 #include "dmalloc.h"
 #include "mem/pma.h"
 #include "mem/mem.h"
-#include "mem/heap.h"
 #include "abs.h"
 
 static DMABlock *dma_head = NULL;

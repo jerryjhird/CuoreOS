@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #define HEAP_ALIGNMENT 16
-#define ALIGN(alignment, size) (((size) + (alignment-1)) & ~(alignment-1))
 #define HEAP_MAGIC 0xCAFEBABE
 #define MIN_SPLIT_SIZE 16
 #define PAGES_PER_GROWTH 4
