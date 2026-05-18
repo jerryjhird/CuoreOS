@@ -24,7 +24,6 @@ ifneq ($(MISSING_TOOLS),)
 $(error Install the following utilities: $(MISSING_TOOLS))
 endif
 
-CC := $(CONFIG_CC)
 QEMU_UEFI_FIRMWARE ?= /usr/share/OVMF/OVMF_CODE.fd
 
 SRCDIR := src
@@ -47,30 +46,21 @@ LIMINE_DIR := $(CACHEDIR)/limine
 FLANTERM_DIR := $(CACHEDIR)/flanterm
 DISK_IMG := $(CACHEDIR)/qemu-disk.img
 
-# colors
-BLUE := \033[1;34m
-CYAN := \033[1;36m
-GREEN := \033[1;32m
-RESET := \033[0m
-
 # flags
-CFLAGS := -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
+# -fno-pie/-fno-pic for systems that auto enable PIE/PIC like microslop windows subsystem for linux
+CFLAGS := -fno-pie -fno-pic -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
 CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wmissing-declarations
 GCC_WARNINGS := -Wlogical-op
 
-ifeq ($(CONFIG_CC),gcc)
-	CFLAGS += $(GCC_WARNINGS)
-endif
-
-LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000
+LDFLAGS := -T kernel.ld -nostdlib -static -z max-page-size=0x1000 -no-pie
 CFLAGS += $(CC_WARNINGS) $(CONFIG_ADDITIONAL_CFLAGS)
 LDFLAGS += $(CONFIG_ADDITIONAL_LDFLAGS)
 
 SIG := 0x$(shell head -c 8 /dev/urandom | xxd -p)
 CFLAGS += -DKERNEL_BUILD_SIGNATURE=$(SIG)
 
-.PHONY: all clean run style format compile_commands.json menuconfig print_config
-all: print_config deps_setup $(OBJS) $(KERNEL_ELF) compile_commands.json $(DISK_IMG) $(INITRD) $(BOOT_ISO)
+.PHONY: all clean run style format compile_commands.json menuconfig
+all: deps_setup $(OBJS) $(KERNEL_ELF) $(DISK_IMG) $(INITRD) $(BOOT_ISO) compile_commands.json
 
 $(OBJS): | deps_setup
 
@@ -83,15 +73,6 @@ endif
 ifeq ($(CONFIG_BIOS_SUPPORT),true)
 	FIRMWARE_SUPPORT_LIST += BIOS
 endif
-
-print_config:
-	@echo -e "$(BLUE)CuoreOS Main Config:$(RESET)"
-	@echo -e "$(CYAN)  Firmware: $(RESET)$(FIRMWARE_SUPPORT_LIST)"
-	@echo -e "$(CYAN)  Compiler: $(RESET)$(CC)"
-	@echo -e "$(CYAN)  Additional CFLAGS: $(RESET)$(CONFIG_ADDITIONAL_CFLAGS)"
-	@echo -e "$(CYAN)  Additional LDFLAGS: $(RESET)$(CONFIG_ADDITIONAL_LDFLAGS)"
-	@echo -e "$(CYAN)  Limine: $(RESET)$(CONFIG_LIMINE_FLAGS) $(CONFIG_LIMINE)"
-	@echo -e "$(CYAN)  Flanterm: $(RESET)$(CONFIG_FLANTERM_FLAGS) $(CONFIG_FLANTERM)"
 
 menuconfig:
 	@python3 $(TOOLS)/configscreen.py $(CUOREOS_VERSION_NAME) $(SYSTEM_CONFIG_VERSION)
@@ -109,34 +90,33 @@ deps_setup:
 	make -C $(LIMINE_DIR)
 
 compile_commands.json: $(C_SRCS) $(ASM_SRCS) $(TOOL_SRCS) $(FORCE_REBUILD)
-	@echo "Generating compile_commands.json"
-	@echo "[" > compile_commands.json
-	@for src in $(C_SRCS) $(ASM_SRCS); do \
-		echo "  {" >> compile_commands.json; \
-		echo "    \"directory\": \"$(CURDIR)\"," >> compile_commands.json; \
-		echo "    \"command\": \"$(CC) $(CFLAGS) -c $$src\"," >> compile_commands.json; \
-		echo "    \"file\": \"$$src\"" >> compile_commands.json; \
-		echo "  }," >> compile_commands.json; \
+	@echo "[" > $@
+	@comma=""; \
+	for src in $(C_SRCS) $(ASM_SRCS); do \
+		rel_path="$${src#$(SRCDIR)/}"; \
+		obj="$(BUILDDIR)/$${rel_path%.*}.o"; \
+		printf "%s\n  {\n    \"directory\": \"%s\",\n    \"command\": \"%s %s -c %s\",\n    \"file\": \"%s\",\n    \"output\": \"%s\"\n  }" \
+			"$$comma" "$(CURDIR)" "$(CONFIG_CC)" "$(subst ",\",$(CFLAGS))" "$$src" "$$src" "$$obj" >> $@; \
+		comma=","; \
 	done
-	@sed -i '$$d' compile_commands.json
-	@echo "  }" >> compile_commands.json
-	@echo "]" >> compile_commands.json
+	@printf "\n]\n" >> $@
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c $(FORCE_REBUILD)
 	@mkdir -p $(dir $@)
-	@echo " [ $(CC) ] $<"
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo " [ $(CONFIG_CC) ] $<"
+	@$(CONFIG_CC) $(CFLAGS) -c $< -o $@
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.S $(FORCE_REBUILD)
 	@mkdir -p $(dir $@)
-	@echo " [ $(CC) ] $<"
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo " [ $(CONFIG_CC) ] $<"
+	@$(CONFIG_CC) $(CFLAGS) -c $< -o $@
 
 $(BUILDDIR)/$(TOOLS)/mkramfs: $(TOOLS)/mkramfs.c
 	@mkdir -p $(dir $@)
-	@echo " [ $(CC) ] [ TOOL ] $<"
-	@$(CC) -std=c11 -I./ $< -o $@
+	@echo " [ $(CONFIG_CC) ] [ TOOL ] $<"
+	@$(CONFIG_CC) -std=c11 -I./ $< -o $@
 
+# kernel.ld as a placeholder as we dont actually have anything to put on the initramfs right now
 $(INITRD): $(BUILDDIR)/$(TOOLS)/mkramfs
 	$(BUILDDIR)/$(TOOLS)/mkramfs $@ kernel.ld
 
@@ -146,7 +126,7 @@ $(DISK_IMG):
 
 $(KERNEL_ELF): $(OBJS)
 	@echo " [ LINK ] $@"
-	@$(CC) $(LDFLAGS) $(OBJS) -o $@
+	@$(CONFIG_CC) $(LDFLAGS) $(OBJS) -o $@
 	@cp $@ $(BUILDDIR)/kernel.sym
 	@objcopy --strip-debug --strip-unneeded -R .eh_frame -R .note.gnu.property -R .note.gnu.build-id -R .comment $@
 
@@ -185,11 +165,8 @@ format:
 	./format tools/
 
 clean:
-	rm -rf $(BUILDDIR) compile_commands.json network_capture.pcap
+	rm -rf $(BUILDDIR) network_capture.pcap
 
 clean-cache: clean
-#   we use this for compile time dependencies and qemu runtime dependencies like the disk image
 	rm -rf $(CACHEDIR)
-
-#   some external tools use this
 	rm -rf .cache
