@@ -36,6 +36,7 @@
 #include "net/protocol/dns.h"
 #include "net/protocol/telnet.h"
 #include "net/arp.h"
+#include "binfmt/elf64.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -130,10 +131,6 @@ static void uart16550_console_task(void) {
 			}
 		#endif
 	}
-}
-
-static void idle_task(void) {
-	while (1) {}
 }
 
 static void startup_sound_task(void) {
@@ -243,9 +240,19 @@ static void kernel_main(void) {
 	logbuf_clear();
 
 	scheduler_init();
-	scheduler_create_task(uart16550_console_task, 1);
-	scheduler_create_task(idle_task, 2);
-	scheduler_create_task(startup_sound_task, 3);
+
+	task_t *uart_console_t = scheduler_create_task(uart16550_console_task);
+	scheduler_enroll_task(uart_console_t);
+
+	ramfs_file_t init = ramfs_get_file(&initramfs, "init.elf");
+	if (init.data != NULL) {
+		task_t *init_system_t = elf64_alloc(init.data, init.size);
+		scheduler_enroll_task(init_system_t);
+	}
+
+	task_t *startup_sound_task_t = scheduler_create_task(startup_sound_task);
+	scheduler_enroll_task(startup_sound_task_t);
+
 	scheduler_start();
 
 	for(;;) { __asm__ ("hlt"); }
