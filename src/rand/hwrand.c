@@ -1,4 +1,4 @@
-#include "rdrand.h"
+#include "hwrand.h"
 #include "cpu/cpuid.h"
 #include <stdint.h>
 #include <stdbool.h>

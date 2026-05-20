@@ -22,7 +22,6 @@
 #include "_time.h"
 #include "cpu/MSR.h"
 #include "bitmask.h"
-#include "cpu/rdrand.h"
 #include "multimedia/beep.h"
 #include "acpi/mcfg.h"
 #include "acpi/fadt.h"
@@ -192,16 +191,6 @@ static void kernel_main(void) {
 
 		while (__atomic_load_n(&cpu_devices_c, __ATOMIC_ACQUIRE) < cores_to_boot) {
 			__asm__ volatile("pause");
-		}
-	}
-
-	// random test
-	uint64_t random = 0;
-	if (!rdrand_supported()) {
-		logbuf_write("[ RNG  ] rdrand not supported\n");
-	} else {
-		if (rdrand64(&random)) {
-			logbuf_printf("[ RNG  ] %llu\n", random);
 		}
 	}
 
