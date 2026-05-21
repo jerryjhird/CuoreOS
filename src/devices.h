@@ -87,7 +87,7 @@ typedef struct kernel_net_dev_t {
 	void (*on_received)(struct kernel_net_dev_t* dev, void* data, size_t len);
 
 	void* private_data;
-	bool link_up;
+	bool initialized;
 } kernel_net_dev_t;
 
 typedef enum {
