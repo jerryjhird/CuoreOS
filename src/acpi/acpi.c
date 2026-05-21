@@ -1,4 +1,5 @@
 #include "acpi.h"
+
 #include "mem/mem.h"
 #include "kstate.h"
 #include "abs.h"
@@ -20,7 +21,7 @@ void acpi_init(void) {
 	}
 }
 
-static bool acpi_checksum(struct acpi_sdt_header* table) {
+bool acpi_checksum(struct acpi_sdt_header* table) {
 	uint8_t sum = 0;
 	uint8_t* bytes = (uint8_t*)table;
 

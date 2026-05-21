@@ -30,6 +30,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.class_id = PCI_CLASS_MEMORY,
 		.subclass_id = PCI_SUBCLASS_CXL_DEVICE,
 		.progif = PCI_PROGIF_ANY,
+		.required_capabilities = PCI_CAP_ECAM,
 		#ifdef KERNEL_MOD_CXL_ENABLED
 			.init = cxl_init
 		#else
@@ -44,6 +45,7 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.class_id = PCI_CLASS_ACCELERATOR,
 		.subclass_id = PCI_SUBCLASS_ACCEL_CXL,
 		.progif = PCI_PROGIF_ANY,
+		.required_capabilities = PCI_CAP_ECAM,
 		#ifdef KERNEL_MOD_CXL_ENABLED
 			.init = cxl_init
 		#else

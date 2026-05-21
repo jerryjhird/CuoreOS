@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct acpi_sdt_header {
 	char signature[4];
@@ -36,3 +37,4 @@ struct rsdp_v2 {
 
 void acpi_init(void);
 void* acpi_find_sdt(const char* signature);
+bool acpi_checksum(struct acpi_sdt_header* table);

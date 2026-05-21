@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "acpi.h"
 
 struct mcfg_entry {
@@ -16,6 +17,8 @@ struct mcfg_table {
 	uint64_t reserved;
 	struct mcfg_entry entries[];
 } __attribute__((packed));
+
+extern bool mcfg_is_initialized;
 
 void mcfg_init(void);
 void* mcfg_get_device_addr(uint16_t segment, uint8_t bus, uint8_t slot, uint8_t func);

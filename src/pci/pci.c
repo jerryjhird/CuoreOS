@@ -11,6 +11,16 @@ extern pci_driver_entry_t pci_discovery_table[];
 // 32 bit access
 //
 
+static bool pci_check_driver_capabilities(uint32_t required_caps) {
+	if ((required_caps & PCI_CAP_ECAM) && !mcfg_is_initialized) {
+		return false;
+	}
+
+	// will add other checks here when i add other features
+
+	return true;
+}
+
 uint32_t pci_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset) {
 	// try PCIe ECAM first
 	void* addr = mcfg_get_device_addr(0, (uint8_t)bus, (uint8_t)slot, (uint8_t)func);
@@ -230,6 +240,11 @@ void pci_init(void) {
 
 			if (match) {
 				dev->claimed = true;
+
+				if (!pci_check_driver_capabilities(entry->required_capabilities)) {
+					logbuf_printf("[ PCI  ] skipping initialization of %s  reason: Missing capabilities\n", entry->name);
+					continue; // try next driver
+				}
 
 				if (entry->group_id != 0) {
 					claimed_groups |= (1 << entry->group_id);

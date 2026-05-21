@@ -97,6 +97,11 @@ typedef struct {
 
 typedef void (*pci_init_fn)(pci_dev_t dev);
 
+typedef enum {
+	PCI_CAP_NONE = 0,
+	PCI_CAP_ECAM = (1 << 0),
+} pci_capability_t;
+
 typedef struct {
 	uint16_t vendor_id;
 	uint16_t device_id;
@@ -107,6 +112,7 @@ typedef struct {
 
 	// parser configuration
 	uint16_t group_id; // 0 = always load if found | > 0 = only load one per group
+	uint32_t required_capabilities; // driver requires these capabilities (ca pci_capability_t)
 
 	const char* name;
 	pci_init_fn init;

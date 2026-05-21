@@ -8,6 +8,7 @@
 static struct mcfg_table* mcfg_ptr = NULL;
 static size_t mcfg_entry_count = 0;
 static struct mcfg_entry* primary_entry = NULL;
+bool mcfg_is_initialized = false;
 
 void mcfg_init(void) {
 	mcfg_ptr = (struct mcfg_table*)acpi_find_sdt("MCFG");
@@ -23,6 +24,8 @@ void mcfg_init(void) {
 	if (LIKELY(mcfg_entry_count > 0 && mcfg_ptr->entries[0].segment_group == 0)) {
 		primary_entry = &mcfg_ptr->entries[0];
 	}
+
+	mcfg_is_initialized = true;
 
 	logbuf_printf("[ MCFG ] Found MCFG at %p, entries: %zu\n", (void*)mcfg_ptr, (size_t)mcfg_entry_count);
 }
