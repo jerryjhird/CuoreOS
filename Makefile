@@ -40,6 +40,7 @@ DEPS := $(OBJS:.o=.d)
 KERNEL_ELF := $(BUILDDIR)/kernel.elf
 BOOT_ISO := $(BUILDDIR)/Cuore.x86-64.iso
 ISO_ROOT := $(BUILDDIR)/iso_root
+SYMTABLE := $(BUILDDIR)/symtable.data
 INITRD := $(BUILDDIR)/initrd.img
 
 LIMINE_DIR := $(CACHEDIR)/limine
@@ -116,9 +117,11 @@ $(BUILDDIR)/$(TOOLS)/mkramfs: $(TOOLS)/mkramfs.c
 	@echo " [ $(CONFIG_CC) ] [ TOOL ] $<"
 	@$(CONFIG_CC) -std=c11 -I./ $< -o $@
 
-# kernel.ld as a placeholder as we dont actually have anything to put on the initramfs right now
-$(INITRD): $(BUILDDIR)/$(TOOLS)/mkramfs
-	$(BUILDDIR)/$(TOOLS)/mkramfs $@ kernel.ld
+$(SYMTABLE):
+	python3 $(TOOLS)/mksymtable.py $(BUILDDIR)/kernel.sym $(SYMTABLE)
+
+$(INITRD): $(BUILDDIR)/$(TOOLS)/mkramfs $(SYMTABLE)
+	$(BUILDDIR)/$(TOOLS)/mkramfs $@ $(SYMTABLE)
 
 $(DISK_IMG):
 	@echo " [ qemu-img ] $(DISK_IMG)"

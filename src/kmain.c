@@ -37,6 +37,7 @@
 #include "mem/vmm.h"
 #include "net/arp.h"
 #include "binfmt/elf64.h"
+#include "symtable.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -276,6 +277,14 @@ void _kstartc(void) {
 		logbuf_write("[WARN] initramfs not found.\n");
 	} else {
 		ramfs_init(&initramfs, module_request.response->modules[0]->address);
+	}
+
+	ramfs_file_t sym_file = ramfs_get_file(&initramfs, "symtable.data");
+
+	if (sym_file.data == NULL || sym_file.size == 0) {
+		panic("SYMTABLE", "failed to find 'symtable.data' in initramfs");
+	} else {
+		symtable_init(sym_file.data, (size_t)sym_file.size);
 	}
 
 	heap_init(HEAP_SIZE);
