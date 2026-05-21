@@ -294,12 +294,11 @@ void _kstartc(void) {
 	cpu_devices[idx] = my_cpu;
 	my_cpu->self = my_cpu;
 
-	__asm__ volatile ("wrmsr" : : "c"(MSR_GS_BASE), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32)));
+	WRITE_MSR(MSR_GS_BASE, (uint64_t)my_cpu);
 
 	my_cpu->logical_id = idx;
 	my_cpu->lapic_id = hardware_id;
 	my_cpu->ticks = 1;
-
 	my_cpu->status = CPU_BUSY; // BSP is always busy
 
 	uart16550_init();

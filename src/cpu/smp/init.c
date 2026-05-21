@@ -44,7 +44,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	cpu_devices[logical_id] = my_cpu;
 	my_cpu->self = my_cpu;
 
-	__asm__ volatile ("wrmsr" : : "c"(MSR_GS_BASE), "a"((uint32_t)(uint64_t)my_cpu), "d"((uint32_t)((uint64_t)my_cpu >> 32))); 	// store a pointer to this CPU block in GS base
+	WRITE_MSR(MSR_GS_BASE, (uint64_t)my_cpu);
 
 	my_cpu->logical_id = logical_id;
 	my_cpu->lapic_id = mp->lapic_id;;

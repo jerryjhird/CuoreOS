@@ -53,7 +53,7 @@ void lapic_init(uintptr_t base_addr) {
 
 	if (!(apic_base & (1ULL << 11))) {
 		apic_base |= (1ULL << 11);
-		write_msr(MSR_IA32_APIC_BASE, apic_base);
+		WRITE_MSR(MSR_IA32_APIC_BASE, apic_base);
 	}
 
 	lapic_write(LAPIC_REG_TPR, 0);
