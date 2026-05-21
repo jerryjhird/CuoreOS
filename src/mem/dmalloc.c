@@ -67,16 +67,18 @@ void dmfree(uint64_t virt_addr) {
 
 	curr->is_free = true;
 
-	if (curr->next && curr->next->is_free && (curr->phys_addr + sizeof(DMABlock) + curr->size == curr->next->phys_addr)) {
+	if (curr->next && curr->next->is_free && ((uint64_t)curr + sizeof(DMABlock) + curr->size == (uint64_t)curr->next)) {
 		curr->size += sizeof(DMABlock) + curr->next->size;
 		curr->next = curr->next->next;
 		if (curr->next) curr->next->prev = curr;
 	}
 
-	if (curr->prev && curr->prev->is_free && (curr->prev->phys_addr + sizeof(DMABlock) + curr->prev->size == curr->phys_addr)) {
+	if (curr->prev && curr->prev->is_free && ((uint64_t)curr->prev + sizeof(DMABlock) + curr->prev->size == (uint64_t)curr)) {
 		DMABlock *p = curr->prev;
 		p->size += sizeof(DMABlock) + curr->size;
 		p->next = curr->next;
 		if (curr->next) curr->next->prev = p;
+
+		curr = p;
 	}
 }
