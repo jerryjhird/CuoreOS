@@ -17,6 +17,8 @@ typedef int dummy0;
 #include <stdint.h>
 #include <string.h>
 #include "_time.h"
+#include "disk/ata.h"
+#include "panic.h"
 
 static void ahci_stop_cmd(hba_port_t *port) {
 	port->cmd &= ~HBA_PxCMD_ST;
@@ -159,27 +161,13 @@ void ahci_init(pci_dev_t pdev) {
 			uint16_t* id_data = (uint16_t*)id_res.virt;
 
 			if (ahci_exec_cmd(ddev, 0, id_res, 1, 0xEC, false) == 0) {
-				for (int k = 0; k < 20; k++) {
-					ddev->model[k * 2]   = (char)(id_data[27 + k] >> 8);
-					ddev->model[k * 2 + 1] = (char)(id_data[27 + k] & 0xFF);
-				}
-				ddev->model[40] = '\0';
-
-				for (int k = 39; k > 0 && ddev->model[k] == ' '; k--) ddev->model[k] = '\0';
-
-				uint64_t lba48_sectors = 0;
-				memcpy(&lba48_sectors, &id_data[100], sizeof(uint64_t));
-
-				uint32_t lba28_sectors = 0;
-				memcpy(&lba28_sectors, &id_data[60], sizeof(uint32_t));
-
-				ddev->total_sectors = lba48_sectors;
-				if (ddev->total_sectors == 0) {
-					ddev->total_sectors = lba28_sectors;
-				}
+				ata_identity_t identity_data = ata_identify(id_data);
+				memcpy(ddev->model, identity_data.model, sizeof(ddev->model));
+				ddev->total_sectors = identity_data.total_sectors;
 			} else {
-				memcpy(ddev->model, "SATA DRIVE(Unknown Model)", 26);
+				panic("AHCI", "Failed to IDENTIFY");
 			}
+
 			dmfree(id_res.virt);
 		}
 

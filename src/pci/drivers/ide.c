@@ -15,6 +15,7 @@ typedef int dummy0; // satisfy ISO C / -Wpedantic
 #include "_time.h"
 #include "ide.h"
 #include <string.h>
+#include "disk/ata.h"
 
 static uint8_t ide_read_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer) {
 	uint16_t base = dev->port_base;
@@ -110,22 +111,9 @@ void ide_init(pci_dev_t pdev) {
 	uint16_t data[256];
 	insw(base + IDE_REG_DATA, data, 256);
 
-	if (data[83] & (1 << 10)) {
-		dev->total_sectors = *(uint64_t*)&data[100];
-	} else {
-		dev->total_sectors = *(uint32_t*)&data[60];
-	}
-
-	for (int i = 0; i < 20; i++) {
-		uint16_t val = data[27 + i];
-		dev->model[i * 2] = (char)(val >> 8);
-		dev->model[i * 2 + 1] = (char)(val & 0xFF);
-	}
-	dev->model[40] = '\0';
-
-	for (int i = 39; i >= 0 && dev->model[i] == ' '; i--) {
-		dev->model[i] = '\0';
-	}
+	ata_identity_t identity = ata_identify(data);
+	memcpy(dev->model, identity.model, sizeof(dev->model));
+	dev->total_sectors = identity.total_sectors;
 
 	dev->port_base = base;
 	dev->read_sectors = ide_read_sectors;
