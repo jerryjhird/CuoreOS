@@ -50,6 +50,10 @@
 // serial bus class 0x0C
 #define PCI_CLASS_SERIAL 0x0C
 #define PCI_SUBCLASS_USB 0x03
+	#define PCI_PROGIF_UHCI 0x00
+	#define PCI_PROGIF_OHCI 0x10
+	#define PCI_PROGIF_EHCI 0x20
+	#define PCI_PROGIF_XHCI 0x30
 
 // processor class 0x0B
 #define PCI_CLASS_PROCESSOR 0x0B
@@ -107,7 +111,8 @@ typedef enum {
 	DEVICE_BUFFER_IS_FULL = 8,
 	CARD_NOT_PRESENT = 9,
 	DRIVER_UNSUPPORTED_CARD = 10,
-	DRIVER_UNSUPPORTED_HOST = 11
+	DRIVER_UNSUPPORTED_HOST = 11,
+	__PCI_STATUS_COUNT // should always be last
 } pci_driver_status;
 
 typedef pci_driver_status (*pci_init_fn)(pci_dev_t dev);
