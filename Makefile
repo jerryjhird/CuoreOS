@@ -117,7 +117,7 @@ $(BUILDDIR)/$(TOOLS)/mkramfs: $(TOOLS)/mkramfs.c
 	@echo " [ $(CONFIG_CC) ] [ TOOL ] $<"
 	@$(CONFIG_CC) -std=c11 -I./ $< -o $@
 
-$(SYMTABLE):
+$(SYMTABLE): $(KERNEL_ELF)
 	python3 $(TOOLS)/mksymtable.py $(BUILDDIR)/kernel.sym $(SYMTABLE)
 
 $(INITRD): $(BUILDDIR)/$(TOOLS)/mkramfs $(SYMTABLE)
