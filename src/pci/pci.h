@@ -95,7 +95,22 @@ typedef struct {
 	bool claimed;
 } pci_dev_t;
 
-typedef void (*pci_init_fn)(pci_dev_t dev);
+typedef enum {
+	DRIVER_OK = 0,
+	CORRUPTED_FIRMWARE_TABLE= 1,
+	HOST_HARDWARE_FAILURE = 2,
+	CARD_HARDWARE_FAILURE = 3,
+	CARD_HARDWARE_STALLING = 4,
+	INVALID_BAR = 5,
+	DOWNLOAD_MORE_RAM = 6, // out of memory
+	DOWNLOAD_MORE_RAM_32BIT = 7, // out of memory under the 4gb mark
+	DEVICE_BUFFER_IS_FULL = 8,
+	CARD_NOT_PRESENT = 9,
+	DRIVER_UNSUPPORTED_CARD = 10,
+	DRIVER_UNSUPPORTED_HOST = 11
+} pci_driver_status;
+
+typedef pci_driver_status (*pci_init_fn)(pci_dev_t dev);
 
 typedef enum {
 	PCI_CAP_NONE = 0,

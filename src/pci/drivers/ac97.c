@@ -146,7 +146,7 @@ static struct trap_frame* ac97_irq_handler(struct trap_frame* tf) {
 	return tf;
 }
 
-void ac97_init(pci_dev_t dev) {
+pci_driver_status ac97_init(pci_dev_t dev) {
 	ac97_state_t* state = zalloc(sizeof(ac97_state_t));
 
 	state->nambar  = dev.bars[0].base;
@@ -216,6 +216,8 @@ void ac97_init(pci_dev_t dev) {
 	logbuf_write("[ AC97 ] Initialized ");
 	logbuf_write(adev->model);
 	logbuf_write("\n");
+
+	return DRIVER_OK;
 }
 
 #endif

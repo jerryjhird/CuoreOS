@@ -51,4 +51,4 @@ typedef struct {
 	uint64_t* pml4;
 } ahci_driver_state_t;
 
-void ahci_init(pci_dev_t pdev);
+pci_driver_status ahci_init(pci_dev_t pdev);

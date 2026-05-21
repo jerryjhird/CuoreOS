@@ -58,4 +58,4 @@ typedef struct rtl8139_state {
 	uint8_t tx_cur;
 } rtl8139_state_t;
 
-void rtl8139_init(pci_dev_t pdev);
+pci_driver_status rtl8139_init(pci_dev_t pdev);

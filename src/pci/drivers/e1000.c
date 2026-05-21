@@ -39,7 +39,7 @@ static uint16_t e1000_eeprom_read(e1000_state_t* s, uint8_t addr) {
 	return (uint16_t)(tmp >> 16);
 }
 
-void e1000_init(pci_dev_t dev) {
+pci_driver_status e1000_init(pci_dev_t dev) {
 	e1000_state_t* s = zalloc(sizeof(e1000_state_t));
 	uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
 
@@ -58,5 +58,6 @@ void e1000_init(pci_dev_t dev) {
 
 	const char* model_name = e1000_get_model(dev.device_id);
 	logbuf_printf("[ ETH  ] Found %s with MAC: %M\n", model_name, s->mac);
+	return DRIVER_OK;
 }
 #endif

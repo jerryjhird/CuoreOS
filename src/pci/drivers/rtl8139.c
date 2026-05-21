@@ -1,3 +1,4 @@
+#include "pci/pci.h"
 typedef int dummy0;
 
 // driver for rtl8139 ethernet controller. supports PMIO and MMIO
@@ -201,11 +202,8 @@ static void rtl_set_promiscuous(kernel_net_dev_t* dev, bool enabled) {
 	rtl_write32(state, RTL_REG_RCR, rcr);
 }
 
-void rtl8139_init(pci_dev_t pdev) {
+pci_driver_status rtl8139_init(pci_dev_t pdev) {
 	rtl8139_state_t* state = zalloc(sizeof(rtl8139_state_t));
-	if (!state) {
-		panic("RTL8139", "failed to allocate state");
-	}
 
 	state->magic = RTL8139_MAGIC;
 
@@ -221,7 +219,7 @@ void rtl8139_init(pci_dev_t pdev) {
 		state->base = phys + hhdm_offset;
 	} else {
 		if (!pdev.bars[0].is_io || pdev.bars[0].base == 0) {
-			panic("RTL8139", "no usable bar");
+			return INVALID_BAR;
 		}
 		state->base = pdev.bars[0].base;
 	}
@@ -235,13 +233,13 @@ void rtl8139_init(pci_dev_t pdev) {
 	}
 
 	if (rtl_read8(state, RTL_REG_COMMAND) & RTL_CMD_RESET) {
-		panic("RTL8139", "reset timed out");
+		return CARD_HARDWARE_STALLING;
 	}
 
 	// rx buffer: 8k + wrap guard pages
 	state->rx_buffer_phys = pma_alloc_pages_low(RTL_RX_BUF_PAGES);
 	if (!state->rx_buffer_phys) {
-		panic("RTL8139", "rx buffer alloc failed");
+		return DOWNLOAD_MORE_RAM_32BIT;
 	}
 
 	state->rx_buffer = (uint8_t*)(state->rx_buffer_phys + hhdm_offset);
@@ -252,7 +250,7 @@ void rtl8139_init(pci_dev_t pdev) {
 	// tx buffers: 4 * 2k descriptors
 	state->tx_buffer_phys = pma_alloc_pages_low(RTL_TX_BUF_PAGES);
 	if (!state->tx_buffer_phys) {
-		panic("RTL8139", "tx buffer alloc failed");
+		return DOWNLOAD_MORE_RAM_32BIT;
 	}
 
 	state->tx_cur = 0;
@@ -273,9 +271,6 @@ void rtl8139_init(pci_dev_t pdev) {
 	irq_install_handler(0, vector, rtl8139_irq_handler);
 
 	kernel_net_dev_t* ndev = zalloc(sizeof(kernel_net_dev_t));
-	if (!ndev) {
-		panic("RTL8139", "failed to allocate net device");
-	}
 
 	for (int i = 0; i < 6; i++) {
 		ndev->mac[i] = rtl_read8(state, RTL_REG_MAC + i);
@@ -292,6 +287,7 @@ void rtl8139_init(pci_dev_t pdev) {
 	active_net_device = ndev;
 
 	logbuf_printf("[ ETH  ] Initialized %s with MAC: %M\n", ndev->model, ndev->mac);
+	return DRIVER_OK;
 }
 
 #endif

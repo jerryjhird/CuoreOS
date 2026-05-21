@@ -9,6 +9,8 @@
 #include "pci/drivers/cxl.h"
 #include "pci/drivers/e1000.h"
 
+#include "Config.h"
+
 pci_driver_entry_t pci_discovery_table[] = {
 	// Host Bridge
 	{

@@ -99,7 +99,7 @@ static uint8_t ahci_write(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, 
 	return ahci_exec_cmd(dev, lba, buffer, (uint16_t)count, 0x35, true);
 }
 
-void ahci_init(pci_dev_t pdev) {
+pci_driver_status ahci_init(pci_dev_t pdev) {
 	hba_mem_t* abar = (hba_mem_t*)(pdev.bars[5].base + hhdm_offset);
 
 	if (abar->cap2 & 0x1) {
@@ -165,7 +165,7 @@ void ahci_init(pci_dev_t pdev) {
 				memcpy(ddev->model, identity_data.model, sizeof(ddev->model));
 				ddev->total_sectors = identity_data.total_sectors;
 			} else {
-				panic("AHCI", "Failed to IDENTIFY");
+				return CARD_HARDWARE_FAILURE; // if identify somehow failed
 			}
 
 			dmfree(id_res.virt);
@@ -176,7 +176,10 @@ void ahci_init(pci_dev_t pdev) {
 		logbuf_write("\n");
 
 		disk_devices[disk_devices_c++] = ddev;
+		return DRIVER_OK;
 	}
+
+	return DRIVER_OK;
 }
 
 #endif

@@ -70,13 +70,13 @@ static uint8_t ide_write_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t 
 	return 0;
 }
 
-void ide_init(pci_dev_t pdev) {
+pci_driver_status ide_init(pci_dev_t pdev) {
 	uint16_t base = (pdev.bars[0].is_io && pdev.bars[0].base != 0)
 					? (uint16_t)pdev.bars[0].base
 					: 0x1F0;
 
 	uint8_t status = inb(base + IDE_REG_STATUS);
-	if (status == 0xFF) return;
+	if (status == 0xFF) return CARD_NOT_PRESENT;
 
 	outb(base + IDE_REG_DRIVE_SEL, 0xA0);
 	usleep(1);
@@ -88,23 +88,19 @@ void ide_init(pci_dev_t pdev) {
 	outb(base + IDE_REG_COMMAND, IDE_CMD_IDENTIFY);
 
 	status = inb(base + IDE_REG_STATUS);
-	if (status == 0) return;
+	if (status == 0) return CARD_HARDWARE_STALLING;
 
 	while (inb(base + IDE_REG_STATUS) & IDE_STATUS_BSY);
 
 	if (inb(base + IDE_REG_LBA_MID) == 0x14 && inb(base + IDE_REG_LBA_HIGH) == 0xEB) {
-		return;
+		return DRIVER_UNSUPPORTED_CARD;
 	}
 
 	while (!(inb(base + IDE_REG_STATUS) & IDE_STATUS_DRQ)) {
-		if (inb(base + IDE_REG_STATUS) & 0x01) return;
+		if (inb(base + IDE_REG_STATUS) & 0x01) return CARD_HARDWARE_FAILURE;
 	}
 
 	kernel_disk_dev_t* dev = zalloc(sizeof(kernel_disk_dev_t));
-	if (!dev) {
-		logbuf_write("[ IDE  ] Critical: Failed to allocate device struct!\n");
-		return;
-	}
 
 	memset(dev, 0, sizeof(kernel_disk_dev_t));
 
@@ -122,6 +118,7 @@ void ide_init(pci_dev_t pdev) {
 	logbuf_printf("[ IDE  ] Found \"%s\" (%llu MiB)\n",  dev->model, (unsigned long long)(dev->total_sectors / 2048));
 
 	disk_devices[disk_devices_c++] = dev;
+	return DRIVER_OK;
 }
 
 #endif

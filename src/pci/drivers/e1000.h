@@ -103,4 +103,4 @@ typedef struct {
 
 typedef struct kernel_net_dev_t kernel_net_dev_t;
 
-void e1000_init(pci_dev_t dev);
+pci_driver_status e1000_init(pci_dev_t dev);

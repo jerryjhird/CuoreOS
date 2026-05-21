@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pci/pci.h"
-#include "devices.h"
 
 #define AC97_MIXER_RESET 0x00
 #define AC97_MASTER_VOLUME 0x02
@@ -39,4 +38,4 @@ typedef struct {
 	bool is_mmio;
 } ac97_state_t;
 
-void ac97_init(pci_dev_t dev);
+pci_driver_status ac97_init(pci_dev_t dev);

@@ -19,4 +19,4 @@
 #define IDE_SEL_MASTER 0xA0
 #define IDE_CMD_IDENTIFY 0xEC
 
-void ide_init(pci_dev_t dev);
+pci_driver_status ide_init(pci_dev_t pdev);

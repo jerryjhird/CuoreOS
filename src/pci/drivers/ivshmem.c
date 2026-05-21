@@ -15,9 +15,9 @@ typedef int dummy0;
 #include "mem/heap.h"
 #include "panic.h"
 
-void ivshmem_init(pci_dev_t dev) {
+pci_driver_status ivshmem_init(pci_dev_t dev) {
 	if (!dev.bars[2].base || !dev.bars[2].size) {
-		panic("IVSHMEM", "bar2 invalid or not present");
+		return INVALID_BAR;
 	}
 
 	uintptr_t phys = dev.bars[2].base;
@@ -25,7 +25,6 @@ void ivshmem_init(pci_dev_t dev) {
 	size_t pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
 
 	uintptr_t virt = vmm_alloc_pages(pages);
-	if (!virt) { panic("IVSHMEM", "vmm failed to allocate virtual region"); }
 
 	uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
 	for (size_t i = 0; i < pages; i++) {
@@ -58,5 +57,6 @@ void ivshmem_init(pci_dev_t dev) {
 			  			phys,
 			  			virt,
 			  			size / (1024 * 1024));
+	return DRIVER_OK;
 }
 #endif

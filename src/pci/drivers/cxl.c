@@ -26,7 +26,7 @@ static extmem_type_t determine_cxl_type(pci_dev_t dev) {
 	}
 }
 
-void cxl_init(pci_dev_t dev) {
+pci_driver_status cxl_init(pci_dev_t dev) {
 	acpi_sdt_header_t *cedt = (acpi_sdt_header_t *)acpi_find_sdt("CEDT");
 	if (!cedt) { panic("CXL", "CEDT table missing"); }
 
@@ -34,7 +34,7 @@ void cxl_init(pci_dev_t dev) {
 	parse_cedt(cedt, &window);
 
 	if (!window.found || !window.size || !window.phys_base) {
-		panic("CXL", "no valid CXL fixed memory window in CEDT");
+		return CORRUPTED_FIRMWARE_TABLE;
 	}
 
 	size_t pages = (window.size + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -53,7 +53,7 @@ void cxl_init(pci_dev_t dev) {
 	vmm_flush_tlb_all();
 
 	if (extmem_devices_c >= MAX_EXTMEM_DEVICES) {
-		panic("CXL", "extmem device table full");
+		return DEVICE_BUFFER_IS_FULL;
 	}
 
 	kernel_extmem_dev_t *ext_dev = zalloc(sizeof(kernel_extmem_dev_t));
@@ -84,5 +84,6 @@ void cxl_init(pci_dev_t dev) {
 				  			window.phys_base,
 				  			virt,
 				  			window.size / (1024 * 1024));
+	return DRIVER_OK;
 }
 #endif
