@@ -8,11 +8,11 @@ void fadt_init(void) {
 	fadt = (acpi_fadt_t*)acpi_find_sdt("FACP");
 
 	if (!fadt) {
-		logbuf_write("[ FADT ] FADT table is corrupted!!!\n");
+		logbuf_write("[ FADT ] FADT is missing or corrupted!\n");
 		return;
 	}
 
-	logbuf_write("[ FADT ] table located and verified\n");
+	logbuf_printf("[ FADT ] Found FADT at %p\n", (void*)fadt);
 }
 
 uintptr_t fadt_get_pm1a_cnt(void) {
