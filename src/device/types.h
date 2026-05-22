@@ -5,10 +5,10 @@
 #include <stddef.h>
 #include "mem/dmalloc.h"
 
-#define CHAR_DEV_CAP_ON_ERROR (1ULL << 0)
+#define CHAR_IS_ERROR_HANDLER (1ULL << 0)
 
 typedef struct kernel_char_dev_t {
-	uint8_t DevCAP;
+	uint64_t DevCAP;
 	void (*putc)(char c);
 	bool initialized;
 } kernel_char_dev_t;

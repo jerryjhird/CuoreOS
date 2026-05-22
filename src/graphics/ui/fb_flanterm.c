@@ -15,7 +15,7 @@
 struct flanterm_context *ft_ctx = NULL;
 
 kernel_char_dev_t flanterm_dev = {
-	CHAR_DEV_CAP_ON_ERROR,
+	CHAR_IS_ERROR_HANDLER,
 	_c_flanterm_putc,
 	false
 };

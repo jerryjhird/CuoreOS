@@ -1,7 +1,6 @@
 #include "GDT.h"
 
 #include <stdint.h>
-#include "bitmask.h"
 #include "stdio.h"
 #include "apic/lapic.h"
 #include "IRQ.h"
@@ -63,7 +62,7 @@ void exception_main(struct trap_frame *tf, const char *description) {
 		kernel_char_dev_t* dev = (kernel_char_dev_t*)entry->dev_ptr;
 
 		// 3. Check for the error capability
-		if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR)) {
+		if (BIT_CHECK(dev->DevCAP, CHAR_IS_ERROR_HANDLER)) {
 			dev_puts(dev, "\n*** CPU EXCEPTION: ");
 			dev_puts(dev, description ? description : "UNKNOWN");
 			dev_puts(dev, " ***\n");

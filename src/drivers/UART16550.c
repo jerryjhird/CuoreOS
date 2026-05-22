@@ -38,7 +38,7 @@ static struct trap_frame* uart16550_irq_handler(struct trap_frame *tf) {
 }
 
 kernel_char_dev_t uart16550_dev = {
-	CHAR_DEV_CAP_ON_ERROR,
+	CHAR_IS_ERROR_HANDLER,
 	uart16550_putc,
 	false
 };

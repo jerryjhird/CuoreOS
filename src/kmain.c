@@ -22,7 +22,6 @@
 #include "stdio.h"
 #include "_time.h"
 #include "cpu/MSR.h"
-#include "bitmask.h"
 #include "multimedia/beep.h"
 #include "acpi/mcfg.h"
 #include "acpi/fadt.h"
@@ -95,7 +94,7 @@ void panic(const char* header_msg, const char* msg) {
 
 		kernel_char_dev_t* dev = (kernel_char_dev_t*)registry[i].dev_ptr;
 
-		if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR) && dev->initialized) {
+		if (BIT_CHECK(dev->DevCAP, CHAR_IS_ERROR_HANDLER) && dev->initialized) {
 			dev_printf(dev, "\n*** KERNEL PANIC: %s ***\n%s\n\n", header_msg, msg);
 			printed = true;
 		}
