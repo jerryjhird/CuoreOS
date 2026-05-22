@@ -49,16 +49,16 @@ def load_existing_config():
         with open("Config.mk", "r") as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith("#") or ":=" not in line:
+                if not line or line.startswith("#") or ":=" not in line or "_C :=" in line:
                     continue
 
                 key_part, val_part = line.split(":=", 1)
                 clean_key = key_part.replace("CONFIG_", "").strip().lower()
                 clean_val = val_part.strip()
 
-                for group_name in config_groups:
-                    if clean_key in config_groups[group_name]:
-                        config_groups[group_name][clean_key] = clean_val
+                for group in config_groups.values():
+                    if clean_key in group:
+                        group[clean_key] = clean_val
     except Exception:
         pass
 
@@ -102,20 +102,21 @@ def save_config():
         for section, settings in config_groups.items():
             for key, val in settings.items():
                 args[key] = val
-
-                if val.lower() == "true":
-                    args[f"{key}_C"] = "#define"
-                else:
-                    args[f"{key}_C"] = "#undef"
+                args[f"{key}_C"] = "#define" if val.lower() == "true" else "#undef"
 
         with open("Config.mk", "w") as f:
-            f.write(MAKEFILE_TEMPLATE.strip().format(**args) + "\n")
+            f.write(f"CONFIG_STORED_VERSION := {CONFIG_FORMAT_VERSION}\n")
+            for section, settings in config_groups.items():
+                f.write(f"\n# {section}\n")
+                for key, val in settings.items():
+                    f.write(f"CONFIG_{key.upper()} := {val}\n")
+                    f.write(f"CONFIG_{key.upper()}_C := {args[key+'_C']}\n")
 
         with open("src/Config.h", "w") as f:
             f.write(HEADER_TEMPLATE.strip().format(**args) + "\n")
 
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"error saving: {e}")
 
 def get_input(stdscr, prompt, existing):
     curses.noecho()
