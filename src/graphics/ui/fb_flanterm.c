@@ -1,3 +1,4 @@
+#include "device/devreg.h"
 #include "flanterm.c"
 #include "flanterm_backends/fb.c"
 #include "flanterm.h"
@@ -6,7 +7,7 @@
 #include "fb_flanterm.h"
 
 #include "graphics/fb.h"
-#include "devices.h"
+#include "device/types.h"
 #include "mem/heap.h"
 #include <stdint.h>
 #include "abs.h"
@@ -20,7 +21,7 @@ kernel_char_dev_t flanterm_dev = {
 };
 
 void _c_flanterm_init(linear_framebuffer_t *fb) {
-	char_devices[char_devices_c++] = &flanterm_dev;
+	device_register(CHAR_DEV, &flanterm_dev);
 
 	ft_ctx = flanterm_fb_init(
 		malloc,

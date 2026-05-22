@@ -1,6 +1,5 @@
 #include "beep.h"
 
-#include "devices.h"
 #include "mem/mem.h"
 #include "mem/dmalloc.h"
 #include "abs.h"

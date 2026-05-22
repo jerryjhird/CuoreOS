@@ -1,6 +1,6 @@
 # CuoreOS Build System
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
-SYSTEM_CONFIG_VERSION := 0006
+SYSTEM_CONFIG_VERSION := 0007
 
 WHITELIST_GOALS := menuconfig clean clean-cache format
 ifeq ($(wildcard Config.mk),)

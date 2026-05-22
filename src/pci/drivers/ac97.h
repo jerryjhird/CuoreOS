@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pci/pci.h"
+#include <stdint.h>
 
 #define AC97_MIXER_RESET 0x00
 #define AC97_MASTER_VOLUME 0x02

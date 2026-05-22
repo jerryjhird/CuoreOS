@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "devices.h"
+#include "device/char.h"
 
 #define LOGBUF_SIZE 16384
 

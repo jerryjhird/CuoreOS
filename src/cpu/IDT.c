@@ -5,10 +5,13 @@
 #include "stdio.h"
 #include "apic/lapic.h"
 #include "IRQ.h"
-#include "devices.h"
+#include "device/types.h"
+#include "device/char.h"
 #include "panic.h"
 #include "abs.h"
 #include "mem/mem.h"
+#include "device/devreg.h"
+#include "cpu/coreinfo.h"
 
 struct idt_entry {
 	uint16_t offset_low;
@@ -53,18 +56,16 @@ void exception_main(struct trap_frame *tf, const char *description) {
 		"ERR", "RIP", "CS ", "FLG", "RSP", "SS "
 	};
 
-	for (size_t i = 0; i < char_devices_c; i++) {
-		kernel_char_dev_t* dev = char_devices[i];
+	for (size_t i = 0; i < registry_count; i++) {
+		device_registry_entry_t* entry = &registry[i];
+		if (entry->type != CHAR_DEV) continue;
 
+		kernel_char_dev_t* dev = (kernel_char_dev_t*)entry->dev_ptr;
+
+		// 3. Check for the error capability
 		if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR)) {
 			dev_puts(dev, "\n*** CPU EXCEPTION: ");
-
-			if (description) {
-				dev_puts(dev, description);
-			} else {
-				dev_puts(dev, "UNKNOWN");
-			}
-
+			dev_puts(dev, description ? description : "UNKNOWN");
 			dev_puts(dev, " ***\n");
 
 			uint8_t *base = (uint8_t*)tf;
@@ -219,7 +220,10 @@ DEF_EXCEPTION_HANDLER(31, "Reserved", 0)
 // irq's
 
 void irq_install_handler(uint32_t logical_id, uint8_t vector, irq_handler_t handler) {
-	kernel_cpu_dev_t *target_cpu = cpu_devices[logical_id];
+	if (logical_id >= SMP_MAX_CORES || cpu_blocks[logical_id] == NULL) {
+		panic("IRQ", "Attempted to install handler on uninitialized or invalid CPU");
+	}
+	coreinfo_t *target_cpu = cpu_blocks[logical_id];
 	irq_vector_chain_t *chain = &target_cpu->routines[vector];
 
 	if (chain->count < MAX_HANDLERS_PER_VECTOR) {
@@ -232,7 +236,7 @@ void irq_install_handler(uint32_t logical_id, uint8_t vector, irq_handler_t hand
 
 static struct trap_frame* irq_dispatch(struct trap_frame *tf) {
 	uint64_t vector = tf->error_code;
-	kernel_cpu_dev_t *my_cpu;
+	coreinfo_t *my_cpu;
 	GET_CURRENT_CPU(my_cpu);
 
 	my_cpu->irq_stats[vector]++;

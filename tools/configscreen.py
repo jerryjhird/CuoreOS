@@ -27,13 +27,7 @@ config_groups = {
         "ivshmem_support": "true",
         "cxl_support": "true"
     },
-    "Devices": {
-        "max_char_devices": "9",
-        "max_disk_devices": "9",
-        "max_power_devices": "9",
-        "max_external_memory_devices": "9"
-    },
-    "Symmetric Multiprocessing": {
+    "SMP": {
         "ap_stack_size": "16384",
         "max_cores": "255"
     },
@@ -93,12 +87,6 @@ HEADER_TEMPLATE = """
 {ivshmem_support_C} KERNEL_MOD_IVSHMEM_ENABLED
 {e1000_support_C} KERNEL_MOD_E1000_ENABLED
 {cxl_support_C} KERNEL_MOD_CXL_ENABLED
-
-// dev
-#define MAX_CHAR_DEVICES {max_char_devices}
-#define MAX_DISK_DEVICES {max_disk_devices}
-#define MAX_POWER_DEVICES {max_power_devices}
-#define MAX_EXTMEM_DEVICES {max_external_memory_devices}
 
 // smp
 #define AP_STACK_SIZE {ap_stack_size}

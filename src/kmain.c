@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include "Config.h"
+#include "device/devreg.h"
 #include "panic.h"
 #include "drivers/HPET.h"
 #include "drivers/UART16550.h"
@@ -7,7 +9,6 @@
 #include "limine.h"
 #include "mem/pma.h"
 #include "mem/mem.h"
-#include "devices.h"
 #include "graphics/ui/fb_flanterm.h"
 #include "cpu/GDT.h"
 #include "apic/lapic.h"
@@ -38,6 +39,7 @@
 #include "net/arp.h"
 #include "binfmt/elf64.h"
 #include "symtable.h"
+#include "cpu/coreinfo.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -84,15 +86,22 @@ const uint64_t compile_signature = KERNEL_BUILD_SIGNATURE;
 uint64_t hhdm_offset;
 
 void panic(const char* header_msg, const char* msg) {
-	if (char_devices_c > 0) {
-		for (size_t i = 0; i < char_devices_c; i++) {
-			kernel_char_dev_t* dev = char_devices[i];
+	__asm__ volatile ("cli");
 
-			if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR) && dev->initialized) {
-				dev_printf(dev, "\n*** KERNEL PANIC: %s ***\n%s\n\n", header_msg, msg);
-			}
+	bool printed = false;
+
+	for (size_t i = 0; i < registry_count; i++) {
+		if (registry[i].type != CHAR_DEV) continue;
+
+		kernel_char_dev_t* dev = (kernel_char_dev_t*)registry[i].dev_ptr;
+
+		if (BIT_CHECK(dev->DevCAP, CHAR_DEV_CAP_ON_ERROR) && dev->initialized) {
+			dev_printf(dev, "\n*** KERNEL PANIC: %s ***\n%s\n\n", header_msg, msg);
+			printed = true;
 		}
-	} else {
+	}
+
+	if (!printed) {
 		const char* prefix = "\n*** KERNEL PANIC: ";
 		const char* suffix = " ***\n";
 		const char* newline = "\n\n";
@@ -104,7 +113,7 @@ void panic(const char* header_msg, const char* msg) {
 		for (const char* p = newline; *p; p++) uart16550_putc(*p);
 	}
 
-	for(;;) { __asm__ ("hlt"); }
+	for(;;) { __asm__ volatile ("hlt"); }
 }
 
 ramfs_handle_t initramfs;
@@ -116,18 +125,14 @@ static void uart16550_console_task(void) {
 		dev_puts(&uart16550_dev, &c);
 
 		#ifdef DEBUG
-			if (c == 's') {
-				if (LIKELY(power_devices_c > 0 && power_devices[0] != NULL)) {
-					power_devices[0]->shutdown(power_devices[0]);
+			if (c == 's' || c == 'r') {
+				kernel_power_dev_t* pwr = (kernel_power_dev_t*)device_find_first(POWER_DEV);
+
+				if (LIKELY(pwr != NULL)) {
+					if (c == 's') pwr->shutdown(pwr);
+					else		  pwr->reboot(pwr);
 				} else {
-					panic("POWER", "no power device registered for shutdown!\n");
-				}
-			}
-			else if (c == 'r') {
-				if (LIKELY(power_devices_c > 0 && power_devices[0] != NULL)) {
-					power_devices[0]->reboot(power_devices[0]);
-				} else {
-					panic("POWER", "no power device registered for reboot!\n");
+					panic("POWER", "no power device registered for operation!\n");
 				}
 			}
 		#endif
@@ -135,27 +140,38 @@ static void uart16550_console_task(void) {
 }
 
 static void startup_sound_task(void) {
-	audio_beep(active_audio_device, 659, 150);
-	audio_beep(active_audio_device, 1, 90);
-	audio_beep(active_audio_device, 659, 150);
-	audio_beep(active_audio_device, 1, 90);
-	audio_beep(active_audio_device, 659, 300);
-	audio_beep(active_audio_device, 1, 100);
-	audio_beep(active_audio_device, 659, 150);
-	audio_beep(active_audio_device, 1, 90);
-	audio_beep(active_audio_device, 659, 150);
-	audio_beep(active_audio_device, 1, 90);
-	audio_beep(active_audio_device, 659, 300);
-	audio_beep(active_audio_device, 1, 100);
-	audio_beep(active_audio_device, 659, 150);
-	audio_beep(active_audio_device, 783, 150);
-	audio_beep(active_audio_device, 523, 150);
-	audio_beep(active_audio_device, 587, 150);
-	audio_beep(active_audio_device, 659, 600);
+	kernel_audio_dev_t* audio_dev = (kernel_audio_dev_t*)device_find_first(AUDIO_DEV);
+
+	if (UNLIKELY(!audio_dev)) {
+		scheduler_exit_task();
+		return;
+	}
+
+	audio_beep(audio_dev, 659, 150);
+	// audio_beep(audio_dev, 1, 90);
+	// audio_beep(audio_dev, 659, 150);
+	// audio_beep(audio_dev, 1, 90);
+	// audio_beep(audio_dev, 659, 300);
+	// audio_beep(audio_dev, 1, 100);
+	// audio_beep(audio_dev, 659, 150);
+	// audio_beep(audio_dev, 1, 90);
+	// audio_beep(audio_dev, 659, 150);
+	// audio_beep(audio_dev, 1, 90);
+	// audio_beep(audio_dev, 659, 300);
+	// audio_beep(audio_dev, 1, 100);
+	// audio_beep(audio_dev, 659, 150);
+	// audio_beep(audio_dev, 783, 150);
+	// audio_beep(audio_dev, 523, 150);
+	// audio_beep(audio_dev, 587, 150);
+	// audio_beep(audio_dev, 659, 600);
+
 	scheduler_exit_task();
 }
 
 extern void AP_kentry(struct limine_mp_info *mp);
+
+coreinfo_t *cpu_blocks[SMP_MAX_CORES];
+uint32_t cpu_blocks_c = 0;
 
 static void kernel_main(void) {
 	struct limine_mp_response *mp_response = mp_request.response;
@@ -166,6 +182,8 @@ static void kernel_main(void) {
 	if (cores_to_boot > SMP_MAX_CORES) {
 		cores_to_boot = SMP_MAX_CORES;
 	}
+
+	__atomic_fetch_add(&cpu_online_count, 1, __ATOMIC_SEQ_CST); // account for bsp in active cpu counter
 
 	if (mp_response->cpu_count >= 2) {
 		logbuf_write("[ SMP  ] Multiple processors found\n");
@@ -190,8 +208,18 @@ static void kernel_main(void) {
 			cpu->goto_address = AP_kentry;
 		}
 
-		while (__atomic_load_n(&cpu_devices_c, __ATOMIC_ACQUIRE) < cores_to_boot) {
+		while (__atomic_load_n(&cpu_online_count, __ATOMIC_ACQUIRE) < cores_to_boot) {
 			__asm__ volatile("pause");
+		}
+
+		__asm__ volatile("" ::: "memory");
+
+		for (uint32_t i = 0; i < cores_to_boot; i++) {
+			if (cpu_blocks[i] == NULL) {
+				panic("SMP", "cpu core registered as online but block is NULL");
+			}
+			irq_install_handler(i, 40, AP_ipi_wakeup_irq);
+			irq_install_handler(i, 32, AP_clock_tick_irq);
 		}
 	}
 
@@ -202,25 +230,27 @@ static void kernel_main(void) {
 	logbuf_printf("[ KRNL ] Signature: %llu\n", (unsigned long long)compile_signature);
 	logbuf_printf("[ BOOT ] Time it took to boot (nano's): %llu\n", (unsigned long long)hpet_get_nanos());
 
-	if (active_net_device) {
-		eth_init(active_net_device);
+	kernel_net_dev_t* net_dev = (kernel_net_dev_t*)device_find_first(NET_DEV);
 
-		active_net_device->ip_addr	  = IP_ADDR(10, 0, 2, 15);
-		active_net_device->gateway	  = IP_ADDR(10, 0, 2, 2);
-		active_net_device->subnet_mask  = IP_ADDR(255, 255, 255, 0);
+	if (net_dev) {
+		eth_init(net_dev);
 
-		arp_send_request(active_net_device, active_net_device->gateway);
+		net_dev->ip_addr	  = IP_ADDR(10, 0, 2, 15);
+		net_dev->gateway	  = IP_ADDR(10, 0, 2, 2);
+		net_dev->subnet_mask  = IP_ADDR(255, 255, 255, 0);
 
-		uint32_t google_time = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "time.google.com");
+		arp_send_request(net_dev, net_dev->gateway);
+
+		uint32_t google_time = dns_query_blocking(net_dev, IP_ADDR(8,8,8,8), "time.google.com");
 		if (google_time != 0) {
-			ntp_send_request(active_net_device, google_time);
+			ntp_send_request(net_dev, google_time);
 		} else {
 			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
 		}
 
-		// uint32_t STARWARS_SERVER = dns_query_blocking(active_net_device, IP_ADDR(8,8,8,8), "towel.blinkenlights.nl");
+		// uint32_t STARWARS_SERVER = dns_query_blocking(net_dev, IP_ADDR(8,8,8,8), "towel.blinkenlights.nl");
 		// if (STARWARS_SERVER != 0) {
-		// 	telnet_client(active_net_device, STARWARS_SERVER, 23);
+		// 	telnet_client(net_dev, STARWARS_SERVER, 23);
 		// } else {
 		// 	dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
 		// }
@@ -289,17 +319,18 @@ void _kstartc(void) {
 
 	heap_init(HEAP_SIZE);
 
-	uint32_t idx = __atomic_fetch_add(&cpu_devices_c, 1, __ATOMIC_SEQ_CST);
-	kernel_cpu_dev_t *my_cpu = zalloc(sizeof(kernel_cpu_dev_t));
-	cpu_devices[idx] = my_cpu;
+	coreinfo_t *my_cpu = zalloc(sizeof(coreinfo_t));
+	cpu_blocks[cpu_blocks_c] = my_cpu;
 	my_cpu->self = my_cpu;
 
 	WRITE_MSR(MSR_GS_BASE, (uint64_t)my_cpu);
 
-	my_cpu->logical_id = idx;
+	my_cpu->logical_id = 0;
 	my_cpu->lapic_id = hardware_id;
 	my_cpu->ticks = 1;
 	my_cpu->status = CPU_BUSY; // BSP is always busy
+
+	cpu_blocks_c++;
 
 	uart16550_init();
 	dev_puts(&uart16550_dev, "\033[2J\033[H"); // ensure we dont overwrite things like the qemu dvd rom blob
@@ -312,10 +343,11 @@ void _kstartc(void) {
 	pci_init();
 
 	// scan disks previously found by pci discovery
-	for (size_t i = 0; i < disk_devices_c; i++) {
-		kernel_disk_dev_t* dev = disk_devices[i];
+	for (size_t i = 0; i < registry_count; i++) {
+		if (registry[i].type != DISK_DEV) continue;
 
-		if (dev == NULL) continue;
+		kernel_disk_dev_t* dev = (kernel_disk_dev_t*)registry[i].dev_ptr;
+		if (!dev) continue;
 
 		#ifdef DO_KDEVTESTS
 			if (!dev__test__disk(dev)) {

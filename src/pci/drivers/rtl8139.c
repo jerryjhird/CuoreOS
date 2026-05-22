@@ -1,4 +1,3 @@
-#include "pci/pci.h"
 typedef int dummy0;
 
 // driver for rtl8139 ethernet controller. supports PMIO and MMIO
@@ -14,9 +13,11 @@ typedef int dummy0;
 #include "mem/mem.h"
 #include "logbuf.h"
 #include "apic/ioapic.h"
-#include "devices.h"
+#include "device/types.h"
 #include "mem/paging.h"
-#include "panic.h"
+#include "cpu/IRQ.h"
+#include "device/devreg.h"
+#include "pci/pci.h"
 
 static void rtl_write32(rtl8139_state_t* s, uint16_t reg, uint32_t val) {
 	if (s->is_mmio) {
@@ -99,8 +100,10 @@ static void rtl_rx_drain(rtl8139_state_t* state, kernel_net_dev_t* dev) {
 	}
 }
 
+static kernel_net_dev_t* g_rtl8139_dev = NULL;
+
 static struct trap_frame* rtl8139_irq_handler(struct trap_frame* tf) {
-	kernel_net_dev_t* dev = active_net_device;
+	kernel_net_dev_t* dev = g_rtl8139_dev;
 	if (!dev || !dev->private_data) {
 		return tf;
 	}
@@ -284,7 +287,9 @@ pci_driver_status rtl8139_init(pci_dev_t pdev) {
 	__asm__ volatile("" ::: "memory");
 
 	ndev->initialized = true;
-	active_net_device = ndev;
+	g_rtl8139_dev = ndev;
+
+	device_register(NET_DEV, ndev);
 
 	logbuf_printf("[ ETH  ] Initialized %s with MAC: %M\n", ndev->model, ndev->mac);
 	return DRIVER_OK;

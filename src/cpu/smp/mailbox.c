@@ -2,11 +2,18 @@
 
 #include "apic/lapic.h"
 #include <stdint.h>
-#include "devices.h"
+#include "init.h"
+#include "abs.h"
+#include "panic.h"
+#include "cpu/coreinfo.h"
 
 // send to a specific cpu
 void mailbox_send(uint32_t logical_id, mailbox_func_t func, void *data) {
-	kernel_cpu_dev_t *target = cpu_devices[logical_id];
+	coreinfo_t *target = cpu_blocks[logical_id];
+
+	if (UNLIKELY(!target)) {
+		panic("MAILBOX", "passed logical_id not found\n");
+	}
 
 	while (__atomic_load_n(&target->mailbox.pending, __ATOMIC_ACQUIRE)) {
 		__asm__ volatile("pause");
@@ -31,9 +38,9 @@ bool mailbox_send_fc(mailbox_func_t func, void *data) {
 
 // send to everyone
 void mailman_send(mailbox_func_t func, void *data) {
-	kernel_cpu_dev_t *self; GET_CURRENT_CPU(self);
+	coreinfo_t *self; GET_CURRENT_CPU(self);
 
-	for (uint32_t i = 0; i < cpu_devices_c; i++) {
+	for (uint32_t i = 0; i < cpu_online_count; i++) {
 		if (i == self->logical_id) continue;
 
 		mailbox_send(i, func, data);

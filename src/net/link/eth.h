@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "devices.h"
+#include "device/types.h"
 #include "net/netbuf.h"
 
 #define ETH_ADDR_LEN 6

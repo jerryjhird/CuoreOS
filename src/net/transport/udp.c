@@ -1,6 +1,5 @@
 #include "udp.h"
 
-#include "devices.h"
 #include "net/link/eth.h"
 #include "mem/mem.h"
 #include "net/netbuf.h"

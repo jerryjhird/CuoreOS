@@ -1,6 +1,5 @@
 #include "tcp.h"
 
-#include "devices.h"
 #include "mem/mem.h"
 #include "net/ip/ipv4.h"
 #include "net/protocol/dns.h"

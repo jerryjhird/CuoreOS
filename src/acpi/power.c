@@ -4,10 +4,10 @@
 #include "fadt.h"
 #include "logbuf.h"
 #include "mem/mem.h"
-#include "devices.h"
 #include "cpu/io.h"
 #include "mem/heap.h"
 #include "abs.h"
+#include "device/devreg.h"
 
 static bool acpi_shutdown(kernel_power_dev_t* dev) {
 	(void)dev;
@@ -56,10 +56,9 @@ void acpi_power_init(void) {
 	if (UNLIKELY(!fadt || fadt_get_pm1a_cnt() == 0)) { return; }
 
 	kernel_power_dev_t* dev = zalloc(sizeof(kernel_power_dev_t));
-	memset(dev->model, 0, 32);
 	dev->shutdown = acpi_shutdown;
 	dev->reboot = acpi_reboot;
 	dev->private_data = NULL;
 
-	power_devices[power_devices_c++] = dev;
+	device_register(POWER_DEV, dev);
 }

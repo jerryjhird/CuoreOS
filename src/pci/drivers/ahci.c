@@ -11,14 +11,13 @@ typedef int dummy0;
 #include "logbuf.h"
 #include "mem/pma.h"
 #include "mem/mem.h"
-#include "mem/paging.h"
 #include "mem/dmalloc.h"
-#include "devices.h"
+#include "device/types.h"
 #include <stdint.h>
 #include <string.h>
 #include "_time.h"
 #include "disk/ata.h"
-#include "panic.h"
+#include "device/devreg.h"
 
 static void ahci_stop_cmd(hba_port_t *port) {
 	port->cmd &= ~HBA_PxCMD_ST;
@@ -171,11 +170,12 @@ pci_driver_status ahci_init(pci_dev_t pdev) {
 			dmfree(id_res.virt);
 		}
 
+		device_register(DISK_DEV, ddev);
+
 		logbuf_write("[ SATA ] Initialized ");
 		logbuf_write(ddev->model);
 		logbuf_write("\n");
 
-		disk_devices[disk_devices_c++] = ddev;
 		return DRIVER_OK;
 	}
 

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "net/netbuf.h"
-#include "devices.h"
+#include "device/types.h"
 
 typedef struct __attribute__((packed)) {
 	uint8_t  version_ihl;

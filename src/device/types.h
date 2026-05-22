@@ -1,38 +1,17 @@
 #pragma once
 
 #include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
-#include "cpu/IRQ.h"
-#include "cpu/smp/mailbox.h"
-#include "scheduler.h"
+#include <stddef.h>
 #include "mem/dmalloc.h"
-#include "Config.h"
 
-// character device capabilities
-#define CHAR_DEV_CAP_ON_ERROR (1ULL << 0) // device should be used to display error's (e.g cpu exceptions, panics etc)
+#define CHAR_DEV_CAP_ON_ERROR (1ULL << 0)
 
-// generic text output device (like a terminal or serial port)
 typedef struct kernel_char_dev_t {
 	uint8_t DevCAP;
 	void (*putc)(char c);
 	bool initialized;
 } kernel_char_dev_t;
-
-// cpu core
-typedef enum { CPU_IDLE = 0, CPU_BUSY, CPU_HALTED, CPU_PANIC } cpu_status_t;
-typedef struct kernel_cpu_dev_t {
-	struct kernel_cpu_dev_t *self; // @ gs:0
-	task_t *current_task; // @ gs:8
-	uint32_t logical_id;
-	uint32_t lapic_id;
-	uint64_t ticks;
-	volatile cpu_status_t status;
-	mailbox_t mailbox;
-
-	irq_vector_chain_t routines[256];
-	uint64_t irq_stats[256];
-} __attribute__((aligned(64))) kernel_cpu_dev_t;
 
 typedef struct kernel_disk_dev_t {
 	struct partition_s* partitions;
@@ -106,31 +85,3 @@ typedef struct kernel_extmem_dev_t {
 
 	void* private_data;
 } kernel_extmem_dev_t;
-
-void dev_puts(kernel_char_dev_t* dev, const char* s);
-void dev_putint(kernel_char_dev_t* dev, uint64_t n);
-void dev_printf(kernel_char_dev_t *dev, const char *fmt, ...);
-
-extern kernel_char_dev_t uart16550_dev;
-extern kernel_char_dev_t flanterm_dev;
-
-extern kernel_char_dev_t* char_devices[MAX_CHAR_DEVICES];
-extern size_t char_devices_c;
-
-extern kernel_disk_dev_t* disk_devices[MAX_DISK_DEVICES];
-extern size_t disk_devices_c;
-
-extern kernel_power_dev_t* power_devices[MAX_POWER_DEVICES];
-extern size_t power_devices_c;
-
-extern kernel_extmem_dev_t* extmem_devices[MAX_EXTMEM_DEVICES];
-extern size_t extmem_devices_c;
-
-#define GET_CURRENT_CPU(target) __asm__ volatile ("mov %%gs:0, %0" : "=r"(target))
-#define GET_CURRENT_TASK(target) __asm__ volatile ("mov %%gs:8, %0" : "=r"(target))
-#define SET_CURRENT_TASK(bootstrap_task) __asm__ volatile ("mov %0, %%gs:8" : : "r"(bootstrap_task));
-extern kernel_cpu_dev_t* cpu_devices[SMP_MAX_CORES];
-extern volatile uint32_t cpu_devices_c;
-
-extern kernel_net_dev_t* active_net_device;
-extern kernel_audio_dev_t* active_audio_device;

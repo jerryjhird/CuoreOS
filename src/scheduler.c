@@ -7,8 +7,8 @@
 #include "panic.h"
 #include "mem/mem.h"
 #include <string.h>
-#include "devices.h"
 #include "mem/paging.h"
+#include "cpu/coreinfo.h"
 
 static uint64_t current_pid = 1;
 
@@ -147,7 +147,7 @@ void scheduler_init(void) {
 	bootstrap_task->next = bootstrap_task;
 	bootstrap_task->prev = bootstrap_task;
 
-	kernel_cpu_dev_t *my_cpu;
+	coreinfo_t *my_cpu;
 	GET_CURRENT_CPU(my_cpu);
 	irq_install_handler(my_cpu->logical_id, 32, scheduler_timer_handler);
 }

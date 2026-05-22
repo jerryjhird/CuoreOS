@@ -1,12 +1,10 @@
 #include "gpt.h"
-#include "devices.h"
+
 #include "guid_list.h"
 #include "partition.h"
 #include "logbuf.h"
-#include "mem/pma.h"
 #include "crc32.h"
 #include <string.h>
-#include "mem/mem.h"
 #include "mem/heap.h"
 #include "mem/dmalloc.h"
 

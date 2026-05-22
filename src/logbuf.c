@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include "logbuf.h"
-#include "devices.h"
 #include <sys/types.h>
 #include "stdio.h"
 

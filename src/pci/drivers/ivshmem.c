@@ -11,9 +11,9 @@ typedef int dummy0;
 #include <stddef.h>
 #include "logbuf.h"
 #include "mem/mem.h"
-#include "devices.h"
+#include "device/types.h"
 #include "mem/heap.h"
-#include "panic.h"
+#include "device/devreg.h"
 
 pci_driver_status ivshmem_init(pci_dev_t dev) {
 	if (!dev.bars[2].base || !dev.bars[2].size) {
@@ -36,10 +36,6 @@ pci_driver_status ivshmem_init(pci_dev_t dev) {
 
 	vmm_flush_tlb_all();
 
-	if (extmem_devices_c >= MAX_EXTMEM_DEVICES) {
-		panic("IVSHMEM", "extmem device table full");
-	}
-
 	kernel_extmem_dev_t *ext = zalloc(sizeof(kernel_extmem_dev_t));
 
 	ext->type = IVSHMEM_NON_PERSISTENT;
@@ -48,7 +44,7 @@ pci_driver_status ivshmem_init(pci_dev_t dev) {
 	ext->size = size;
 	ext->private_data = NULL;
 
-	extmem_devices[extmem_devices_c++] = ext;
+	device_register(EXTMEM_DEV, ext);
 
 	logbuf_printf("[ SHM  ] Initialized IVSHMEM\n"
 						"	  Physical base: %#lx\n"

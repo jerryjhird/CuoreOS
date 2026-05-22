@@ -5,17 +5,16 @@ typedef int dummy0; // satisfy ISO C / -Wpedantic
 #include "Config.h"
 
 #ifdef KERNEL_MOD_IDE_ENABLED
-#include "devices.h"
 #include "pci/pci.h"
 #include "cpu/io.h"
 #include "logbuf.h"
-#include "mem/mem.h"
 #include "mem/heap.h"
 #include "mem/dmalloc.h"
 #include "_time.h"
 #include "ide.h"
 #include <string.h>
 #include "disk/ata.h"
+#include "device/devreg.h"
 
 static uint8_t ide_read_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer) {
 	uint16_t base = dev->port_base;
@@ -115,9 +114,10 @@ pci_driver_status ide_init(pci_dev_t pdev) {
 	dev->read_sectors = ide_read_sectors;
 	dev->write_sectors = ide_write_sectors;
 
+	device_register(DISK_DEV, dev);
+
 	logbuf_printf("[ IDE  ] Found \"%s\" (%llu MiB)\n",  dev->model, (unsigned long long)(dev->total_sectors / 2048));
 
-	disk_devices[disk_devices_c++] = dev;
 	return DRIVER_OK;
 }
 

@@ -14,6 +14,7 @@ typedef int dummy0;
 #include "apic/ioapic.h"
 #include "cpu/IRQ.h"
 #include "mem/paging.h"
+#include "device/devreg.h"
 
 typedef struct {uint32_t id; const char* name;} ac97_vendor_t;
 
@@ -113,8 +114,10 @@ static void ac97_play(kernel_audio_dev_t* dev, void* buffer, size_t size) {
 	ac97_write8(state, state->nabmbar, AC97_PO_CR, 0x1D);
 }
 
+static kernel_audio_dev_t* g_ac96_dev = NULL;
+
 static struct trap_frame* ac97_irq_handler(struct trap_frame* tf) {
-	kernel_audio_dev_t* adev = active_audio_device;
+	kernel_audio_dev_t* adev = g_ac96_dev;
 	if (!adev) return tf;
 
 	ac97_state_t* state = (ac97_state_t*)adev->private_data;
@@ -211,7 +214,10 @@ pci_driver_status ac97_init(pci_dev_t dev) {
 	adev->play = ac97_play;
 	adev->stop = ac97_stop;
 	adev->set_volume = ac97_set_volume;
-	active_audio_device = adev;
+
+	device_register(AUDIO_DEV, adev);
+
+	g_ac96_dev = adev;
 
 	logbuf_write("[ AC97 ] Initialized ");
 	logbuf_write(adev->model);

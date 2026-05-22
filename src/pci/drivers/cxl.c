@@ -11,10 +11,11 @@ typedef int dummy0;
 #include <stddef.h>
 #include "logbuf.h"
 #include "mem/mem.h"
-#include "devices.h"
+#include "device/types.h"
 #include "mem/heap.h"
 #include "panic.h"
 #include "acpi/cedt.h"
+#include "device/devreg.h"
 
 static extmem_type_t determine_cxl_type(pci_dev_t dev) {
 	if (dev.class_id == 0x05 && dev.subclass_id == 0x02) {
@@ -52,10 +53,6 @@ pci_driver_status cxl_init(pci_dev_t dev) {
 
 	vmm_flush_tlb_all();
 
-	if (extmem_devices_c >= MAX_EXTMEM_DEVICES) {
-		return DEVICE_BUFFER_IS_FULL;
-	}
-
 	kernel_extmem_dev_t *ext_dev = zalloc(sizeof(kernel_extmem_dev_t));
 	pci_dev_t *dev_copy = zalloc(sizeof(pci_dev_t));
 
@@ -66,12 +63,13 @@ pci_driver_status cxl_init(pci_dev_t dev) {
 	ext_dev->phys_addr = window.phys_base;
 	ext_dev->size = window.size;
 	ext_dev->private_data = dev_copy;
-	extmem_devices[extmem_devices_c++] = ext_dev;
 
 	const char *type_str =
 		ext_dev->type == CXL_TYPE2_ACCEL_MEM  ? "Type 2 Accelerator" :
 		ext_dev->type == CXL_TYPE3_PERSISTENT  ? "Type 3 Persistent"  :
 											 "Type 3 Volatile";
+
+	device_register(EXTMEM_DEV, ext_dev);
 
 	logbuf_printf("[ CXL  ] Initialized CXL Device\n"
 							"	  Device type: %s\n"

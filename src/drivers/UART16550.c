@@ -1,9 +1,11 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "devices.h"
+#include "device/devreg.h"
+#include "device/types.h"
 #include "drivers/UART16550.h"
 #include "cpu/io.h"
 #include "cpu/IRQ.h"
+#include "cpu/coreinfo.h"
 
 #define UART_COM1 0x3F8
 
@@ -42,10 +44,10 @@ kernel_char_dev_t uart16550_dev = {
 };
 
 void uart16550_init(void) {
-	char_devices[char_devices_c++] = &uart16550_dev;
+	device_register(CHAR_DEV, &uart16550_dev);
 	rx_read_ptr = 0; rx_write_ptr = 0;
 
-	kernel_cpu_dev_t *my_cpu; GET_CURRENT_CPU(my_cpu);
+	coreinfo_t *my_cpu; GET_CURRENT_CPU(my_cpu);
 	irq_install_handler(my_cpu->logical_id, 36, uart16550_irq_handler);
 
 	outb(UART_COM1 + UART_IER, 0x00);

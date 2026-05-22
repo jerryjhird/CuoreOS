@@ -8,35 +8,35 @@
 extern pci_driver_entry_t pci_discovery_table[];
 
 typedef struct {
-    pci_driver_status status;
-    const char* message;
+	pci_driver_status status;
+	const char* message;
 } pci_status_lookup_t;
 
 static const pci_status_lookup_t pci_status_table[] = {
-    {DRIVER_OK,                   "OK"},
-    {CORRUPTED_FIRMWARE_TABLE,    "Corrupted Firmware Table"},
-    {HOST_HARDWARE_FAILURE,       "Host Hardware Failure"},
-    {CARD_HARDWARE_FAILURE,       "Card Hardware Failure"},
-    {CARD_HARDWARE_STALLING,      "Card Hardware Stalling"},
-    {INVALID_BAR,                 "Invalid BAR configuration"},
-    {DOWNLOAD_MORE_RAM,           "Out of memory"},
-    {DOWNLOAD_MORE_RAM_32BIT,     "Out of memory (< 4GB)"},
-    {DEVICE_BUFFER_IS_FULL,       "Device buffer is full"},
-    {CARD_NOT_PRESENT,            "Card not present"},
-    {DRIVER_UNSUPPORTED_CARD,     "Unsupported card"},
-    {DRIVER_UNSUPPORTED_HOST,     "Unsupported host"},
-    {0, NULL}
+	{DRIVER_OK,				   "OK"},
+	{CORRUPTED_FIRMWARE_TABLE,	"Corrupted Firmware Table"},
+	{HOST_HARDWARE_FAILURE,	   "Host Hardware Failure"},
+	{CARD_HARDWARE_FAILURE,	   "Card Hardware Failure"},
+	{CARD_HARDWARE_STALLING,	  "Card Hardware Stalling"},
+	{INVALID_BAR,				 "Invalid BAR configuration"},
+	{DOWNLOAD_MORE_RAM,		   "Out of memory"},
+	{DOWNLOAD_MORE_RAM_32BIT,	 "Out of memory (< 4GB)"},
+	{DEVICE_BUFFER_IS_FULL,	   "Device buffer is full"},
+	{CARD_NOT_PRESENT,			"Card not present"},
+	{DRIVER_UNSUPPORTED_CARD,	 "Unsupported card"},
+	{DRIVER_UNSUPPORTED_HOST,	 "Unsupported host"},
+	{0, NULL}
 };
 
 _Static_assert((sizeof(pci_status_table) / sizeof(pci_status_lookup_t)) - 1 == __PCI_STATUS_COUNT, "pci_status_table is missing entries compared to pci_driver_status enum!");
 
 static const char* pci_driver_status_to_string(pci_driver_status status) {
-    for (int i = 0; pci_status_table[i].message != NULL; i++) {
-        if (pci_status_table[i].status == status) {
-            return pci_status_table[i].message;
-        }
-    }
-    return "Unknown";
+	for (int i = 0; pci_status_table[i].message != NULL; i++) {
+		if (pci_status_table[i].status == status) {
+			return pci_status_table[i].message;
+		}
+	}
+	return "Unknown";
 }
 
 //
