@@ -1,6 +1,8 @@
 #include "pci/pci.h"
 #include <stddef.h>
 
+#include "pci/pci.h"
+
 #include "pci/drivers/ide.h"
 #include "pci/drivers/rtl8139.h"
 #include "pci/drivers/ac97.h"
@@ -23,6 +25,26 @@ pci_driver_entry_t pci_discovery_table[] = {
 		.progif = PCI_PROGIF_ANY,
 
 		.init = NULL // no driver for this
+	},
+	{
+		.name = "xHCI USB Controller",
+		.group_id = 3,
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_SERIAL,
+		.subclass_id = PCI_SUBCLASS_USB,
+		.progif = PCI_PROGIF_XHCI,
+		.init = NULL // xHCI is not implemented
+	},
+	{
+		.name = "EHCI USB Controller",
+		.group_id = 3,
+		.vendor_id = PCI_VENDOR_ANY,
+		.device_id = PCI_DEVICE_ANY,
+		.class_id = PCI_CLASS_SERIAL,
+		.subclass_id = PCI_SUBCLASS_USB,
+		.progif = PCI_PROGIF_EHCI,
+		.init = NULL // EHCI is not implemented
 	},
 	{
 		.name = "Compute Express Link Memory",

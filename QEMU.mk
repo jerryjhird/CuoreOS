@@ -1,5 +1,7 @@
 QEMU_USE_CXL ?= false
 QEMU_USE_SHM ?= false
+QEMU_USE_XHCI ?= false
+QEMU_USE_EHCI ?= false
 
 QEMU_MACHINE ?= q35
 QEMU_CORE_COUNT ?= 1 # single-core by default as multicore can be unstable right now
@@ -20,6 +22,14 @@ ifeq ($(QEMU_USE_CXL),true)
                                  -device cxl-rp,id=rp0,bus=cxl.1,chassis=0,slot=0 \
                                  -device cxl-type3,bus=rp0,volatile-memdev=cxl-mem0,id=cxl-dev0 \
                                  -machine cxl-fmw.0.targets.0=cxl.1,cxl-fmw.0.size=256M
+endif
+
+ifeq ($(QEMU_USE_XHCI),true)
+    EXTRA_OBJECTS_AND_DEVICES += -device nec-usb-xhci,id=xhci0,bus=pcie.0
+endif
+
+ifeq ($(QEMU_USE_EHCI),true)
+    EXTRA_OBJECTS_AND_DEVICES += -device ich9-usb-ehci1,id=ehci0,bus=pcie.0
 endif
 
 ifeq ($(QEMU_USE_SHM),true)

@@ -85,3 +85,33 @@ typedef struct kernel_extmem_dev_t {
 
 	void* private_data;
 } kernel_extmem_dev_t;
+
+typedef struct kernel_usb_bus_dev_t kernel_usb_bus_dev_t;
+typedef struct kernel_usb_dev_t kernel_usb_dev_t;
+
+// USB device
+struct kernel_usb_dev_t {
+	uint8_t slot_id;
+	uint16_t vendor_id;
+	uint16_t product_id;
+	uint8_t class_code;
+
+	struct kernel_usb_bus_dev_t* bus;
+
+	void (*send_transfer)(struct kernel_usb_dev_t* dev, uint8_t endpoint, void* buffer, size_t len);
+	void (*on_event)(struct kernel_usb_dev_t* dev, void* event_trb);
+
+	void* private_data;
+};
+
+// USB bus
+struct kernel_usb_bus_dev_t {
+	uint8_t bus_number;
+
+	struct kernel_usb_dev_t* children[64];
+
+	void (*reset_port)(struct kernel_usb_bus_dev_t* bus, uint8_t port_id);
+	void (*poll_bus)(struct kernel_usb_bus_dev_t* bus);
+
+	void* private_data;
+};

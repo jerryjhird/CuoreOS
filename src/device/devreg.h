@@ -10,7 +10,8 @@ typedef enum {
 	NET_DEV,
 	AUDIO_DEV,
 	POWER_DEV,
-	EXTMEM_DEV
+	EXTMEM_DEV,
+	USB_BUS_DEV
 } device_type_t;
 
 typedef struct {
