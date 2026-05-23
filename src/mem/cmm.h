@@ -23,4 +23,5 @@ void cmm_init(void);
 
 size_t cmm_get_region_count(void);
 const struct cmm_region* cmm_get_region(size_t index);
-uintptr_t cmm_get_max_phys(void);
+uintptr_t cmm_get_phys_top(void);
+uintptr_t cmm_get_ram_top(void);

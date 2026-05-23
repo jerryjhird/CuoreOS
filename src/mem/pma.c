@@ -30,7 +30,7 @@ static inline int bit_test(size_t bit) {
 void pma_init(void) {
 	pma_free_pages_count = 0;
 
-	pma_total_pages = cmm_get_max_phys() / PAGE_SIZE;
+	pma_total_pages = cmm_get_ram_top() / PAGE_SIZE;
 	pma_bitmap_bytes = (pma_total_pages + 7) / 8;
 	size_t bitmap_pages = (pma_bitmap_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
 	size_t bitmap_reserved_bytes = bitmap_pages * PAGE_SIZE;

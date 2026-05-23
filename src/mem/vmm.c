@@ -1,8 +1,9 @@
 #include "vmm.h"
 #include "mem.h"
+#include "cmm.h"
+#include "logbuf.h"
 #include "abs.h"
 #include "panic.h"
-#include "kstate.h"
 
 static uintptr_t vmm_pool_base = 0;
 static uintptr_t vmm_pool_end = 0;
@@ -205,12 +206,7 @@ static VMMNode *vmm_delete(VMMNode *root, uintptr_t start, VMMNode **out) {
 }
 
 void vmm_init(void) {
-	uintptr_t max_phys = 0;
-	for (size_t i = 0; i < memmap_request.response->entry_count; i++) {
-		struct limine_memmap_entry *e = memmap_request.response->entries[i];
-		uintptr_t end = e->base + e->length;
-		if (end > max_phys) { max_phys = end; }
-	}
+	uintptr_t max_phys = cmm_get_phys_top();
 
 	max_phys = (max_phys + 0x1fffff) & ~(uintptr_t)0x1fffff;
 	vmm_pool_base = hhdm_offset + max_phys;
@@ -218,6 +214,8 @@ void vmm_init(void) {
 	vmm_root = NULL;
 	memset(node_bitmap, 0, sizeof(node_bitmap));
 	node_bitmap_hint = 0;
+
+	logbuf_printf("[ VMM  ] Initialized VMM with pool base: %p\n", (void*)vmm_pool_base);
 }
 
 uintptr_t vmm_alloc_pages(size_t count) {
