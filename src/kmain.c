@@ -39,6 +39,8 @@
 #include "binfmt/elf64.h"
 #include "symtable.h"
 #include "cpu/coreinfo.h"
+#include "mem/paging.h"
+#include "mem/cmm.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -171,6 +173,7 @@ extern void AP_kentry(struct limine_mp_info *mp);
 
 coreinfo_t *cpu_blocks[SMP_MAX_CORES];
 uint32_t cpu_blocks_c = 0;
+uint64_t kernel_pml4_phys = 0;
 
 static void kernel_main(void) {
 	struct limine_mp_response *mp_response = mp_request.response;
@@ -287,21 +290,30 @@ void _kstartc(void);
 __attribute__((used))
 void _kstartc(void) {
 	hhdm_offset = hhdm_req.response->offset;
+	kernel_pml4_phys = vmm_get_pml4();
 
 	acpi_init();
 	fadt_init();
 	madt_init();
 	hpet_init();
 
-	// lapic stuff
-	lapic_init(madt_get_lapic_base() + hhdm_offset);
-	uint8_t hardware_id = (uint8_t)lapic_get_id();
-
 	gdt_init();
 	idt_init();
+
+	cmm_init();
 	pma_init();
 	vmm_init();
 
+	// lapic stuff
+	uintptr_t lapic_phys = madt_get_lapic_base();
+	uint64_t* pml4_virt = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	uint64_t flags = PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE;
+
+	vmm_map_page(pml4_virt, LAPIC_VIRTUAL_BASE, lapic_phys, flags);
+	lapic_init(LAPIC_VIRTUAL_BASE);
+	uint8_t hardware_id = (uint8_t)lapic_get_id();
+
+	// initramfs
 	if (module_request.response->module_count <= 0) {
 		logbuf_write("[WARN] initramfs not found.\n");
 	} else {
@@ -318,6 +330,7 @@ void _kstartc(void) {
 
 	heap_init(HEAP_SIZE);
 
+	// cpu block
 	coreinfo_t *my_cpu = zalloc(sizeof(coreinfo_t));
 	cpu_blocks[cpu_blocks_c] = my_cpu;
 	my_cpu->self = my_cpu;
@@ -339,6 +352,7 @@ void _kstartc(void) {
 
 	acpi_power_init();
 
+	// pci stuff
 	pci_init();
 
 	// scan disks previously found by pci discovery
@@ -360,6 +374,7 @@ void _kstartc(void) {
 
 	logbuf_flush(&uart16550_dev);
 
+	// wm stuff
 	GENERIC_FB_FROM_LIMINE_FB(&gfb_limine_framebuffer, framebuffer_request.response->framebuffers[0]);
 
 	wm_init(&gfb_limine_framebuffer);

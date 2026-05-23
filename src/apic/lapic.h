@@ -20,6 +20,8 @@
 #define ICR_LEVEL_DEASSERT 0x000
 #define ICR_SEND_PENDING 0x1000
 
+#define LAPIC_VIRTUAL_BASE 0xFFFFFFFFFF000000ULL
+
 void lapic_init(uintptr_t base_addr);
 
 uint32_t lapic_get_id(void);

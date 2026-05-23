@@ -2,14 +2,12 @@
 
 #include "logbuf.h"
 #include "kstate.h"
-#include "mem/mem.h"
 #include "mem/heap.h"
 #include "sync.h"
 #include "mailbox.h"
 #include "apic/lapic.h"
 #include "cpu/GDT.h"
 #include "cpu/IRQ.h"
-#include "apic/madt.h"
 #include <stdint.h>
 #include "cpu/MSR.h"
 #include "cpu/coreinfo.h"
@@ -30,11 +28,9 @@ struct trap_frame* AP_clock_tick_irq(struct trap_frame *tf) {
 
 __attribute__((noinline))
 void AP_kstartc(struct limine_mp_info *mp) {
-	uint64_t sp;
-	__asm__ volatile("mov %%rsp, %0" : "=r"(sp));
 	gdt_init();
 	idt_init();
-	lapic_init(madt_get_lapic_base() + hhdm_offset);
+	lapic_init(LAPIC_VIRTUAL_BASE);
 
 	SPIN_LOCK(&AP_init_spinlock);
 
@@ -52,8 +48,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	cpu_blocks[my_index] = my_cpu;
 	WRITE_MSR(MSR_GS_BASE, (uint64_t)my_cpu);
 
-	logbuf_printf("[ SMP  ] Core %u Initialized = lapic: %u | sp: %p\n",
-				  (unsigned int)my_index, (unsigned int)mp->lapic_id, (void*)sp);
+	logbuf_printf("[ SMP  ] Core %u Initialized | lapic: %u\n", (unsigned int)my_index, (unsigned int)mp->lapic_id);
 
 	__atomic_fetch_add(&cpu_online_count, 1, __ATOMIC_SEQ_CST);
 
