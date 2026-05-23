@@ -12,7 +12,7 @@ void fadt_init(void) {
 		return;
 	}
 
-	logbuf_printf("[ FADT ] Found FADT at %p\n", (void*)fadt);
+	logbuf_printf("[ FADT ] Initialized FADT at %p\n", (void*)fadt);
 }
 
 uintptr_t fadt_get_pm1a_cnt(void) {

@@ -50,6 +50,12 @@ uint8_t ioapic_map_irq_to_free_vector(uint8_t irq_pin, uint8_t cpu_apic_id, uint
 void ioapic_init(uintptr_t base_addr) {
 	ioapic_virt_base = base_addr;
 
+	// sanity check
+	*(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_SEL) = 0x00;
+	uint32_t id = *(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_WIN) >> 24;
+
+	logbuf_printf("[IOAPIC] Initialized IOAPIC at %p, ID: %u\n", (void*)base_addr, id);
+
 	uint8_t pin;
 	uint32_t flags;
 
