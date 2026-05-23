@@ -47,9 +47,6 @@ void uart16550_init(void) {
 	device_register(CHAR_DEV, &uart16550_dev);
 	rx_read_ptr = 0; rx_write_ptr = 0;
 
-	coreinfo_t *my_cpu; GET_CURRENT_CPU(my_cpu);
-	irq_install_handler(my_cpu->logical_id, 36, uart16550_irq_handler);
-
 	outb(UART_COM1 + UART_IER, 0x00);
 	outb(UART_COM1 + UART_LCR, 0x80);
 	outb(UART_COM1 + UART_DATA, 0x01);
@@ -57,9 +54,16 @@ void uart16550_init(void) {
 	outb(UART_COM1 + UART_LCR, 0x03);
 	outb(UART_COM1 + UART_FCR, 0xC7);
 	outb(UART_COM1 + UART_MCR, 0x0B);
-	outb(UART_COM1 + UART_IER, 0x01);
 
 	uart16550_dev.initialized = true;
+}
+
+void uart16550_init_late(void) {
+	coreinfo_t *my_cpu;
+	GET_CURRENT_CPU(my_cpu);
+	irq_install_handler(my_cpu->logical_id, 36, uart16550_irq_handler);
+
+	outb(UART_COM1 + UART_IER, 0x01);
 }
 
 static void uart16550_wait_tx(void) {while (!(inb(UART_COM1 + UART_LSR) & UART_LSR_TX_EMPTY));}

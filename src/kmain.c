@@ -292,6 +292,9 @@ void _kstartc(void) {
 	hhdm_offset = hhdm_req.response->offset;
 	kernel_pml4_phys = vmm_get_pml4();
 
+	uart16550_init();
+	dev_puts(&uart16550_dev, "\033[2J\033[H");
+
 	acpi_init();
 	fadt_init();
 	madt_init();
@@ -344,12 +347,10 @@ void _kstartc(void) {
 
 	cpu_blocks_c++;
 
-	uart16550_init();
-	dev_puts(&uart16550_dev, "\033[2J\033[H"); // ensure we dont overwrite things like the qemu dvd rom blob
+	uart16550_init_late();
 
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
 	mcfg_init();
-
 	acpi_power_init();
 
 	// pci stuff
