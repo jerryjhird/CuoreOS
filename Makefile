@@ -2,16 +2,16 @@
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
 SYSTEM_CONFIG_VERSION := 0007
 
-WHITELIST_GOALS := menuconfig clean clean-cache format
+WHITELIST_GOALS := configsync clean clean-cache format
 ifeq ($(wildcard Config.mk),)
     ifeq ($(filter $(WHITELIST_GOALS),$(MAKECMDGOALS)),)
-        $(error [!] Config.mk is missing. Run 'make menuconfig' first)
+        $(error [!] Config.mk is missing. Run 'make configsync' first)
     endif
 else
     -include Config.mk
     ifneq ($(CONFIG_STORED_VERSION),$(SYSTEM_CONFIG_VERSION))
         ifeq ($(filter $(WHITELIST_GOALS),$(MAKECMDGOALS)),)
-            $(error [!] Config.mk is outdated (Version $(CONFIG_STORED_VERSION) vs Required $(SYSTEM_CONFIG_VERSION)). Run 'make menuconfig' and press 'S' or explore the new configuration options)
+            $(error [!] Config.mk is outdated (Version $(CONFIG_STORED_VERSION) vs Required $(SYSTEM_CONFIG_VERSION)). Run 'make configsync')
         endif
     endif
 endif
@@ -60,7 +60,7 @@ LDFLAGS += $(CONFIG_ADDITIONAL_LDFLAGS)
 SIG := 0x$(shell head -c 8 /dev/urandom | xxd -p)
 CFLAGS += -DKERNEL_BUILD_SIGNATURE=$(SIG)
 
-.PHONY: all clean run style format compile_commands.json menuconfig
+.PHONY: all clean run style format compile_commands.json configsync
 all: deps_setup $(OBJS) $(KERNEL_ELF) $(DISK_IMG) $(INITRD) $(BOOT_ISO) compile_commands.json
 
 $(OBJS): | deps_setup
@@ -75,8 +75,8 @@ ifeq ($(CONFIG_BIOS_SUPPORT),true)
 	FIRMWARE_SUPPORT_LIST += BIOS
 endif
 
-menuconfig:
-	@python3 $(TOOLS)/configscreen.py $(CUOREOS_VERSION_NAME) $(SYSTEM_CONFIG_VERSION)
+configsync:
+	@python3 $(TOOLS)/configsync.py $(SYSTEM_CONFIG_VERSION)
 	@echo -e "it is recommended to run 'make clean' after regenerating the config"
 
 deps_setup:

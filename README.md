@@ -34,9 +34,9 @@ By contributing code to this project, you agree to the following:
 
 ### Configuring
 ```
-make menuconfig
+make configsync
 ```
-note: If a config dosent exist it will fill out the config with the default values so you can immediately save and exit and have a functional config
+note: everytime you change the config.toml file re-run this command
 
 ### Compiling: (-Otarget isnt required)
 ```bash
