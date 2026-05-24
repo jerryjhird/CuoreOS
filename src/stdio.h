@@ -11,31 +11,35 @@ typedef void (*putc_t)(char c);
 
 /**
  * flags:
- *  - # : adds 0x prefix for %x, 0b for %b but %p always includes 0x
+ *  - # : adds 0x prefix for %x/%X, 0b for %b; %p always includes 0x
  *  - 0 : zero padding
- *  - - : left alignment
- *  - + : prefaces positive numbers with +
- *  -   : prefaces positive numbers with a space.
+ *  - - : left align
+ *  - + : prefix positive numbers with +
+ *  -   : prefix positive numbers with a space
  *
  * length modifiers:
- *  - hh  : argument is (unsigned) char.
- *  - h   : argument is (unsigned) short.
- *  - l   : argument is (unsigned) long.
- *  - ll  : argument is (unsigned) long long.
- *  - z   : argument is size_t.
- *  - j   : argument is intmax_t.
- *  - t   : argument is ptrdiff_t.
+ *  - hh : (unsigned) char
+ *  - h  : (unsigned) short
+ *  - l  : (unsigned) long
+ *  - ll : (unsigned) long long
+ *  - z  : size_t / ssize_t
+ *  - j  : intmax_t / uintmax_t
+ *  - t  : ptrdiff_t
  *
- *  - d, i: signed decimal integer.
- *  - u : unsigned decimal integer.
- *  - x : unsigned hex
- *  - p : pointer.
- *  - s : null terminated str
- *  - c : single char
- *  - %
+ * specifiers:
+ *  - d, i : signed decimal
+ *  - u	: unsigned decimal
+ *  - x, X : unsigned hex (lower/upper)
+ *  - o	: unsigned octal
+ *  - p	: pointer (0x-prefixed hex)
+ *  - s	: null-terminated string
+ *  - c	: single char
+ *  - b	: binary
+ *  - I	: IPv4 address (uint8_t[4])
+ *  - M	: MAC address (uint8_t[6])
+ *  - %%   : literal %
  *
- *  - b : binary representation
- *  - I : ipv4 addr (expects uint8_t[4])
- *  - M : mac addr (expects uint8_t[6])
  */
- void vprintfcb(putc_t putc, const char *fmt, va_list args);
+
+int vsnprintf(char *buf, size_t bufsz, const char *fmt, va_list args);
+int snprintf(char *buf, size_t bufsz, const char *fmt, ...);
