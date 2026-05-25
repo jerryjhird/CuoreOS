@@ -353,26 +353,6 @@ void _kstartc(void) {
 	mcfg_init();
 	acpi_power_init();
 
-	// pci stuff
-	pci_init();
-
-	// scan disks previously found by pci discovery
-	for (size_t i = 0; i < registry_count; i++) {
-		if (registry[i].type != DISK_DEV) continue;
-
-		kernel_disk_dev_t* dev = (kernel_disk_dev_t*)registry[i].dev_ptr;
-		if (!dev) continue;
-
-		#ifdef DO_KDEVTESTS
-			if (!dev__test__disk(dev)) {
-				panic("DISK", "Test Failed");
-			}
-		#endif
-
-		logbuf_printf("[ DISK ] Scanning %s\n", dev->model);
-		generic_disk_init(dev);
-	}
-
 	logbuf_flush(&uart16550_dev);
 
 	// wm stuff
@@ -392,6 +372,26 @@ void _kstartc(void) {
 	logbuf_clear();
 
 	__asm__ volatile ("sti");
+
+	// pci stuff
+	pci_init();
+
+	// scan disks previously found by pci discovery
+	for (size_t i = 0; i < registry_count; i++) {
+		if (registry[i].type != DISK_DEV) continue;
+
+		kernel_disk_dev_t* dev = (kernel_disk_dev_t*)registry[i].dev_ptr;
+		if (!dev) continue;
+
+		#ifdef DO_KDEVTESTS
+			if (!dev__test__disk(dev)) {
+				panic("DISK", "Test Failed");
+			}
+		#endif
+
+		logbuf_printf("[ DISK ] Scanning %s\n", dev->model);
+		generic_disk_init(dev);
+	}
 
 	// start the kernel
 	kernel_main();
