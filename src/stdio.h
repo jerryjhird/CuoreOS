@@ -7,8 +7,6 @@
 void ptrthex(char *buf, uint64_t val);
 void readline(char (*getc_func)(void), void (*putc_func)(char), char* buffer, size_t limit);
 
-typedef void (*putc_t)(char c);
-
 /**
  * flags:
  *  - # : adds 0x prefix for %x/%X, 0b for %b; %p always includes 0x
