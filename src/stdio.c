@@ -16,6 +16,26 @@ void ptrthex(char *buf, uint64_t val) {
 	buf[16] = 0;
 }
 
+uint64_t strtoull(const char* nptr) {
+	uint64_t val = 0;
+	if (nptr[0] == '0' && (nptr[1] == 'x' || nptr[1] == 'X')) {
+		nptr += 2;
+		while ((*nptr >= '0' && *nptr <= '9') || (*nptr >= 'a' && *nptr <= 'f') || (*nptr >= 'A' && *nptr <= 'F')) {
+			val *= 16;
+			if (*nptr >= '0' && *nptr <= '9') val += *nptr - '0';
+			else if (*nptr >= 'a' && *nptr <= 'f') val += *nptr - 'a' + 10;
+			else val += *nptr - 'A' + 10;
+			nptr++;
+		}
+	} else {
+		while (*nptr >= '0' && *nptr <= '9') {
+			val = val * 10 + (*nptr - '0');
+			nptr++;
+		}
+	}
+	return val;
+}
+
 /**
  * @param getc_func pointer to a blocking getc
  * @param putc_func pointer to putc (to echo back characters) if NULL echo is disabled.

@@ -41,6 +41,7 @@
 #include "cpu/coreinfo.h"
 #include "mem/paging.h"
 #include "mem/cmm.h"
+#include "cmdline.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -74,6 +75,11 @@ volatile struct limine_rsdp_request rsdp_request = {
 
 volatile struct limine_mp_request mp_request = {
 	.id = LIMINE_MP_REQUEST_ID,
+	.revision = 0
+};
+
+volatile struct limine_executable_cmdline_request cmdline_request = {
+	.id = LIMINE_EXECUTABLE_CMDLINE_REQUEST_ID,
 	.revision = 0
 };
 
@@ -180,30 +186,40 @@ static void kernel_main(void) {
 
 	time_init();
 
+	uint64_t maxcpu_req = cmdline_get_uint("maxcpus", SMP_MAX_CORES);
+	if (maxcpu_req == 0) maxcpu_req = 1;
+
+	if (maxcpu_req > SMP_MAX_CORES) {
+		LOGBUF_WARN("CMDLINE's maxcpus is set higher than SMP_MAX_CORES. maxcpu will be set to SMP_MAX_CORES, increase SMP_MAX_CORES in build config\n");
+		maxcpu_req = SMP_MAX_CORES;
+	}
+
 	uint64_t cores_to_boot = mp_response->cpu_count;
 	if (cores_to_boot > SMP_MAX_CORES) {
 		cores_to_boot = SMP_MAX_CORES;
 	}
 
-	__atomic_fetch_add(&cpu_online_count, 1, __ATOMIC_SEQ_CST); // account for bsp in active cpu counter
+	if (cores_to_boot > maxcpu_req) {
+		cores_to_boot = maxcpu_req;
+	}
+
+	__atomic_fetch_add(&cpu_online_count, 1, __ATOMIC_SEQ_CST);
 
 	if (mp_response->cpu_count >= 2) {
 		logbuf_write("[ SMP  ] Multiple processors found\n");
 
-		if (mp_response->cpu_count > SMP_MAX_CORES) {
-			logbuf_printf("[ WARN ] the config used to compile this kernel limits usage to %zu of %zu available cores.\n" "[ WARN ] %zu cores will remain inactive.\n", (size_t)SMP_MAX_CORES, (size_t)mp_response->cpu_count, (size_t)(mp_response->cpu_count - SMP_MAX_CORES));
+		if (mp_response->cpu_count > cores_to_boot) {
+			const char* reason = (maxcpu_req < SMP_MAX_CORES) ? "the arguments used to boot this kernel" : "the config used to compile this kernel";
+
+			LOGBUF_WARN("%s limits usage to %zu of %zu available cores.\n", reason, (size_t)cores_to_boot, (size_t)mp_response->cpu_count);
+			LOGBUF_WARN("%zu cores will remain inactive.\n", (size_t)(mp_response->cpu_count - cores_to_boot));
 		}
 
 		for (uint64_t i = 0; i < mp_response->cpu_count; i++) {
 			struct limine_mp_info *cpu = mp_response->cpus[i];
 
-			if (cpu->lapic_id == mp_response->bsp_lapic_id) {
-				continue;
-			}
-
-			if (i >= cores_to_boot) {
-				continue;
-			}
+			if (cpu->lapic_id == mp_response->bsp_lapic_id) { continue; }
+			if (i >= cores_to_boot) { continue; }
 
 			void* ap_stack = malloc(AP_STACK_SIZE);
 			cpu->extra_argument = (uint64_t)ap_stack + AP_STACK_SIZE;
@@ -249,13 +265,6 @@ static void kernel_main(void) {
 		} else {
 			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
 		}
-
-		// uint32_t STARWARS_SERVER = dns_query_blocking(net_dev, IP_ADDR(8,8,8,8), "towel.blinkenlights.nl");
-		// if (STARWARS_SERVER != 0) {
-		// 	telnet_client(net_dev, STARWARS_SERVER, 23);
-		// } else {
-		// 	dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
-		// }
 	}
 
 	logbuf_flush(&uart16550_dev);
@@ -291,6 +300,8 @@ __attribute__((used))
 void _kstartc(void) {
 	hhdm_offset = hhdm_req.response->offset;
 	kernel_pml4_phys = vmm_get_pml4();
+
+	cmdline_init();
 
 	uart16550_init();
 	dev_puts(&uart16550_dev, "\033[2J\033[H");
@@ -389,7 +400,6 @@ void _kstartc(void) {
 			}
 		#endif
 
-		logbuf_printf("[ DISK ] Scanning %s\n", dev->model);
 		generic_disk_init(dev);
 	}
 

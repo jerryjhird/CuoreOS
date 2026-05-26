@@ -1,5 +1,4 @@
-#ifndef logbuf_H
-#define logbuf_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -17,4 +16,5 @@ void logbuf_printf(const char *fmt, ...); // see formatting instructions in stdi
 void logbuf_flush(kernel_char_dev_t *target);
 void logbuf_clear(void);
 
-#endif
+#define LOGBUF_WARN(fmt, ...) logbuf_printf(ANSI_BOLD_YELLOW "[ WARN ] " ANSI_RESET fmt __VA_OPT__(,) __VA_ARGS__)
+#define LOGBUF_ERROR(fmt, ...) logbuf_printf(ANSI_BOLD_RED "[ ERR  ] " ANSI_RESET fmt __VA_OPT__(,) __VA_ARGS__)

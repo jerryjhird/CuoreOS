@@ -5,6 +5,8 @@
 #include <stdarg.h>
 
 void ptrthex(char *buf, uint64_t val);
+uint64_t strtoull(const char* nptr);
+
 void readline(char (*getc_func)(void), void (*putc_func)(char), char* buffer, size_t limit);
 
 /**
