@@ -4,9 +4,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <limine.h>
-#include "kstate.h"
 #include "mem.h"
 #include "abs.h"
+#include "datatype/bitmap.h"
 #include "panic.h"
 #include "cmm.h"
 
@@ -14,18 +14,6 @@ static uint8_t *pma_bitmap = NULL;
 static size_t pma_total_pages = 0;
 static size_t pma_bitmap_bytes = 0;
 static size_t pma_free_pages_count = 0;
-
-static inline void bit_set(size_t bit) {
-	pma_bitmap[bit / 8] |= (1 << (bit % 8));
-}
-
-static inline void bit_clear(size_t bit) {
-	pma_bitmap[bit / 8] &= ~(1 << (bit % 8));
-}
-
-static inline int bit_test(size_t bit) {
-	return (pma_bitmap[bit / 8] >> (bit % 8)) & 1;
-}
 
 void pma_init(void) {
 	pma_free_pages_count = 0;
@@ -59,44 +47,50 @@ void pma_init(void) {
 
 				size_t page_idx = addr / PAGE_SIZE;
 				if (page_idx < pma_total_pages) {
-					bit_clear(page_idx);
+					BITMAP_CLEAR(pma_bitmap, page_idx);
 					pma_free_pages_count++;
 				}
 			}
 		}
 	}
 
-	bit_set(0);
+	BITMAP_SET(pma_bitmap, 0);
 }
 
 static uintptr_t _pma_alloc_range(size_t count, size_t limit) {
 	if (UNLIKELY(count == 0)) return 0;
 	if (limit > pma_total_pages) limit = pma_total_pages;
 
-	size_t consecutive_found = 0;
-	size_t start_bit = 0;
+	size_t search_idx = 0;
+	while (search_idx < limit) {
+		size_t next_free = bitmap_find_next_free(pma_bitmap, search_idx, limit);
 
-	for (size_t i = 0; i < limit; i++) {
-		if (!bit_test(i)) {
-			if (consecutive_found == 0) start_bit = i;
-			consecutive_found++;
+		if (next_free == (size_t)-1) break; // OOM
+		search_idx = next_free;
 
-			if (consecutive_found == count) {
-				for (size_t j = 0; j < count; j++) {
-					bit_set(start_bit + j);
-				}
-				return (uintptr_t)(start_bit * PAGE_SIZE);
+		size_t consecutive = 0;
+		for (size_t i = 0; i < count; i++) {
+			if (search_idx + i < limit && !BITMAP_TEST(pma_bitmap, search_idx + i)) {
+				consecutive++;
+			} else {
+				break;
 			}
-		} else {
-			consecutive_found = 0;
 		}
+
+		if (consecutive == count) {
+			for (size_t j = 0; j < count; j++) {
+				BITMAP_SET(pma_bitmap, search_idx + j);
+			}
+			return (uintptr_t)(search_idx * PAGE_SIZE);
+		}
+
+		search_idx++;
 	}
 
 	return 0; // OOM
 }
 
 // allocate anywhere in physical memory
-
 uintptr_t pma_alloc_pages(size_t count) {
 	uintptr_t addr = _pma_alloc_range(count, pma_total_pages);
 	if (UNLIKELY(addr == 0)) {
@@ -106,7 +100,6 @@ uintptr_t pma_alloc_pages(size_t count) {
 }
 
 // below 4gb memory allocation for legacy devices that cant do 64 bit DMA
-
 uintptr_t pma_alloc_pages_low(size_t count) {
 	uintptr_t addr = _pma_alloc_range(count, PMA_ZONE_32BIT);
 	if (UNLIKELY(addr == 0)) {
@@ -116,8 +109,7 @@ uintptr_t pma_alloc_pages_low(size_t count) {
 }
 
 // free pages
-
 void pma_free_pages(uintptr_t phys, size_t count) {
 	size_t start_bit = phys / PAGE_SIZE;
-	for (size_t i = 0; i < count; i++) bit_clear(start_bit + i);
+	for (size_t i = 0; i < count; i++) BITMAP_CLEAR(pma_bitmap, start_bit + i);
 }

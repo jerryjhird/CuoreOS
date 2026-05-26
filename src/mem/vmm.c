@@ -1,9 +1,11 @@
 #include "vmm.h"
+
 #include "mem.h"
 #include "cmm.h"
 #include "logbuf.h"
 #include "abs.h"
 #include "panic.h"
+#include "datatype/avl.h"
 
 static uintptr_t vmm_pool_base = 0;
 static uintptr_t vmm_pool_end = 0;
@@ -12,10 +14,61 @@ static VMMNode node_pool[VMM_MAX_ALLOCATIONS];
 static uint8_t node_bitmap[VMM_MAX_ALLOCATIONS / 8];
 static size_t node_bitmap_hint = 0;
 
+#define VMM_MAX_GAP(n_ptr) ((n_ptr) ? GET_CONTAINER(n_ptr, VMMNode, node)->max_gap : 0)
+
+static uintptr_t vmm_subtree_end(VMMNode *n) {
+	if (!n) { return 0; }
+
+	avl_node_t *max = avl_get_max(&n->node);
+	VMMNode *node = GET_CONTAINER(max, VMMNode, node);
+
+	return node->start + node->page_count * PAGE_SIZE;
+}
+
+static uintptr_t vmm_subtree_start(VMMNode *n) {
+	if (!n) { return (uintptr_t)-1; }
+
+	avl_node_t *min = avl_get_min(&n->node);
+	return GET_CONTAINER(min, VMMNode, node)->start;
+}
+
+static int vmm_node_cmp(avl_node_t *a, avl_node_t *b) {
+	VMMNode *va = GET_CONTAINER(a, VMMNode, node);
+	VMMNode *vb = GET_CONTAINER(b, VMMNode, node);
+
+	if (va->start < vb->start) return -1;
+	if (va->start > vb->start) return 1;
+	return 0;
+}
+
+static void vmm_node_update(avl_node_t *n) {
+	VMMNode *node = GET_CONTAINER(n, VMMNode, node);
+	size_t gap_il = 0;
+
+	if (node->node.left) {
+		uintptr_t lend = vmm_subtree_end(GET_CONTAINER(node->node.left, VMMNode, node));
+		if (node->start >= lend) { gap_il = (node->start - lend) / PAGE_SIZE; }
+	}
+
+	size_t gap_ir = 0;
+
+	if (node->node.right) {
+		uintptr_t nend = node->start + node->page_count * PAGE_SIZE;
+		uintptr_t rstart = vmm_subtree_start(GET_CONTAINER(node->node.right, VMMNode, node));
+		if (rstart >= nend) { gap_ir = (rstart - nend) / PAGE_SIZE; }
+	}
+
+	node->max_gap = SMAX(SMAX(VMM_MAX_GAP(node->node.left), VMM_MAX_GAP(node->node.right)),
+						 SMAX(gap_il, gap_ir));
+}
+
+static const avl_callbacks_t vmm_avl_cb = { .compare = vmm_node_cmp, .update = vmm_node_update };
+
 static VMMNode *pool_alloc_node(void) {
 	for (size_t i = node_bitmap_hint; i < VMM_MAX_ALLOCATIONS; i++) {
 		size_t byte = i / 8;
 		size_t bit = i % 8;
+
 		if (!(node_bitmap[byte] & (1u << bit))) {
 			node_bitmap[byte] |= (1u << bit);
 			node_bitmap_hint = i + 1;
@@ -38,97 +91,6 @@ static void pool_free_node(VMMNode *node) {
 	if (i < node_bitmap_hint) { node_bitmap_hint = i; }
 }
 
-static inline int vmm_height(VMMNode *n) {
-	return n ? n->height : 0;
-}
-
-static inline size_t vmm_max_gap(VMMNode *n) {
-	return n ? n->max_gap : 0;
-}
-
-static inline int vmm_balance(VMMNode *n) {
-	return n ? vmm_height(n->left) - vmm_height(n->right) : 0;
-}
-
-static inline int imax(int a, int b) {
-	return a > b ? a : b;
-}
-
-static inline size_t smax(size_t a, size_t b) {
-	return a > b ? a : b;
-}
-
-static uintptr_t vmm_subtree_end(VMMNode *n) {
-	if (!n) { return 0; }
-	while (n->right) { n = n->right; }
-	return n->start + n->page_count * PAGE_SIZE;
-}
-
-static uintptr_t vmm_subtree_start(VMMNode *n) {
-	if (!n) { return (uintptr_t)-1; }
-	while (n->left) { n = n->left; }
-	return n->start;
-}
-
-static void vmm_update(VMMNode *n) {
-	if (!n) { return; }
-	n->height = 1 + imax(vmm_height(n->left), vmm_height(n->right));
-	size_t gap_il = 0;
-
-	if (n->left) {
-		uintptr_t lend = vmm_subtree_end(n->left);
-		if (n->start >= lend) { gap_il = (n->start - lend) / PAGE_SIZE; }
-	}
-
-	size_t gap_ir = 0;
-
-	if (n->right) {
-		uintptr_t nend = n->start + n->page_count * PAGE_SIZE;
-		uintptr_t rstart = vmm_subtree_start(n->right);
-		if (rstart >= nend) { gap_ir = (rstart - nend) / PAGE_SIZE; }
-	}
-
-	n->max_gap = smax(smax(vmm_max_gap(n->left), vmm_max_gap(n->right)),
-					  smax(gap_il, gap_ir));
-}
-
-static VMMNode *vmm_rot_r(VMMNode *y) {
-	VMMNode *x = y->left;
-	VMMNode *t = x->right;
-	x->right = y;
-	y->left = t;
-	vmm_update(y);
-	vmm_update(x);
-	return x;
-}
-
-static VMMNode *vmm_rot_l(VMMNode *x) {
-	VMMNode *y = x->right;
-	VMMNode *t = y->left;
-	y->left = x;
-	x->right = t;
-	vmm_update(x);
-	vmm_update(y);
-	return y;
-}
-
-static VMMNode *vmm_rebalance(VMMNode *n) {
-	vmm_update(n);
-	int bal = vmm_balance(n);
-
-	if (bal > 1) {
-		if (vmm_balance(n->left) < 0) { n->left = vmm_rot_l(n->left); }
-		return vmm_rot_r(n);
-	}
-
-	if (bal < -1) {
-		if (vmm_balance(n->right) > 0) { n->right = vmm_rot_r(n->right); }
-		return vmm_rot_l(n);
-	}
-
-	return n;
-}
-
 static uintptr_t vmm_find_gap(VMMNode *n, uintptr_t base, size_t pages) {
 	if (!n) { return 0; }
 	uintptr_t span = pages * PAGE_SIZE;
@@ -137,10 +99,11 @@ static uintptr_t vmm_find_gap(VMMNode *n, uintptr_t base, size_t pages) {
 	if (sub_start >= base + span) { return base; }
 	if (n->max_gap < pages) { return 0; }
 
-	if (n->left) {
-		uintptr_t addr = vmm_find_gap(n->left, base, pages);
+	if (n->node.left) {
+		VMMNode *l = GET_CONTAINER(n->node.left, VMMNode, node);
+		uintptr_t addr = vmm_find_gap(l, base, pages);
 		if (addr) { return addr; }
-		uintptr_t lend = vmm_subtree_end(n->left);
+		uintptr_t lend = vmm_subtree_end(l);
 		if (lend > base) { base = lend; }
 	}
 
@@ -148,61 +111,13 @@ static uintptr_t vmm_find_gap(VMMNode *n, uintptr_t base, size_t pages) {
 	uintptr_t nend = n->start + n->page_count * PAGE_SIZE;
 	if (nend > base) { base = nend; }
 
-	if (n->right) {
-		uintptr_t addr = vmm_find_gap(n->right, base, pages);
+	if (n->node.right) {
+		VMMNode *r = GET_CONTAINER(n->node.right, VMMNode, node);
+		uintptr_t addr = vmm_find_gap(r, base, pages);
 		if (addr) { return addr; }
 	}
 
 	return 0;
-}
-
-static VMMNode *vmm_insert(VMMNode *node, VMMNode *n) {
-	if (!node) { return n; }
-
-	if (n->start < node->start) {
-		node->left = vmm_insert(node->left, n);
-	} else if (n->start > node->start) {
-		node->right = vmm_insert(node->right, n);
-	} else {
-		panic("VMM", "overlapping virtual node");
-	}
-
-	return vmm_rebalance(node);
-}
-
-static VMMNode *vmm_unlink_leftmost(VMMNode *n, VMMNode **out) {
-	if (!n->left) {
-		*out = n;
-		return n->right;
-	}
-
-	n->left = vmm_unlink_leftmost(n->left, out);
-	return vmm_rebalance(n);
-}
-
-static VMMNode *vmm_delete(VMMNode *root, uintptr_t start, VMMNode **out) {
-	if (!root) { return NULL; }
-	if (start < root->start) {
-		root->left = vmm_delete(root->left, start, out);
-		return vmm_rebalance(root);
-	}
-
-	if (start > root->start) {
-		root->right = vmm_delete(root->right, start, out);
-		return vmm_rebalance(root);
-	}
-
-	*out = root;
-	if (!root->left) { return root->right; }
-	if (!root->right) { return root->left; }
-
-	VMMNode *succ;
-	VMMNode *new_right = vmm_unlink_leftmost(root->right, &succ);
-
-	succ->left = root->left;
-	succ->right = new_right;
-
-	return vmm_rebalance(succ);
 }
 
 void vmm_init(void) {
@@ -235,23 +150,29 @@ uintptr_t vmm_alloc_pages(size_t count) {
 	VMMNode *n = pool_alloc_node();
 	n->start = addr;
 	n->page_count = count;
-	n->height = 1;
-	vmm_root = vmm_insert(vmm_root, n);
+	vmm_root = GET_CONTAINER(avl_insert(&vmm_root->node, &n->node, &vmm_avl_cb), VMMNode, node);
+
 	return addr;
 }
 
 uintptr_t vmm_free_pages(uintptr_t virt, size_t count) {
 	if (UNLIKELY(virt == 0)) { return 0; }
-	VMMNode *node = NULL;
-	vmm_root = vmm_delete(vmm_root, virt, &node);
 
-	if (UNLIKELY(!node)) { return 0; }
+	VMMNode key = { .start = virt };
+	avl_node_t *out = NULL;
+	avl_node_t *new_root = avl_delete(&vmm_root->node, &key.node, &vmm_avl_cb, &out);
 
+	vmm_root = new_root ? GET_CONTAINER(new_root, VMMNode, node) : NULL;
+
+	if (UNLIKELY(!out)) { return 0; }
+
+	VMMNode *node = GET_CONTAINER(out, VMMNode, node);
 	if (UNLIKELY(node->page_count != count)) {
 		panic("VMM", "free count mismatch");
 	}
 
 	uintptr_t addr = node->start;
 	pool_free_node(node);
+
 	return addr;
 }
