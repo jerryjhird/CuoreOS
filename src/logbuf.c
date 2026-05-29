@@ -47,15 +47,17 @@ void logbuf_write(const char *str) {
 	}
 }
 
+void logbuf_vprintf(const char *fmt, va_list args) {
+	char temp_buf[512];
+	vsnprintf(temp_buf, sizeof(temp_buf), fmt, args);
+	logbuf_write(temp_buf);
+}
+
 void logbuf_printf(const char *fmt, ...) {
 	va_list args;
-
-	char temp_buf[512];
 	va_start(args, fmt);
-	vsnprintf(temp_buf, sizeof(temp_buf), fmt, args);
+	logbuf_vprintf(fmt, args);
 	va_end(args);
-
-	logbuf_write(temp_buf);
 }
 
 void logbuf_flush(kernel_char_dev_t *target) {

@@ -2,6 +2,9 @@
 CUOREOS_VERSION_NAME := ALPHA-prebin-000
 SYSTEM_CONFIG_VERSION := 0007
 
+GIT_LIMINE = "https://github.com/Limine-Bootloader/Limine.git" --depth=1 --branch v11.x-binary
+GIT_FLANTERM = "https://github.com/Mintsuki/Flanterm.git" --depth=1
+
 WHITELIST_GOALS := configsync clean clean-cache format
 ifeq ($(wildcard Config.mk),)
     ifeq ($(filter $(WHITELIST_GOALS),$(MAKECMDGOALS)),)
@@ -49,7 +52,7 @@ DISK_IMG := $(CACHEDIR)/qemu-disk.img
 
 # flags
 # -fno-pie/-fno-pic for systems that auto enable PIE/PIC like microslop windows subsystem for linux
-CFLAGS := -fno-pie -fno-pic -std=c11 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
+CFLAGS := -fno-pie -fno-pic -std=c23 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I. -MMD -MP
 CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wmissing-declarations
 GCC_WARNINGS := -Wlogical-op
 
@@ -82,10 +85,10 @@ configsync:
 deps_setup:
 	@mkdir -p $(FLANTERM_DIR) $(LIMINE_DIR)
 	@if [ ! -d "$(FLANTERM_DIR)/.git" ]; then \
-		git clone $(CONFIG_FLANTERM_FLAGS) $(CONFIG_FLANTERM) $(FLANTERM_DIR); \
+		git clone $(GIT_FLANTERM) $(FLANTERM_DIR); \
 	fi
 	@if [ ! -d "$(LIMINE_DIR)/.git" ]; then \
-		git clone $(CONFIG_LIMINE_FLAGS) $(CONFIG_LIMINE) $(LIMINE_DIR); \
+		git clone $(GIT_LIMINE) $(LIMINE_DIR); \
 	fi
 
 	make -C $(LIMINE_DIR)
