@@ -1,10 +1,12 @@
 #include "devreg.h"
 
+#include "device/types.h"
 #include "panic.h"
 
 device_registry_entry_t registry[512];
 size_t registry_count = 0;
 uint32_t next_device_id = 1;
+kernel_char_dev_t* debug_dev = {0};
 
 void* device_find(uint32_t id) {
 	int low = 0, high = (int)registry_count - 1;

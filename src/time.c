@@ -59,7 +59,7 @@ void time_sync(void) {
 	boot_hpet_ticks = hpet_get_ticks();
 	boot_epoch = get_epoch_rtc();
 
-	dev_puts(&uart16550_dev, "[ TIME ] Time synced\n");
+	dev_puts(debug_dev, "[ TIME ] Time synced\n");
 }
 
 void time_init(void) {

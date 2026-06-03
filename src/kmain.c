@@ -4,6 +4,7 @@
 #include "panic.h"
 #include "drivers/HPET.h"
 #include "drivers/UART16550.h"
+#include "drivers/E9.h"
 #include "logbuf.h"
 #include "mem/heap.h"
 #include "limine.h"
@@ -129,7 +130,7 @@ linear_framebuffer_t gfb_limine_framebuffer;
 static void uart16550_console_task(void) {
 	while (1) {
 		char c = uart16550_getc();
-		dev_puts(&uart16550_dev, &c);
+		dev_puts(debug_dev, &c);
 
 		#ifdef DEBUG
 			if (c == 's' || c == 'r') {
@@ -263,11 +264,11 @@ static void kernel_main(void) {
 		if (google_time != 0) {
 			ntp_send_request(net_dev, google_time);
 		} else {
-			dev_puts(&uart16550_dev, "[ DNS ] could not resolve\n");
+			dev_puts(debug_dev, "[ DNS ] could not resolve\n");
 		}
 	}
 
-	logbuf_flush(&uart16550_dev);
+	logbuf_flush(debug_dev);
 	logbuf_flush(&flanterm_dev);
 	logbuf_clear();
 
@@ -303,8 +304,18 @@ void _kstartc(void) {
 
 	cmdline_init();
 
-	uart16550_init();
-	dev_puts(&uart16550_dev, "\033[2J\033[H");
+	const char* debugout = cmdline_get_string("debugout");
+
+	if (debugout != NULL && strcmp(debugout, "e9") == 0) {
+		E9_init();
+		debug_dev = &e9_dev;
+	} else {
+		// default
+		uart16550_init();
+		debug_dev = &uart16550_dev;
+	}
+
+	dev_puts(debug_dev, "\033[2J\033[H");
 
 	acpi_init();
 	fadt_init();
@@ -364,7 +375,7 @@ void _kstartc(void) {
 	mcfg_init();
 	acpi_power_init();
 
-	logbuf_flush(&uart16550_dev);
+	logbuf_flush(debug_dev);
 
 	// wm stuff
 	GENERIC_FB_FROM_LIMINE_FB(&gfb_limine_framebuffer, framebuffer_request.response->framebuffers[0]);

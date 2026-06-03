@@ -8,7 +8,7 @@ ntp_callback_t ntp_update_cb = NULL; // when NTP response is received this will 
 
 #ifdef DEBUG
 static void ntp_debug_callback(ntp_info_t* info) {
-	dev_printf(&uart16550_dev,
+	dev_printf(debug_dev,
 		"\n( NTP DEBUG HANDLER )\n"
 		"unix TS: %llu\n"
 		"stratum: %u\n"

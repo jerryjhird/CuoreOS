@@ -13,12 +13,12 @@ static void telnet_callback(uint8_t* data, size_t len) {
 			i += 2;
 			continue;
 		}
-		uart16550_dev.putc(data[i]);
+		debug_dev->putc(data[i]);
 	}
 }
 
 void telnet_client(kernel_net_dev_t* dev, uint32_t server_ip, uint16_t server_port) {
-	dev_puts(&uart16550_dev, "\033[2J\033[H");
+	dev_puts(debug_dev, "\033[2J\033[H");
 
 	telnet_socket = tcp_connect(dev, server_ip, server_port);
 	if (telnet_socket) {

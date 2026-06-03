@@ -7,5 +7,4 @@
 void dev_puts(kernel_char_dev_t* dev, const char* s);
 void dev_printf(kernel_char_dev_t *dev, const char *fmt, ...);
 
-extern kernel_char_dev_t uart16550_dev;
-extern kernel_char_dev_t flanterm_dev;
+extern kernel_char_dev_t* debug_dev;
