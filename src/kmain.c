@@ -16,7 +16,6 @@
 #include "apic/ioapic.h"
 #include "apic/madt.h"
 #include "pci/pci.h"
-#include "acpi/power.h"
 #include "fs/ramfs.h"
 #include "scheduler.h"
 #include "cpu/smp/init.h"
@@ -131,19 +130,6 @@ static void uart16550_console_task(void) {
 	while (1) {
 		char c = uart16550_getc();
 		dev_puts(debug_dev, &c);
-
-		#ifdef DEBUG
-			if (c == 's' || c == 'r') {
-				kernel_power_dev_t* pwr = (kernel_power_dev_t*)device_find_first(POWER_DEV);
-
-				if (LIKELY(pwr != NULL)) {
-					if (c == 's') pwr->shutdown(pwr);
-					else		  pwr->reboot(pwr);
-				} else {
-					panic("POWER", "no power device registered for operation!\n");
-				}
-			}
-		#endif
 	}
 }
 
@@ -373,7 +359,6 @@ void _kstartc(void) {
 
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
 	mcfg_init();
-	acpi_power_init();
 
 	logbuf_flush(debug_dev);
 
