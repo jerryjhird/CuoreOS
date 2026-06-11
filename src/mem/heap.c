@@ -184,7 +184,7 @@ void heap_init(size_t size) {
 	head->prev = NULL;
 	tail = head;
 
-	logbuf_ok("[ HEAP ] Initialized HEAP with %zu pages (%zu MB) starting at %p\n", pages, (pages * PAGE_SIZE) / (1024 * 1024), (void *)virt);
+	logbuf_ok("[ HEAP ] Initialized HEAP with %zu pages (%zu MB) starting at %p\n", pages, (size_t)BYTES_TO_MB(pages * PAGE_SIZE), (void *)virt);
 	heap_init_pools();
 }
 

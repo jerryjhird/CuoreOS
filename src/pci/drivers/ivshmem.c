@@ -47,12 +47,12 @@ pci_driver_status ivshmem_init(pci_dev_t dev) {
 	device_register(EXTMEM_DEV, ext);
 
 	logbuf_ok("[ SHM  ] Initialized IVSHMEM\n"
-						"	  Physical base: %#lx\n"
-						"	  Virtual base:	%#lx\n"
-						"	  Size: %zu MB\n",
-			  			phys,
-			  			virt,
-			  			size / (1024 * 1024));
+						"	 Physical base: %#lx\n"
+						"	 Virtual base: %#lx\n"
+						"	 Size: %zu MB\n",
+						phys,
+						virt,
+						(size_t)BYTES_TO_MB(size));
 	return DRIVER_OK;
 }
 #endif

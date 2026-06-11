@@ -14,6 +14,14 @@
 #define BIT_CHECK(var, mask) (((var) & (mask)) == (mask))
 #define BIT_TOGGLE(var, mask) ((var) ^=  (mask))
 
+// unit conversion
+#define BYTES_TO_KB(bytes) ((bytes) / 1024UL)
+#define BYTES_TO_MB(bytes) ((bytes) / (1024UL * 1024UL))
+#define BYTES_TO_GB(bytes) ((bytes) / (1024UL * 1024UL * 1024UL))
+#define KB_TO_BYTES(x) ((x) * 1024UL)
+#define MB_TO_BYTES(x) ((x) * 1024UL * 1024UL)
+#define GB_TO_BYTES(x) ((x) * 1024UL * 1024UL * 1024UL)
+
 // ANSI (based on https://gist.github.com/JBlond/2fea43a3049b38287e5e9cefc87b2124)
 #define ESC "\033"
 #define ANSI_RESET ESC "[0m"

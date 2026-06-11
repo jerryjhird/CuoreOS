@@ -76,7 +76,7 @@ void partition_register(partition_t* new_part) {
 	kernel_disk_dev_t* dev = new_part->disk;
 	const char* type_name = partition_get_name(new_part);
 
-	logbuf_info("[ DISK ] Registered partition #%u \"%s\" Size: %llu (MiB)\n", (unsigned int)new_part->partition_id, type_name ? type_name : "Unknown", (unsigned long long)((new_part->sector_count * 512) / 1024 / 1024));
+	logbuf_info("[ DISK ] Registered partition #%u \"%s\" Size: %llu (MiB)\n", (unsigned int)new_part->partition_id, type_name ? type_name : "Unknown", (unsigned long long)BYTES_TO_MB(new_part->sector_count * 512));
 
 	if (dev->partitions == NULL) {
 		dev->partitions = (struct partition_s*)new_part;
