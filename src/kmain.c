@@ -41,6 +41,7 @@
 #include "mem/paging.h"
 #include "mem/cmm.h"
 #include "cmdline.h"
+#include "firmware/smbios/smbios.h"
 
 volatile struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
@@ -79,6 +80,11 @@ volatile struct limine_mp_request mp_request = {
 
 volatile struct limine_executable_cmdline_request cmdline_request = {
 	.id = LIMINE_EXECUTABLE_CMDLINE_REQUEST_ID,
+	.revision = 0
+};
+
+volatile struct limine_smbios_request smbios_request = {
+	.id = LIMINE_SMBIOS_REQUEST_ID,
 	.revision = 0
 };
 
@@ -314,6 +320,10 @@ void _kstartc(void) {
 	} else {
 		symtable_init(sym_file.data, (size_t)sym_file.size);
 	}
+
+	// smbios
+	struct limine_smbios_response *smbios_response = smbios_request.response;
+	smbios_init(smbios_response->entry_32, smbios_response->entry_64);
 
 	dev_puts(debug_dev, "\033[2J\033[H");
 
