@@ -1,4 +1,4 @@
-#include "HPET.h"
+#include "hpet.h"
 
 #include "mem/mem.h"
 #include "mem/paging.h"

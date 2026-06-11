@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "device/char.h"
 #include "drivers/RTC.h"
-#include "drivers/HPET.h"
+#include "firmware/acpi/hpet.h"
 #include "abs.h"
 
 static time_t boot_epoch = 0;

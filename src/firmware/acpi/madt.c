@@ -1,6 +1,7 @@
 #include "madt.h"
+
 #include "firmware/acpi/acpi.h"
-#include "ioapic.h"
+#include "cpu/apic/ioapic.h"
 #include <stddef.h>
 #include "mem/mem.h"
 #include "panic.h"

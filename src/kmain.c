@@ -2,7 +2,7 @@
 #include "Config.h"
 #include "device/devreg.h"
 #include "panic.h"
-#include "drivers/HPET.h"
+#include "firmware/acpi/hpet.h"
 #include "drivers/UART16550.h"
 #include "drivers/E9.h"
 #include "logbuf.h"
@@ -14,7 +14,7 @@
 #include "cpu/GDT.h"
 #include "cpu/apic/lapic.h"
 #include "cpu/apic/ioapic.h"
-#include "cpu/apic/madt.h"
+#include "firmware/acpi/madt.h"
 #include "pci/pci.h"
 #include "fs/ramfs.h"
 #include "scheduler.h"
@@ -245,8 +245,8 @@ static void kernel_main(void) {
 	if (net_dev) {
 		eth_init(net_dev);
 
-		net_dev->ip_addr	  = IP_ADDR(10, 0, 2, 15);
-		net_dev->gateway	  = IP_ADDR(10, 0, 2, 2);
+		net_dev->ip_addr = IP_ADDR(10, 0, 2, 15);
+		net_dev->gateway = IP_ADDR(10, 0, 2, 2);
 		net_dev->subnet_mask  = IP_ADDR(255, 255, 255, 0);
 
 		arp_send_request(net_dev, net_dev->gateway);

@@ -2,7 +2,7 @@
 #include <limine.h>
 #include "ioapic.h"
 #include "logbuf.h"
-#include "madt.h"
+#include "firmware/acpi/madt.h"
 
 #define IOAPIC_REG_SEL  0x00
 #define IOAPIC_REG_WIN  0x10
