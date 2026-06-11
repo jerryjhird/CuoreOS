@@ -1,6 +1,6 @@
 #include "mailbox.h"
 
-#include "apic/lapic.h"
+#include "cpu/apic/lapic.h"
 #include <stdint.h>
 #include "init.h"
 #include "abs.h"

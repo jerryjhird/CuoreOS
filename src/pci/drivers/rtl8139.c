@@ -12,7 +12,7 @@ typedef int dummy0;
 #include "mem/heap.h"
 #include "mem/mem.h"
 #include "logbuf.h"
-#include "apic/ioapic.h"
+#include "cpu/apic/ioapic.h"
 #include "device/types.h"
 #include "mem/paging.h"
 #include "cpu/IRQ.h"

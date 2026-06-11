@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "acpi/acpi.h"
+#include "firmware/acpi/acpi.h"
 
 #define HPET_REG_CAPS 0x00
 #define HPET_REG_CONFIG 0x10

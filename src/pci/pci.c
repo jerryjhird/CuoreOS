@@ -3,7 +3,7 @@
 #include "mem/heap.h"
 #include "logbuf.h"
 #include <stddef.h>
-#include "acpi/mcfg.h"
+#include "firmware/acpi/mcfg.h"
 
 extern pci_driver_entry_t pci_discovery_table[];
 

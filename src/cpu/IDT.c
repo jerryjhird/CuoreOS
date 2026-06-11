@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "stdio.h"
-#include "apic/lapic.h"
+#include "cpu/apic/lapic.h"
 #include "IRQ.h"
 #include "device/types.h"
 #include "device/char.h"

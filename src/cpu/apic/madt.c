@@ -1,5 +1,5 @@
 #include "madt.h"
-#include "acpi/acpi.h"
+#include "firmware/acpi/acpi.h"
 #include "ioapic.h"
 #include <stddef.h>
 #include "mem/mem.h"

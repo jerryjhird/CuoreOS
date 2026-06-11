@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "acpi/acpi.h"
+#include "firmware/acpi/acpi.h"
 
 struct madt {
 	struct acpi_sdt_header header;

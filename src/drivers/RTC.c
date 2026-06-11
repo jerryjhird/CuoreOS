@@ -1,7 +1,7 @@
 #include "RTC.h"
 
 #include "CMOS.h"
-#include "acpi/fadt.h"
+#include "firmware/acpi/fadt.h"
 #include <stddef.h>
 
 #define BCD_TO_BIN(val) (((val) & 0x0F) + (((val) / 16) * 10))

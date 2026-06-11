@@ -5,7 +5,7 @@
 #include "mem/heap.h"
 #include "sync.h"
 #include "mailbox.h"
-#include "apic/lapic.h"
+#include "cpu/apic/lapic.h"
 #include "cpu/GDT.h"
 #include "cpu/IRQ.h"
 #include <stdint.h>

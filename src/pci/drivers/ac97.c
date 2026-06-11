@@ -11,7 +11,7 @@ typedef int dummy0;
 #include "logbuf.h"
 #include "mem/heap.h"
 #include "mem/mem.h"
-#include "apic/ioapic.h"
+#include "cpu/apic/ioapic.h"
 #include "cpu/IRQ.h"
 #include "mem/paging.h"
 #include "device/devreg.h"

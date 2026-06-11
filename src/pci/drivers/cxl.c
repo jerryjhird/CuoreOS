@@ -14,7 +14,7 @@ typedef int dummy0;
 #include "device/types.h"
 #include "mem/heap.h"
 #include "panic.h"
-#include "acpi/cedt.h"
+#include "firmware/acpi/cedt.h"
 #include "device/devreg.h"
 
 static extmem_type_t determine_cxl_type(pci_dev_t dev) {
