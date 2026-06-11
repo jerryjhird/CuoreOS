@@ -28,7 +28,7 @@ void logbuf_clear(void);
 #endif
 
 #define logbuf_info(fmt, ...) logbuf_printf("(" ANSI_REG_CYAN	 " INFO  " ANSI_RESET ") " fmt __VA_OPT__(,) __VA_ARGS__)
-#define logbuf_ok(fmt, ...) logbuf_printf("(" ANSI_BOLD_GREEN    "  OK   " ANSI_RESET ") " fmt __VA_OPT__(,) __VA_ARGS__)
+#define logbuf_ok(fmt, ...) logbuf_printf("(" ANSI_BOLD_GREEN	"  OK   " ANSI_RESET ") " fmt __VA_OPT__(,) __VA_ARGS__)
 #define logbuf_warn(fmt, ...) logbuf_printf("(" ANSI_BOLD_YELLOW " WARN  " ANSI_RESET ") " fmt __VA_OPT__(,) __VA_ARGS__)
 #define logbuf_error(fmt, ...) logbuf_printf("(" ANSI_BOLD_RED	 " ERROR " ANSI_RESET ") " fmt __VA_OPT__(,) __VA_ARGS__)
 #define logbuf_critical(fmt, ...) logbuf_printf("(" ANSI_BG_RED ANSI_BOLD_WHITE " CRIT  " ANSI_RESET ") " fmt __VA_OPT__(,) __VA_ARGS__)

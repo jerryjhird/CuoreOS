@@ -121,7 +121,7 @@ void smbios_init(void *entry_32, void *entry_64) {
 			}
 
 			if (header->type != 126) {
-				logbuf_debug("[SMBIOS] found structure: %d | handle: 0x%X | length: %d bytes\n", header->type, header->handle, header->length);
+				logbuf_debug("[SMBIOS] Found Structure: %d | handle: 0x%X | length: %d bytes\n", header->type, header->handle, header->length);
 			}
 
 			uintptr_t next_addr = current_addr + header->length;
