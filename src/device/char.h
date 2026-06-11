@@ -8,7 +8,12 @@
 void dev_puts(kernel_char_dev_t* dev, const char* s);
 void dev_printf(kernel_char_dev_t *dev, const char *fmt, ...);
 
-#define dev_log_debug(dev, fmt, ...) dev_printf(dev, "(" ANSI_HI_BLACK   " DEBUG " ANSI_RESET ") ", ##__VA_ARGS__)
+#ifdef DEBUG
+	#define dev_log_debug(dev, fmt, ...) dev_printf(dev, "(" ANSI_HI_BLACK " DEBUG " ANSI_RESET ") " fmt, ##__VA_ARGS__)
+#else
+	#define dev_log_debug(dev, fmt, ...) ((void)0)
+#endif
+
 #define dev_log_ok(dev, fmt, ...) dev_printf(dev, "(" ANSI_BOLD_GREEN	"  OK   " ANSI_RESET ") ", ##__VA_ARGS__)
 #define dev_log_info(dev, fmt, ...) dev_printf(dev, "(" ANSI_REG_CYAN	" INFO  " ANSI_RESET ") ", ##__VA_ARGS__)
 #define dev_log_warn(dev, fmt, ...) dev_printf(dev, "(" ANSI_BOLD_YELLOW " WARN  " ANSI_RESET ") ", ##__VA_ARGS__)
