@@ -3,7 +3,7 @@
 #include "guid_list.h"
 #include "partition.h"
 #include "logbuf.h"
-#include "crc32.h"
+#include "math/crc32.h"
 #include <string.h>
 #include "mem/heap.h"
 #include "mem/dmalloc.h"
