@@ -48,7 +48,7 @@ void AP_kstartc(struct limine_mp_info *mp) {
 	cpu_blocks[my_index] = my_cpu;
 	WRITE_MSR(MSR_GS_BASE, (uint64_t)my_cpu);
 
-	logbuf_printf("[ SMP  ] Core %u Initialized | lapic: %u\n", (unsigned int)my_index, (unsigned int)mp->lapic_id);
+	logbuf_ok("[ SMP  ] Core %u Initialized | lapic: %u\n", (unsigned int)my_index, (unsigned int)mp->lapic_id);
 
 	__atomic_fetch_add(&cpu_online_count, 1, __ATOMIC_SEQ_CST);
 

@@ -177,7 +177,7 @@ static void kernel_main(void) {
 	if (maxcpu_req == 0) maxcpu_req = 1;
 
 	if (maxcpu_req > SMP_MAX_CORES) {
-		LOGBUF_WARN("CMDLINE's maxcpus is set higher than SMP_MAX_CORES. maxcpu will be set to SMP_MAX_CORES, increase SMP_MAX_CORES in build config\n");
+		logbuf_warn("[ SMP  ] CMDLINE's maxcpus is set higher than SMP_MAX_CORES. maxcpu will be set to SMP_MAX_CORES, increase SMP_MAX_CORES in build config\n");
 		maxcpu_req = SMP_MAX_CORES;
 	}
 
@@ -193,13 +193,13 @@ static void kernel_main(void) {
 	__atomic_fetch_add(&cpu_online_count, 1, __ATOMIC_SEQ_CST);
 
 	if (mp_response->cpu_count >= 2) {
-		logbuf_write("[ SMP  ] Multiple processors found\n");
+		logbuf_info("[ SMP  ] Multiple processors found\n");
 
 		if (mp_response->cpu_count > cores_to_boot) {
 			const char* reason = (maxcpu_req < SMP_MAX_CORES) ? "the arguments used to boot this kernel" : "the config used to compile this kernel";
 
-			LOGBUF_WARN("%s limits usage to %zu of %zu available cores.\n", reason, (size_t)cores_to_boot, (size_t)mp_response->cpu_count);
-			LOGBUF_WARN("%zu cores will remain inactive.\n", (size_t)(mp_response->cpu_count - cores_to_boot));
+			logbuf_warn("[ SMP  ] %s limits usage to %zu of %zu available cores.\n", reason, (size_t)cores_to_boot, (size_t)mp_response->cpu_count);
+			logbuf_warn("[ SMP  ] %zu cores will remain inactive.\n", (size_t)(mp_response->cpu_count - cores_to_boot));
 		}
 
 		for (uint64_t i = 0; i < mp_response->cpu_count; i++) {
@@ -232,8 +232,8 @@ static void kernel_main(void) {
 		mailbox_send_fc(time_sync, NULL);
 	}
 
-	logbuf_printf("[ KRNL ] Signature: %llu\n", (unsigned long long)compile_signature);
-	logbuf_printf("[ BOOT ] Time it took to boot (nano's): %llu\n", (unsigned long long)hpet_get_nanos());
+	logbuf_info("[ KRNL ] Signature: %llu\n", (unsigned long long)compile_signature);
+	logbuf_info("[ BOOT ] Time it took to boot (nano's): %llu\n", (unsigned long long)hpet_get_nanos());
 
 	kernel_net_dev_t* net_dev = (kernel_net_dev_t*)device_find_first(NET_DEV);
 
@@ -301,6 +301,21 @@ void _kstartc(void) {
 		debug_dev = &uart16550_dev;
 	}
 
+	// initramfs
+	if (module_request.response->module_count <= 0) {
+		logbuf_warn("initramfs not found.\n");
+	} else {
+		ramfs_init(&initramfs, module_request.response->modules[0]->address);
+	}
+
+	ramfs_file_t sym_file = ramfs_get_file(&initramfs, "symtable.data");
+
+	if (sym_file.data == NULL || sym_file.size == 0) {
+		panic("SYMTABLE", "failed to find 'symtable.data' in initramfs");
+	} else {
+		symtable_init(sym_file.data, (size_t)sym_file.size);
+	}
+
 	dev_puts(debug_dev, "\033[2J\033[H");
 
 	acpi_init();
@@ -323,21 +338,6 @@ void _kstartc(void) {
 	vmm_map_page(pml4_virt, LAPIC_VIRTUAL_BASE, lapic_phys, flags);
 	lapic_init(LAPIC_VIRTUAL_BASE);
 	uint8_t hardware_id = (uint8_t)lapic_get_id();
-
-	// initramfs
-	if (module_request.response->module_count <= 0) {
-		logbuf_write("[WARN] initramfs not found.\n");
-	} else {
-		ramfs_init(&initramfs, module_request.response->modules[0]->address);
-	}
-
-	ramfs_file_t sym_file = ramfs_get_file(&initramfs, "symtable.data");
-
-	if (sym_file.data == NULL || sym_file.size == 0) {
-		panic("SYMTABLE", "failed to find 'symtable.data' in initramfs");
-	} else {
-		symtable_init(sym_file.data, (size_t)sym_file.size);
-	}
 
 	heap_init(HEAP_SIZE);
 

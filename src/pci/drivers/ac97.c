@@ -163,11 +163,11 @@ pci_driver_status ac97_init(pci_dev_t dev) {
 
 		// NAMBAR
 		vmm_map_page(pml4_virt, state->nambar + hhdm_offset, state->nambar,
-					 PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
+					 PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 
 		// NABMBAR
 		vmm_map_page(pml4_virt, state->nabmbar + hhdm_offset, state->nabmbar,
-					 PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
+					 PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 
 		state->nambar  += hhdm_offset;
 		state->nabmbar += hhdm_offset;
@@ -219,9 +219,7 @@ pci_driver_status ac97_init(pci_dev_t dev) {
 
 	g_ac96_dev = adev;
 
-	logbuf_write("[ AC97 ] Initialized ");
-	logbuf_write(adev->model);
-	logbuf_write("\n");
+	logbuf_ok("[ AC97 ] Initialized %s\n", adev->model);
 
 	return DRIVER_OK;
 }

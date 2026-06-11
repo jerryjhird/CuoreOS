@@ -48,7 +48,7 @@ pci_driver_status cxl_init(pci_dev_t dev) {
 		vmm_map_page_noflush(pml4,
 			virt + i * PAGE_SIZE,
 			window.phys_base + i * PAGE_SIZE,
-			PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER);
+			PTE_PRESENT | PTE_WRITABLE);
 	}
 
 	vmm_flush_tlb_all();
@@ -71,12 +71,12 @@ pci_driver_status cxl_init(pci_dev_t dev) {
 
 	device_register(EXTMEM_DEV, ext_dev);
 
-	logbuf_printf("[ CXL  ] Initialized CXL Device\n"
-							"	  Device type: %s\n"
-							"	  Host Bridge UID: %d\n"
-							"	  Physical base: %#lx\n"
-							"	  Virtual base:	%#lx\n"
-							"	  Size: %zu MB\n",
+	logbuf_ok("[ CXL  ] Initialized CXL Device\n"
+							"				 Device type: %s\n"
+							"				 Host Bridge UID: %d\n"
+							"				 Physical base: %#lx\n"
+							"				 Virtual base:	%#lx\n"
+							"				 Size: %zu MB\n",
 				  			type_str,
 				  			window.host_bridge_uid,
 				  			window.phys_base,

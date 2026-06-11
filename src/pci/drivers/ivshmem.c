@@ -31,7 +31,7 @@ pci_driver_status ivshmem_init(pci_dev_t dev) {
 		vmm_map_page_noflush(pml4,
 			virt + i * PAGE_SIZE,
 			phys + i * PAGE_SIZE,
-			PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
+			PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 	}
 
 	vmm_flush_tlb_all();
@@ -46,7 +46,7 @@ pci_driver_status ivshmem_init(pci_dev_t dev) {
 
 	device_register(EXTMEM_DEV, ext);
 
-	logbuf_printf("[ SHM  ] Initialized IVSHMEM\n"
+	logbuf_ok("[ SHM  ] Initialized IVSHMEM\n"
 						"	  Physical base: %#lx\n"
 						"	  Virtual base:	%#lx\n"
 						"	  Size: %zu MB\n",

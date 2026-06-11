@@ -274,7 +274,7 @@ void pci_init(void) {
 				dev->claimed = true;
 
 				if (!pci_check_driver_capabilities(entry->required_capabilities)) {
-					logbuf_printf("[ PCI  ] skipping initialization of %s  reason: Missing capabilities\n", entry->name);
+					logbuf_warn("[ PCI  ] skipping initialization of %s  reason: Missing capabilities\n", entry->name);
 					continue; // try next driver
 				}
 
@@ -286,10 +286,10 @@ void pci_init(void) {
 					pci_enable_capabilities(dev->bus, dev->slot, dev->func);
 					pci_driver_status status = entry->init(*dev);
 					if (status != DRIVER_OK) {
-						logbuf_printf("[ PCI  ] Driver for '%s' failed with error: %s\n", entry->name, pci_driver_status_to_string(status));
+						logbuf_warn("[ PCI  ] Driver for '%s' failed with error: %s\n", entry->name, pci_driver_status_to_string(status));
 					}
 				} else {
-					logbuf_printf("[ PCI  ] Found %s\n", entry->name);
+					logbuf_info("[ PCI  ] Found %s\n", entry->name);
 				}
 
 				if (entry->group_id != 0) break;
@@ -300,7 +300,7 @@ void pci_init(void) {
 	for (int j = 0; j < count; j++) {
 		pci_dev_t* dev = &discovered[j];
 		if (!dev->claimed) {
-			logbuf_printf("[ PCI  ] Unhandled: %02x:%02x.%d ID %04x:%04x Class %02x/%02x\n",
+			logbuf_debug("[ PCI  ] Unhandled: %02x:%02x.%d ID %04x:%04x Class %02x/%02x\n",
 						  (unsigned int)dev->bus,
 						  (unsigned int)dev->slot,
 						  (unsigned int)dev->func,

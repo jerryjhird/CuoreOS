@@ -28,9 +28,7 @@ void ioapic_map_irq(uint8_t irq_pin, uint8_t vector, uint8_t cpu_apic_id, uint32
 	uint32_t low_entry = (uint32_t)vector | flags;
 	ioapic_write(low_index, low_entry);
 
-	#ifdef DEBUG
-		logbuf_printf("[IOAPIC] mapped pin: %u, vector: %#02x, flags: %#08x\n", (unsigned int)irq_pin, (unsigned int)vector, (unsigned int)flags);
-	#endif
+	logbuf_debug("[IOAPIC] mapped pin: %u, vector: %#02x, flags: %#08x\n", (unsigned int)irq_pin, (unsigned int)vector, (unsigned int)flags);
 }
 
 uint8_t ioapic_map_irq_to_free_vector(uint8_t irq_pin, uint8_t cpu_apic_id, uint32_t flags) {
@@ -54,7 +52,7 @@ void ioapic_init(uintptr_t base_addr) {
 	*(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_SEL) = 0x00;
 	uint32_t id = *(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_WIN) >> 24;
 
-	logbuf_printf("[IOAPIC] Initialized IOAPIC at %p, ID: %u\n", (void*)base_addr, id);
+	logbuf_ok("[IOAPIC] Initialized IOAPIC at %p, ID: %u\n", (void*)base_addr, id);
 
 	uint8_t pin;
 	uint32_t flags;

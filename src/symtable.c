@@ -44,7 +44,7 @@ const char* symtable_lookup(size_t index, uint64_t* out_addr) {
 	return &k_symbols->string_blob[entry->string_offset];
 }
 
-uint64_t symtable_reverse_lookup(const char* name) {
+uint64_t symtable_lookup_name(const char* name) {
 	if (!name || !k_symbols || k_symbols->entry_count == 0) {
 		return 0;
 	}

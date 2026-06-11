@@ -57,9 +57,7 @@ void* acpi_find_sdt(const char* signature) {
 
 		if (memcmp(table->signature, signature, 4) == 0) {
 			if (!acpi_checksum(table)) {
-				logbuf_write("[ ACPI ] Checksum failed for table ");
-				logbuf_write(signature);
-				logbuf_write("\n");
+				logbuf_warn("[ ACPI ] Checksum failed for table %s", signature);
 				return NULL;
 			}
 

@@ -26,7 +26,7 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 	header->header_crc32 = 0;
 
 	if (crc32(header, header->header_size) != read_crc) {
-		logbuf_write("[ GPT  ] Header CRC32 Mismatch! Aborting.\n");
+		logbuf_error("[ GPT  ] Header CRC32 Mismatch! aborting...\n");
 		dmfree(sector_res.virt);
 		return;
 	}
@@ -43,7 +43,7 @@ void gpt_parse(kernel_disk_dev_t* dev) {
 	}
 
 	if (crc32((void*)array_res.virt, array_size) != header->partition_entry_array_crc32) {
-		logbuf_write("[ GPT  ] Partition Entry Array CRC32 Mismatch!\n");
+		logbuf_error("[ GPT  ] Partition Entry Array CRC32 Mismatch!\n");
 		dmfree(array_res.virt);
 		dmfree(sector_res.virt);
 		return;

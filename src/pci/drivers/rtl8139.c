@@ -218,7 +218,7 @@ pci_driver_status rtl8139_init(pci_dev_t pdev) {
 		uintptr_t phys = pdev.bars[1].base;
 		uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
 		vmm_map_page(pml4, phys + hhdm_offset, phys,
-			PTE_PRESENT | PTE_WRITABLE | PTE_TYPE_DRIVER | PTE_CACHE_DISABLE);
+			PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 		state->base = phys + hhdm_offset;
 	} else {
 		if (!pdev.bars[0].is_io || pdev.bars[0].base == 0) {
@@ -291,7 +291,7 @@ pci_driver_status rtl8139_init(pci_dev_t pdev) {
 
 	device_register(NET_DEV, ndev);
 
-	logbuf_printf("[ ETH  ] Initialized %s with MAC: %M\n", ndev->model, ndev->mac);
+	logbuf_ok("[ ETH  ] Initialized %s with MAC: %M\n", ndev->model, ndev->mac);
 	return DRIVER_OK;
 }
 

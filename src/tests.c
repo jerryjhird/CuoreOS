@@ -22,7 +22,7 @@ bool dev__test__disk(kernel_disk_dev_t* dev) {
 
 	// test write (1 sector)
 	if (dev->write_sectors(dev, 100, 1, dma) != 0) {
-		logbuf_write("[ TEST ] FAILED: Write operation\n");
+		logbuf_error("[ TEST ] FAILED: Write operation\n");
 		retcode = false;
 		goto cleanup;
 	}
@@ -31,14 +31,14 @@ bool dev__test__disk(kernel_disk_dev_t* dev) {
 
 	// test read (1 sector)
 	if (dev->read_sectors(dev, 100, 1, dma) != 0) {
-		logbuf_write("[ TEST ] FAILED: Read operation\n");
+		logbuf_error("[ TEST ] FAILED: Read operation\n");
 		retcode = false;
 		goto cleanup;
 	}
 
 	// verify data integrity
 	if (test_buffer[0] != 0xABCD || test_buffer[10] != (uint16_t)(0xABCD + 10)) {
-		logbuf_write("[ TEST ] FAILED: Invalid data read back after write\n");
+		logbuf_error("[ TEST ] FAILED: Invalid data read back after write\n");
 		retcode = false;
 		goto cleanup;
 	}
@@ -51,9 +51,9 @@ bool dev__test__disk(kernel_disk_dev_t* dev) {
 	dev->read_sectors(dev, 100, 1, dma);
 
 	if (test_buffer[0] == 0 && test_buffer[255] == 0) {
-		logbuf_printf("[ TEST ] SUCCESS: %s test passed\n", dev->model);
+		logbuf_ok("[ TEST ] SUCCESS: %s test passed\n", dev->model);
 	} else {
-		logbuf_write("[ TEST ] FAILED: clear verification failed.\n");
+		logbuf_error("[ TEST ] FAILED: clear verification failed.\n");
 		retcode = false;
 	}
 

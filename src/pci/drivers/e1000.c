@@ -46,7 +46,7 @@ pci_driver_status e1000_init(pci_dev_t dev) {
 	for (uintptr_t offset = 0; offset < dev.bars[0].size; offset += 4096) {
 		vmm_map_page(pml4, dev.bars[0].base + hhdm_offset + offset,
 					 dev.bars[0].base + offset,
-					 PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE | PTE_TYPE_DRIVER);
+					 PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 	}
 	s->mmio_virt = dev.bars[0].base + hhdm_offset;
 
@@ -57,7 +57,7 @@ pci_driver_status e1000_init(pci_dev_t dev) {
 	}
 
 	const char* model_name = e1000_get_model(dev.device_id);
-	logbuf_printf("[ ETH  ] Found %s with MAC: %M\n", model_name, s->mac);
+	logbuf_ok("[ ETH  ] Found %s with MAC: %M\n", model_name, s->mac);
 	return DRIVER_OK;
 }
 #endif

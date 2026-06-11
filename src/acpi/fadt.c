@@ -8,11 +8,11 @@ void fadt_init(void) {
 	fadt = (acpi_fadt_t*)acpi_find_sdt("FACP");
 
 	if (!fadt) {
-		logbuf_write("[ FADT ] FADT is missing or corrupted!\n");
+		logbuf_error("[ FADT ] FADT is missing or corrupted!\n");
 		return;
 	}
 
-	logbuf_printf("[ FADT ] Initialized FADT at %p\n", (void*)fadt);
+	logbuf_ok("[ FADT ] Initialized FADT at %p\n", (void*)fadt);
 }
 
 uintptr_t fadt_get_pm1a_cnt(void) {

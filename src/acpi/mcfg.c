@@ -14,7 +14,7 @@ void mcfg_init(void) {
 	mcfg_ptr = (struct mcfg_table*)acpi_find_sdt("MCFG");
 
 	if (UNLIKELY(!mcfg_ptr)) {
-		logbuf_write("[ MCFG ] table not found. PCIe ECAM will be unavailable!!!\n");
+		logbuf_warn("[ MCFG ] table not found. PCIe ECAM will be unavailable!!!\n");
 		return;
 	}
 
@@ -27,7 +27,7 @@ void mcfg_init(void) {
 
 	mcfg_is_initialized = true;
 
-	logbuf_printf("[ MCFG ] Initialized MCFG at %p, entries: %zu\n", (void*)mcfg_ptr, (size_t)mcfg_entry_count);
+	logbuf_ok("[ MCFG ] Initialized MCFG at %p, entries: %zu\n", (void*)mcfg_ptr, (size_t)mcfg_entry_count);
 }
 
 void* mcfg_get_device_addr(uint16_t segment, uint8_t bus, uint8_t slot, uint8_t func) {

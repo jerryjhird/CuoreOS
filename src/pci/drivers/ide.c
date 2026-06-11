@@ -116,7 +116,7 @@ pci_driver_status ide_init(pci_dev_t pdev) {
 
 	device_register(DISK_DEV, dev);
 
-	logbuf_printf("[ IDE  ] Found \"%s\" (%llu MiB)\n",  dev->model, (unsigned long long)(dev->total_sectors / 2048));
+	logbuf_ok("[ IDE  ] Found \"%s\" (%llu MiB)\n",  dev->model, (unsigned long long)(dev->total_sectors / 2048));
 
 	return DRIVER_OK;
 }

@@ -130,7 +130,7 @@ void vmm_init(void) {
 	memset(node_bitmap, 0, sizeof(node_bitmap));
 	node_bitmap_hint = 0;
 
-	logbuf_printf("[ VMM  ] Initialized VMM with pool base: %p\n", (void*)vmm_pool_base);
+	logbuf_ok("[ VMM  ] Initialized VMM with pool base: %p\n", (void*)vmm_pool_base);
 }
 
 uintptr_t vmm_alloc_pages(size_t count) {

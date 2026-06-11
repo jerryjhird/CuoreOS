@@ -18,7 +18,7 @@ void hpet_init(void) {
 	uintptr_t hpet_phys = table->address.address;
 	hpet_base = hpet_phys + hhdm_offset;
 
-	vmm_map_page(pml4_virt, hpet_base, hpet_phys, PTE_PRESENT | PTE_WRITABLE | PTE_WRITE_THROUGH | PTE_CACHE_DISABLE | PTE_TYPE_DRIVER);
+	vmm_map_page(pml4_virt, hpet_base, hpet_phys, PTE_PRESENT | PTE_WRITABLE | PTE_WRITE_THROUGH | PTE_CACHE_DISABLE);
 
 	uint64_t caps = *(volatile uint64_t*)(hpet_base + HPET_REG_CAPS);
 	femtoseconds_per_tick = (uint32_t)(caps >> 32);

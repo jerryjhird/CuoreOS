@@ -171,11 +171,7 @@ pci_driver_status ahci_init(pci_dev_t pdev) {
 		}
 
 		device_register(DISK_DEV, ddev);
-
-		logbuf_write("[ SATA ] Initialized ");
-		logbuf_write(ddev->model);
-		logbuf_write("\n");
-
+		logbuf_ok("[ SATA ] Initialized %s\n", ddev->model);
 		return DRIVER_OK;
 	}
 

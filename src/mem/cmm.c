@@ -44,8 +44,9 @@ void cmm_init(void) {
 		}
 	}
 
-	logbuf_printf("[ CMM  ] Top of Physical address space: %p\n", (void*)max_phys_addr);
-	logbuf_printf("[ CMM  ] Top of RAM: %p\n", (void*)max_ram_addr);
+	logbuf_ok("[ CMM  ] CMM initialized successfully\n");
+	logbuf_debug("[ CMM  ] Top of Physical address space: %p\n", (void*)max_phys_addr);
+	logbuf_debug("[ CMM  ] Top of RAM: %p\n", (void*)max_ram_addr);
 }
 
 size_t cmm_get_region_count(void) { return internal_count; }

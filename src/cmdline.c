@@ -59,10 +59,10 @@ static int cmdline_find(const char* key) {
 
 void cmdline_init(void) {
 	if (cmdline_request.response == NULL || cmdline_request.response->cmdline == NULL || cmdline_request.response->cmdline[0] == '\0') {
-		logbuf_printf("[ ARGS ] no command line arguments provided\n");
+		logbuf_info("[ ARGS ] no command line arguments provided\n");
 		return;
 	}
-	logbuf_printf("[ ARGS ] cmdline arguments: \"%s\"\n", cmdline_request.response->cmdline);
+	logbuf_info("[ ARGS ] cmdline arguments: \"%s\"\n", cmdline_request.response->cmdline);
 	cmdline_parse();
 }
 
