@@ -34,6 +34,12 @@ SECTIONS
 
     . = ALIGN(0x1000);
 
+    .limine_requests : {
+        _limine_requests_start = .;
+        KEEP(*(.limine_requests .limine_requests.*))
+        _limine_requests_end = .;
+    } :data
+
     .data : {
         *(.data .data.*)
     } :data

@@ -43,47 +43,49 @@
 #include "cmdline.h"
 #include "firmware/smbios/smbios.h"
 
-volatile struct limine_module_request module_request = {
+#define limine_request_a __attribute__((used, section(".limine_requests"))) volatile
+
+limine_request_a struct limine_module_request module_request = {
 	.id = LIMINE_MODULE_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_memmap_request memmap_request = {
+limine_request_a struct limine_memmap_request memmap_request = {
 	.id = LIMINE_MEMMAP_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_executable_address_request executable_request = {
+limine_request_a struct limine_executable_address_request executable_request = {
 	.id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_hhdm_request hhdm_req = {
+limine_request_a struct limine_hhdm_request hhdm_req = {
 	.id = LIMINE_HHDM_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_framebuffer_request framebuffer_request = {
+limine_request_a struct limine_framebuffer_request framebuffer_request = {
 	.id = LIMINE_FRAMEBUFFER_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_rsdp_request rsdp_request = {
+limine_request_a struct limine_rsdp_request rsdp_request = {
 	.id = LIMINE_RSDP_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_mp_request mp_request = {
+limine_request_a struct limine_mp_request mp_request = {
 	.id = LIMINE_MP_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_executable_cmdline_request cmdline_request = {
+limine_request_a struct limine_executable_cmdline_request cmdline_request = {
 	.id = LIMINE_EXECUTABLE_CMDLINE_REQUEST_ID,
 	.revision = 0
 };
 
-volatile struct limine_smbios_request smbios_request = {
+limine_request_a struct limine_smbios_request smbios_request = {
 	.id = LIMINE_SMBIOS_REQUEST_ID,
 	.revision = 0
 };
