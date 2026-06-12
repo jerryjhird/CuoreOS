@@ -41,7 +41,7 @@ void cedt_init(struct acpi_sdt_header* table) {
 							g_cxl_info.host_bridge_uid = cfmws->target_windows[i];
 							g_cxl_info.found = true;
 
-							logbuf_ok("[ ACPI ] CEDT: found CXL window at 0x%lx (Size: 0x%lx)\n", g_cxl_info.phys_base, g_cxl_info.size);
+							logbuf_info("[ ACPI ] CEDT reports CXL window at 0x%lx (Size: 0x%lx)\n", g_cxl_info.phys_base, g_cxl_info.size);
 							return;
 						}
 					}
