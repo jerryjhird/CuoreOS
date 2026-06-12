@@ -1,4 +1,4 @@
-#include "device/devreg.h"
+#include "devices/registry.h"
 #include "flanterm.c"
 #include "flanterm_backends/fb.c"
 #include "flanterm.h"
@@ -7,7 +7,7 @@
 #include "fb_flanterm.h"
 
 #include "graphics/fb.h"
-#include "device/types.h"
+#include "devices/types.h"
 #include "mem/heap.h"
 #include <stdint.h>
 #include "abs.h"

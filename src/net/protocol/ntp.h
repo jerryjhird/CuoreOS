@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "device/types.h"
+#include "devices/types.h"
 
 #define NTP_OFFSET 2208988800ULL
 

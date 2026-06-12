@@ -1,6 +1,6 @@
-#include "devreg.h"
+#include "registry.h"
 
-#include "device/types.h"
+#include "devices/types.h"
 #include "panic.h"
 
 device_registry_entry_t registry[512];

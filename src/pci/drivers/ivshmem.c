@@ -11,9 +11,9 @@ typedef int dummy0;
 #include <stddef.h>
 #include "logbuf.h"
 #include "mem/mem.h"
-#include "device/types.h"
+#include "devices/types.h"
 #include "mem/heap.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 
 pci_driver_status ivshmem_init(pci_dev_t dev) {
 	if (!dev.bars[2].base || !dev.bars[2].size) {

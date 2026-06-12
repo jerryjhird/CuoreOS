@@ -14,7 +14,7 @@ typedef int dummy0; // satisfy ISO C / -Wpedantic
 #include "ide.h"
 #include <string.h>
 #include "disk/ata.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 
 static uint8_t ide_read_sectors(kernel_disk_dev_t* dev, uint32_t lba, uint64_t count, dmalloc_ret_t buffer) {
 	uint16_t base = dev->port_base;

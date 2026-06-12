@@ -1,7 +1,7 @@
 #include "ntp.h"
 
 #include "net/transport/udp.h"
-#include "device/char.h"
+#include "devices/char.h"
 #include "mem/mem.h"
 
 ntp_callback_t ntp_update_cb = NULL; // when NTP response is received this will be called

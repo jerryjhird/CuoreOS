@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "device/devreg.h"
-#include "device/types.h"
+#include "devices/registry.h"
+#include "devices/types.h"
 #include "cpu/io.h"
 
 #define BOCHS_E9_PORT 0xE9

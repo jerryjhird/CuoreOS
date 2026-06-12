@@ -1,6 +1,6 @@
 #pragma once
 
-#include "device/char.h"
+#include "devices/char.h"
 
 void E9_init(void);
 void E9_putc(char c);

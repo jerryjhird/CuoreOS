@@ -11,11 +11,11 @@ typedef int dummy0;
 #include <stddef.h>
 #include "logbuf.h"
 #include "mem/mem.h"
-#include "device/types.h"
+#include "devices/types.h"
 #include "mem/heap.h"
 #include "panic.h"
 #include "firmware/acpi/cedt.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 
 static extmem_type_t determine_cxl_type(pci_dev_t dev) {
 	if (dev.class_id == 0x05 && dev.subclass_id == 0x02) {

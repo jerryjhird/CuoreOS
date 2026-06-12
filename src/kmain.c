@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "Config.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 #include "panic.h"
 #include "firmware/acpi/hpet.h"
 #include "drivers/UART16550.h"

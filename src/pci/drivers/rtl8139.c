@@ -13,10 +13,10 @@ typedef int dummy0;
 #include "mem/mem.h"
 #include "logbuf.h"
 #include "cpu/apic/ioapic.h"
-#include "device/types.h"
+#include "devices/types.h"
 #include "mem/paging.h"
 #include "cpu/IRQ.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 #include "pci/pci.h"
 
 static void rtl_write32(rtl8139_state_t* s, uint16_t reg, uint32_t val) {

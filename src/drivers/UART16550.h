@@ -1,6 +1,6 @@
 #pragma once
 
-#include "device/char.h"
+#include "devices/char.h"
 
 void uart16550_init(void);
 void uart16550_init_late(void);

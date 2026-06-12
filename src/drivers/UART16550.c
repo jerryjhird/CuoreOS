@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "device/devreg.h"
-#include "device/types.h"
+#include "devices/registry.h"
+#include "devices/types.h"
 #include "drivers/UART16550.h"
 #include "cpu/io.h"
 #include "cpu/IRQ.h"

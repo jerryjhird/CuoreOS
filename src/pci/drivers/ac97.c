@@ -14,7 +14,7 @@ typedef int dummy0;
 #include "cpu/apic/ioapic.h"
 #include "cpu/IRQ.h"
 #include "mem/paging.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 
 typedef struct {uint32_t id; const char* name;} ac97_vendor_t;
 

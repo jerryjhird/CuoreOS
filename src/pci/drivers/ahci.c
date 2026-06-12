@@ -12,12 +12,12 @@ typedef int dummy0;
 #include "mem/pma.h"
 #include "mem/mem.h"
 #include "mem/dmalloc.h"
-#include "device/types.h"
+#include "devices/types.h"
 #include <stdint.h>
 #include <string.h>
 #include "_time.h"
 #include "disk/ata.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 
 static void ahci_stop_cmd(hba_port_t *port) {
 	port->cmd &= ~HBA_PxCMD_ST;

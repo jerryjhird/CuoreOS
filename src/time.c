@@ -1,6 +1,6 @@
 #include "_time.h"
 #include <stdint.h>
-#include "device/char.h"
+#include "devices/char.h"
 #include "drivers/RTC.h"
 #include "firmware/acpi/hpet.h"
 #include "abs.h"

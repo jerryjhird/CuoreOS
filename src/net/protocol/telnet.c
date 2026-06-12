@@ -1,8 +1,8 @@
 #include "telnet.h"
 
 #include <stdint.h>
-#include "device/types.h"
-#include "device/char.h"
+#include "devices/types.h"
+#include "devices/char.h"
 #include "net/transport/tcp.h"
 
 volatile socket_t* telnet_socket = NULL;

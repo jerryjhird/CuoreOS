@@ -4,12 +4,12 @@
 #include "stdio.h"
 #include "cpu/apic/lapic.h"
 #include "IRQ.h"
-#include "device/types.h"
-#include "device/char.h"
+#include "devices/types.h"
+#include "devices/char.h"
 #include "panic.h"
 #include "abs.h"
 #include "mem/mem.h"
-#include "device/devreg.h"
+#include "devices/registry.h"
 #include "cpu/coreinfo.h"
 
 struct idt_entry {

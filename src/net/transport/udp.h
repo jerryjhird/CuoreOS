@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "device/types.h"
+#include "devices/types.h"
 #include "net/ip/ipv4.h"
 #include "net/socket.h"
 

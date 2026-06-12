@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "device/types.h"
+#include "devices/types.h"
 
 typedef struct {
 	uint8_t  signature[8];

@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "device/types.h"
+#include "devices/types.h"
 
 #define DNS_CACHE_SIZE 16
 
