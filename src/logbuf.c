@@ -48,7 +48,7 @@ void logbuf_write(const char *str) {
 }
 
 void logbuf_vprintf(const char *fmt, va_list args) {
-	char temp_buf[512];
+	char temp_buf[1028];
 	vsnprintf(temp_buf, sizeof(temp_buf), fmt, args);
 	logbuf_write(temp_buf);
 }

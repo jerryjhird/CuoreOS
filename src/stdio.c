@@ -16,15 +16,15 @@ void ptrthex(char *buf, uint64_t val) {
 	buf[16] = 0;
 }
 
-uint64_t strtoull(const char* nptr) {
+uint64_t strtoull(const char *nptr) {
 	uint64_t val = 0;
 	if (nptr[0] == '0' && (nptr[1] == 'x' || nptr[1] == 'X')) {
 		nptr += 2;
 		while ((*nptr >= '0' && *nptr <= '9') || (*nptr >= 'a' && *nptr <= 'f') || (*nptr >= 'A' && *nptr <= 'F')) {
 			val *= 16;
-			if (*nptr >= '0' && *nptr <= '9') val += *nptr - '0';
-			else if (*nptr >= 'a' && *nptr <= 'f') val += *nptr - 'a' + 10;
-			else val += *nptr - 'A' + 10;
+			if (*nptr >= '0' && *nptr <= '9') { val += *nptr - '0'; }
+			else if (*nptr >= 'a' && *nptr <= 'f') { val += *nptr - 'a' + 10; }
+			else { val += *nptr - 'A' + 10; }
 			nptr++;
 		}
 	} else {
@@ -42,14 +42,14 @@ uint64_t strtoull(const char* nptr) {
  * @param buffer where to return the string to
  * @param limit	max length of the string including NULL terminator
  */
-void readline(char (*getc_func)(void), void (*putc_func)(char), char* buffer, size_t limit) {
+void readline(char (*getc_func)(void), void (*putc_func)(char), char *buffer, size_t limit) {
 	size_t index = 0;
 
 	while (index < limit - 1) {
 		char c = getc_func();
 
 		if (c == '\n' || c == '\r') {
-			if (putc_func) putc_func('\n');
+			if (putc_func) { putc_func('\n'); }
 			break;
 		}
 
@@ -67,7 +67,7 @@ void readline(char (*getc_func)(void), void (*putc_func)(char), char* buffer, si
 
 		if (c >= 32 && c <= 126) {
 			buffer[index++] = c;
-			if (putc_func) putc_func(c);
+			if (putc_func) { putc_func(c); }
 		}
 	}
 
@@ -119,9 +119,7 @@ static inline void _internal_printf_ctx_putc(_internal_printf_ctx_t *ctx, char c
 }
 
 static inline void _internal_printf_ctx_write(_internal_printf_ctx_t *ctx, const char *s, size_t n) {
-	if (n == 0) {
-		return;
-	}
+	if (n == 0) { return; }
 	size_t avail = ctx->cap > ctx->pos ? ctx->cap - ctx->pos : 0;
 	size_t copy = n < avail ? n : avail;
 	memcpy(ctx->buf + ctx->pos, s, copy);
@@ -129,154 +127,70 @@ static inline void _internal_printf_ctx_write(_internal_printf_ctx_t *ctx, const
 }
 
 static inline void _internal_printf_ctx_pad(_internal_printf_ctx_t *ctx, char ch, int n) {
-	if (n <= 0) {
-		return;
-	}
+	if (n <= 0) { return; }
 	size_t avail = ctx->cap > ctx->pos ? ctx->cap - ctx->pos : 0;
 	size_t fill = (size_t)n < avail ? (size_t)n : avail;
 	memset(ctx->buf + ctx->pos, (unsigned char)ch, fill);
 	ctx->pos += (size_t)n;
 }
 
-static inline int _internal_printf_count_digits10(uint64_t v) {
-	if (v < 10ULL) return 1;
-	if (v < 100ULL) return 2;
-	if (v < 1000ULL) return 3;
-	if (v < 10000ULL) return 4;
-	if (v < 100000ULL) return 5;
-	if (v < 1000000ULL) return 6;
-	if (v < 10000000ULL) return 7;
-	if (v < 100000000ULL) return 8;
-	if (v < 1000000000ULL) return 9;
-	if (v < 10000000000ULL) return 10;
-	if (v < 100000000000ULL) return 11;
-	if (v < 1000000000000ULL) return 12;
-	if (v < 10000000000000ULL) return 13;
-	if (v < 100000000000000ULL) return 14;
-	if (v < 1000000000000000ULL) return 15;
-	if (v < 10000000000000000ULL) return 16;
-	if (v < 100000000000000000ULL) return 17;
-	if (v < 1000000000000000000ULL) return 18;
-	if (v < 10000000000000000000ULL) return 19;
-	return 20;
-}
-
 static void _internal_printf_fmt_uint(_internal_printf_ctx_t *ctx, uint64_t val, int base, int width, uint8_t flags, bool upper, const char *prefix, int prefixlen) {
 	const char *digits = upper ? digits_upper : digits_lower;
+	char tmp[66];
+	int i = 65;
 
-	if (base == 10) {
-		int numlen = (val == 0) ? 1 : _internal_printf_count_digits10(val);
-		int total = numlen + prefixlen;
-		int padding = width > total ? width - total : 0;
-
-		if (!(flags & FLAG_LEFT)) {
-			if (flags & FLAG_ZERO) {
-				_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
-				_internal_printf_ctx_pad(ctx, '0', padding);
-			} else {
-				_internal_printf_ctx_pad(ctx, ' ', padding);
-				_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
-			}
-		} else {
-			_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
+	if (val == 0) {
+		tmp[--i] = '0';
+	} else if (base == 16) {
+		while (val) {
+			tmp[--i] = digits[val & 0xF];
+			val >>= 4;
 		}
-
-		size_t avail = ctx->cap > ctx->pos ? ctx->cap - ctx->pos : 0;
-		size_t copy = (size_t)numlen < avail ? (size_t)numlen : avail;
-		char *out = ctx->buf + ctx->pos;
-
-		if (val == 0) {
-			if (copy >= 1) {
-				out[0] = '0';
-			}
-		} else {
-			char *p = out + copy;
-			char *p_log = out + numlen;
-			if (copy == (size_t)numlen) {
-				char *wp = out + numlen;
-				while (val >= 100) {
-					uint32_t rem = (uint32_t)(val % 100);
-					val /= 100;
-					*--wp = map100[(rem << 1) + 1];
-					*--wp = map100[rem << 1];
-				}
-				if (val >= 10) {
-					*--wp = map100[(val << 1) + 1];
-					*--wp = map100[val << 1];
-				} else {
-					*--wp = (char)('0' + val);
-				}
-			} else {
-				char tmp[21];
-				char *wp = tmp + numlen;
-				while (val >= 100) {
-					uint32_t rem = (uint32_t)(val % 100);
-					val /= 100;
-					*--wp = map100[(rem << 1) + 1];
-					*--wp = map100[rem << 1];
-				}
-				if (val >= 10) {
-					*--wp = map100[(val << 1) + 1];
-					*--wp = map100[val << 1];
-				} else {
-					*--wp = (char)('0' + val);
-				}
-				memcpy(out, tmp, copy);
-			}
-			(void)p;
-			(void)p_log;
+	} else if (base == 2) {
+		while (val) {
+			tmp[--i] = (char)('0' + (val & 1));
+			val >>= 1;
 		}
-
-		ctx->pos += (size_t)numlen;
-
-		if (flags & FLAG_LEFT) {
-			_internal_printf_ctx_pad(ctx, ' ', padding);
+	} else if (base == 10) {
+		while (val >= 100) {
+			uint32_t rem = (uint32_t)(val % 100);
+			val /= 100;
+			tmp[--i] = map100[(rem << 1) + 1];
+			tmp[--i] = map100[rem << 1];
+		}
+		if (val >= 10) {
+			tmp[--i] = map100[(val << 1) + 1];
+			tmp[--i] = map100[val << 1];
+		} else {
+			tmp[--i] = (char)('0' + val);
 		}
 	} else {
-		char tmp[66];
-		int i = 65;
-
-		if (val == 0) {
-			tmp[--i] = '0';
-		} else if (base == 16) {
-			while (val) {
-				tmp[--i] = digits[val & 0xF];
-				val >>= 4;
-			}
-		} else if (base == 2) {
-			while (val) {
-				tmp[--i] = (char)('0' + (val & 1));
-				val >>= 1;
-			}
-		} else {
-			// octal or other
-			while (val) {
-				tmp[--i] = digits[val % (uint32_t)base];
-				val /= (uint32_t)base;
-			}
+		while (val) {
+			tmp[--i] = digits[val % (uint32_t)base];
+			val /= (uint32_t)base;
 		}
+	}
 
-		int numlen = 65 - i;
-		int total = numlen + prefixlen;
-		int padding = width > total ? width - total : 0;
+	int numlen = 65 - i;
+	int total = numlen + prefixlen;
+	int padding = width > total ? width - total : 0;
 
-		if (!(flags & FLAG_LEFT)) {
-			if (flags & FLAG_ZERO) {
-				_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
-				_internal_printf_ctx_pad(ctx, '0', padding);
-			} else {
-				_internal_printf_ctx_pad(ctx, ' ', padding);
-				_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
-			}
+	if (!(flags & FLAG_LEFT)) {
+		if (flags & FLAG_ZERO) {
+			_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
+			_internal_printf_ctx_pad(ctx, '0', padding);
 		} else {
+			_internal_printf_ctx_pad(ctx, ' ', padding);
 			_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
 		}
+	} else {
+		_internal_printf_ctx_write(ctx, prefix, (size_t)prefixlen);
+	}
 
-		_internal_printf_ctx_write(ctx, tmp + i, (size_t)numlen);
+	_internal_printf_ctx_write(ctx, tmp + i, (size_t)numlen);
 
-		if (flags & FLAG_LEFT) {
-			_internal_printf_ctx_pad(ctx, ' ', padding);
-		}
+	if (flags & FLAG_LEFT) {
+		_internal_printf_ctx_pad(ctx, ' ', padding);
 	}
 }
 
@@ -304,19 +218,12 @@ static void _internal_printf_fmt_signed(_internal_printf_ctx_t *ctx, int64_t val
 }
 
 static void _internal_printf_fmt_string(_internal_printf_ctx_t *ctx, const char *s, int width, uint8_t flags) {
-	if (!s) {
-		s = "(null)";
-	}
+	if (!s) { s = "(null)"; }
 	size_t len = strlen(s);
 	int padding = (width > (int)len) ? width - (int)len : 0;
-
-	if (!(flags & FLAG_LEFT)) {
-		_internal_printf_ctx_pad(ctx, ' ', padding);
-	}
+	if (!(flags & FLAG_LEFT)) { _internal_printf_ctx_pad(ctx, ' ', padding); }
 	_internal_printf_ctx_write(ctx, s, len);
-	if (flags & FLAG_LEFT) {
-		_internal_printf_ctx_pad(ctx, ' ', padding);
-	}
+	if (flags & FLAG_LEFT) { _internal_printf_ctx_pad(ctx, ' ', padding); }
 }
 
 static inline void _internal_printf_fmt_u8_dec(_internal_printf_ctx_t *ctx, uint8_t v) {
@@ -324,12 +231,12 @@ static inline void _internal_printf_fmt_u8_dec(_internal_printf_ctx_t *ctx, uint
 		char tmp[3];
 		uint32_t rem = v % 100;
 		tmp[0] = (char)('0' + v / 100);
-		tmp[1] = map100[(rem << 1)];
+		tmp[1] = map100[rem << 1];
 		tmp[2] = map100[(rem << 1) + 1];
 		_internal_printf_ctx_write(ctx, tmp, 3);
 	} else if (v >= 10) {
 		char tmp[2];
-		tmp[0] = map100[(v << 1)];
+		tmp[0] = map100[v << 1];
 		tmp[1] = map100[(v << 1) + 1];
 		_internal_printf_ctx_write(ctx, tmp, 2);
 	} else {
@@ -353,32 +260,26 @@ int vsnprintf(char *buf, size_t bufsz, const char *fmt, va_list args) {
 	const char *p = fmt;
 	while (*p) {
 		const char *lit = p;
-		while (*p && *p != '%') {
-			p++;
-		}
+		while (*p && *p != '%') { p++; }
 		if (p != lit) {
 			_internal_printf_ctx_write(&ctx, lit, (size_t)(p - lit));
 		}
-		if (!*p) {
-			break;
-		}
+		if (!*p) { break; }
 
 		p++; // skip '%'
-		if (!*p) {
-			break;
-		}
+		if (!*p) { break; }
 
 		uint8_t flags = 0;
 		int width = 0;
 		int length = LEN_DEFAULT;
 
 		for (;;) {
-			if (*p == '#')	  { flags |= FLAG_ALT;   p++; }
-			else if (*p == '0') { flags |= FLAG_ZERO;  p++; }
-			else if (*p == '-') { flags |= FLAG_LEFT;  p++; }
+			if (*p == '#') { flags |= FLAG_ALT; p++; }
+			else if (*p == '0') { flags |= FLAG_ZERO; p++; }
+			else if (*p == '-') { flags |= FLAG_LEFT; p++; }
 			else if (*p == ' ') { flags |= FLAG_SPACE; p++; }
-			else if (*p == '+') { flags |= FLAG_SIGN;  p++; }
-			else break;
+			else if (*p == '+') { flags |= FLAG_SIGN; p++; }
+			else { break; }
 		}
 
 		if (flags & FLAG_LEFT) {
@@ -405,9 +306,7 @@ int vsnprintf(char *buf, size_t bufsz, const char *fmt, va_list args) {
 				va_arg(args, int);
 				p++;
 			} else {
-				while (*p >= '0' && *p <= '9') {
-					p++;
-				}
+				while (*p >= '0' && *p <= '9') { p++; }
 			}
 		}
 
@@ -420,21 +319,21 @@ int vsnprintf(char *buf, size_t bufsz, const char *fmt, va_list args) {
 			if (*p == 'l') { length = LEN_LL; p++; }
 			else { length = LEN_L; }
 		} else if (*p == 'z') { length = LEN_Z; p++; }
-		else if (*p == 'j')   { length = LEN_J; p++; }
-		else if (*p == 't')   { length = LEN_T; p++; }
+		else if (*p == 'j') { length = LEN_J; p++; }
+		else if (*p == 't') { length = LEN_T; p++; }
 
 		switch (*p) {
 			case 'd':
 			case 'i': {
 				int64_t val;
-				if (length == LEN_LL)	  val = va_arg(args, long long);
-				else if (length == LEN_L)  val = va_arg(args, long);
-				else if (length == LEN_Z)  val = (int64_t)va_arg(args, ssize_t);
-				else if (length == LEN_J)  val = va_arg(args, intmax_t);
-				else if (length == LEN_T)  val = va_arg(args, ptrdiff_t);
-				else if (length == LEN_H)  val = (short)va_arg(args, int);
-				else if (length == LEN_HH) val = (signed char)va_arg(args, int);
-				else val = va_arg(args, int);
+				if (length == LEN_LL) { val = va_arg(args, long long); }
+				else if (length == LEN_L) { val = va_arg(args, long); }
+				else if (length == LEN_Z) { val = (int64_t)va_arg(args, ssize_t); }
+				else if (length == LEN_J) { val = va_arg(args, intmax_t); }
+				else if (length == LEN_T) { val = va_arg(args, ptrdiff_t); }
+				else if (length == LEN_H) { val = (short)va_arg(args, int); }
+				else if (length == LEN_HH) { val = (signed char)va_arg(args, int); }
+				else { val = va_arg(args, int); }
 				_internal_printf_fmt_signed(&ctx, val, width, flags);
 				break;
 			}
@@ -445,14 +344,14 @@ int vsnprintf(char *buf, size_t bufsz, const char *fmt, va_list args) {
 			case 'o':
 			case 'b': {
 				uint64_t val;
-				if (length == LEN_LL)	  val = va_arg(args, unsigned long long);
-				else if (length == LEN_L)  val = va_arg(args, unsigned long);
-				else if (length == LEN_Z)  val = va_arg(args, size_t);
-				else if (length == LEN_J)  val = va_arg(args, uintmax_t);
-				else if (length == LEN_T)  val = (uintptr_t)va_arg(args, void *);
-				else if (length == LEN_H)  val = (unsigned short)va_arg(args, unsigned int);
-				else if (length == LEN_HH) val = (unsigned char)va_arg(args, unsigned int);
-				else val = va_arg(args, unsigned int);
+				if (length == LEN_LL) { val = va_arg(args, unsigned long long); }
+				else if (length == LEN_L) { val = va_arg(args, unsigned long); }
+				else if (length == LEN_Z) { val = va_arg(args, size_t); }
+				else if (length == LEN_J) { val = va_arg(args, uintmax_t); }
+				else if (length == LEN_T) { val = (uintptr_t)va_arg(args, void *); }
+				else if (length == LEN_H) { val = (unsigned short)va_arg(args, unsigned int); }
+				else if (length == LEN_HH) { val = (unsigned char)va_arg(args, unsigned int); }
+				else { val = va_arg(args, unsigned int); }
 
 				const char *prefix = "";
 				int prefixlen = 0;

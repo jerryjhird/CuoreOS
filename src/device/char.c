@@ -11,7 +11,7 @@ void dev_puts(kernel_char_dev_t* dev, const char* s) {
 void dev_printf(kernel_char_dev_t *dev, const char *fmt, ...) {
 	if (!dev || !dev->putc) return;
 
-	char temp_buf[512];
+	char temp_buf[1028];
 	va_list args;
 
 	va_start(args, fmt);
