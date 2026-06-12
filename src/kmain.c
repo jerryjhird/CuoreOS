@@ -42,6 +42,7 @@
 #include "mem/cmm.h"
 #include "cmdline.h"
 #include "firmware/smbios/smbios.h"
+#include "drivers/pcspeaker.h"
 
 #define limine_request_a __attribute__((used, section(".limine_requests"))) volatile
 
@@ -91,7 +92,7 @@ limine_request_a struct limine_smbios_request smbios_request = {
 };
 
 #ifndef KERNEL_BUILD_SIGNATURE
-#define KERNEL_BUILD_SIGNATURE 0x0ULL
+	#define KERNEL_BUILD_SIGNATURE 0x0ULL
 #endif
 
 __attribute__((section(".csig"), used))
@@ -149,22 +150,6 @@ static void startup_sound_task(void) {
 	}
 
 	audio_beep(audio_dev, 659, 150);
-	// audio_beep(audio_dev, 1, 90);
-	// audio_beep(audio_dev, 659, 150);
-	// audio_beep(audio_dev, 1, 90);
-	// audio_beep(audio_dev, 659, 300);
-	// audio_beep(audio_dev, 1, 100);
-	// audio_beep(audio_dev, 659, 150);
-	// audio_beep(audio_dev, 1, 90);
-	// audio_beep(audio_dev, 659, 150);
-	// audio_beep(audio_dev, 1, 90);
-	// audio_beep(audio_dev, 659, 300);
-	// audio_beep(audio_dev, 1, 100);
-	// audio_beep(audio_dev, 659, 150);
-	// audio_beep(audio_dev, 783, 150);
-	// audio_beep(audio_dev, 523, 150);
-	// audio_beep(audio_dev, 587, 150);
-	// audio_beep(audio_dev, 659, 600);
 
 	scheduler_exit_task();
 }
@@ -307,6 +292,8 @@ void _kstartc(void) {
 		uart16550_init();
 		debug_dev = &uart16550_dev;
 	}
+
+	pcspeaker_init();
 
 	// initramfs
 	if (module_request.response->module_count <= 0) {

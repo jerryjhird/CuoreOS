@@ -3,6 +3,7 @@ QEMU_USE_CXL ?= false
 QEMU_USE_SHM ?= false
 QEMU_USE_XHCI ?= false
 QEMU_USE_EHCI ?= false
+QEMU_USE_PCSPEAKER ?= false
 
 QEMU_MACHINE ?= q35
 QEMU_CORE_COUNT ?= 1 # single-core by default as multicore can be unstable right now
@@ -11,9 +12,14 @@ GENERIC_QEMU_FLAGS := -display sdl -cpu qemu64,+rdrand,+rdseed -smp $(QEMU_CORE_
 DISK_QEMU_FLAG := -drive file="$(DISK_IMG)",format=raw,index=0,media=disk
 QEMU_AUDIO_FLAGS := -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
 NET_QEMU_FLAG := -netdev user,id=u1 -device rtl8139,netdev=u1 -object filter-dump,id=f1,netdev=u1,file=network_capture.pcap
+QEMU_AUDIO_BACKEND ?=
 
 MACHINE_ARGS := $(QEMU_MACHINE)
 EXTRA_OBJECTS_AND_DEVICES :=
+
+ifndef QEMU_AUDIO_BACKEND
+    QEMU_AUDIO_BACKEND := sdl
+endif
 
 ifeq ($(QEMU_USE_CXL),true)
     MACHINE_ARGS := $(MACHINE_ARGS),cxl=on
@@ -51,6 +57,15 @@ ifeq ($(QEMU_USE_E9),true)
     GENERIC_QEMU_FLAGS += -debugcon stdio -global isa-debugcon.iobase=0xe9
 else
     GENERIC_QEMU_FLAGS += -serial stdio
+endif
+
+ifeq ($(QEMU_USE_PCSPEAKER),true)
+    MACHINE_ARGS := $(MACHINE_ARGS),pcspk-audiodev=snd0
+    QEMU_AUDIO_FLAGS := -audiodev sdl,id=snd0
+endif
+
+ifeq ($(QEMU_USE_AC97),true)
+    QEMU_AUDIO_FLAGS := -audiodev sdl,id=snd0 -device ac97,audiodev=snd0
 endif
 
 GENERIC_QEMU_FLAGS += -machine $(MACHINE_ARGS)
