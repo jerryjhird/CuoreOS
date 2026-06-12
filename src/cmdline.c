@@ -1,5 +1,4 @@
 #include "cmdline.h"
-#include "kstate.h"
 #include "logbuf.h"
 #include "panic.h"
 #include "math/fnv1a.h"
@@ -10,10 +9,8 @@
 static arg_entry_t arg_registry[CMDLINE_MAX_ARGS];
 static int registry_count = 0;
 
-static void cmdline_parse(void) {
-	if (cmdline_request.response == NULL || cmdline_request.response->cmdline == NULL) return;
-
-	const char* cmd = cmdline_request.response->cmdline;
+static void cmdline_parse(const char* cmdline_str) {
+	const char* cmd = cmdline_str;
 
 	while (*cmd) {
 		while (*cmd == ' ') cmd++;
@@ -57,13 +54,14 @@ static int cmdline_find(const char* key) {
 	return -1;
 }
 
-void cmdline_init(void) {
-	if (cmdline_request.response == NULL || cmdline_request.response->cmdline == NULL || cmdline_request.response->cmdline[0] == '\0') {
+void cmdline_init(const char* cmdline_str) {
+	if (cmdline_str == NULL || cmdline_str[0] == '\0') {
 		logbuf_info("[ ARGS ] no command line arguments provided\n");
 		return;
 	}
-	logbuf_info("[ ARGS ] cmdline arguments: \"%s\"\n", cmdline_request.response->cmdline);
-	cmdline_parse();
+
+	logbuf_info("[ ARGS ] cmdline arguments: \"%s\"\n", cmdline_str);
+	cmdline_parse(cmdline_str);
 }
 
 const char* cmdline_get_string(const char* key) {

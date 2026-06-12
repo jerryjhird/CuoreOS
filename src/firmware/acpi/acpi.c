@@ -1,7 +1,6 @@
 #include "acpi.h"
 
 #include "mem/mem.h"
-#include "kstate.h"
 #include "abs.h"
 #include "logbuf.h"
 
@@ -11,6 +10,7 @@
 #include "cedt.h"
 #include "hpet.h"
 #include "waet.h"
+#include <stdint.h>
 
 typedef void (*acpi_dtable_handler)(struct acpi_sdt_header* table);
 #define TO_CHAR_ARRAY(s) { (s)[0], (s)[1], (s)[2], (s)[3] }
@@ -45,9 +45,8 @@ bool acpi_checksum(struct acpi_sdt_header* table) {
 	return (sum == 0);
 }
 
-void acpi_init(void) {
-	struct limine_rsdp_response* resp = rsdp_request.response;
-	struct rsdp_v2* rsdp = (struct rsdp_v2*)resp->address;
+void acpi_init(uintptr_t rsdp_phys) {
+	struct rsdp_v2* rsdp = (struct rsdp_v2*)rsdp_phys;
 
 	if (rsdp->revision >= 2 && rsdp->xsdt_address != 0) {
 		xsdt = (struct acpi_sdt_header*)(rsdp->xsdt_address + hhdm_offset);

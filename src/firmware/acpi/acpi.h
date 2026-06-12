@@ -35,5 +35,5 @@ struct rsdp_v2 {
 	uint8_t reserved[3];
 } __attribute__((packed));
 
-void acpi_init(void);
+void acpi_init(uintptr_t rsdp_phys);
 bool acpi_checksum(struct acpi_sdt_header* table);

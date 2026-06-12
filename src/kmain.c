@@ -278,7 +278,7 @@ void _kstartc(void) {
 	hhdm_offset = hhdm_req.response->offset;
 	kernel_pml4_phys = vmm_get_pml4();
 
-	cmdline_init();
+	cmdline_init(cmdline_request.response->cmdline);
 
 	const char* debugout = cmdline_get_string("debugout");
 
@@ -314,7 +314,9 @@ void _kstartc(void) {
 
 	dev_puts(debug_dev, "\033[2J\033[H");
 
-	acpi_init();
+	// acpi
+	struct limine_rsdp_response* rsdp_resp = rsdp_request.response;
+	acpi_init((uintptr_t)rsdp_resp->address);
 
 	gdt_init();
 	idt_init();

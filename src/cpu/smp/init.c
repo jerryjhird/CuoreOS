@@ -1,7 +1,6 @@
 #include "init.h"
 
 #include "logbuf.h"
-#include "kstate.h"
 #include "mem/heap.h"
 #include "sync.h"
 #include "mailbox.h"
@@ -11,6 +10,8 @@
 #include <stdint.h>
 #include "cpu/MSR.h"
 #include "cpu/coreinfo.h"
+
+#include <limine.h>
 
 static spinlock_t AP_init_spinlock = SPINLOCK_INIT;
 volatile size_t cpu_online_count = 0;
@@ -26,6 +27,7 @@ struct trap_frame* AP_clock_tick_irq(struct trap_frame *tf) {
 	return tf;
 }
 
+// NOTE: swap out limine_mp_info with a custom struct eventually
 __attribute__((noinline))
 void AP_kstartc(struct limine_mp_info *mp) {
 	gdt_init();
