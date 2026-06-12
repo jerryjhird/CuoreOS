@@ -8,12 +8,11 @@
 static uint64_t hpet_base = 0;
 static uint32_t femtoseconds_per_tick = 0;
 
-void hpet_init(void) {
+void hpet_init(struct acpi_sdt_header* header) {
+	struct hpet_table* table = (struct hpet_table*)header;
+
 	uintptr_t pml4_phys = vmm_get_pml4();
 	uint64_t* pml4_virt = (uint64_t*)(pml4_phys + hhdm_offset);
-
-	struct hpet_table* table = (struct hpet_table*)acpi_find_sdt("HPET");
-	if (!table) return;
 
 	uintptr_t hpet_phys = table->address.address;
 	hpet_base = hpet_phys + hhdm_offset;

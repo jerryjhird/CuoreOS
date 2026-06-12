@@ -28,15 +28,9 @@ static extmem_type_t determine_cxl_type(pci_dev_t dev) {
 }
 
 pci_driver_status cxl_init(pci_dev_t dev) {
-	acpi_sdt_header_t *cedt = (acpi_sdt_header_t *)acpi_find_sdt("CEDT");
-	if (!cedt) { panic("CXL", "CEDT table missing"); }
-
 	cedt_ret_t window = {0};
-	parse_cedt(cedt, &window);
 
-	if (!window.found || !window.size || !window.phys_base) {
-		return CORRUPTED_FIRMWARE_TABLE;
-	}
+	if (!cedt_get_info(&window) || !window.found) { return CORRUPTED_FIRMWARE_TABLE; }
 
 	size_t pages = (window.size + PAGE_SIZE - 1) / PAGE_SIZE;
 	uintptr_t virt = vmm_alloc_pages(pages);
@@ -72,16 +66,16 @@ pci_driver_status cxl_init(pci_dev_t dev) {
 	device_register(EXTMEM_DEV, ext_dev);
 
 	logbuf_ok("[ CXL  ] Initialized CXL Device\n"
-			  "			Device type: %s\n"
-			  "			Host Bridge UID: %d\n"
-			  "			Physical base: %#lx\n"
-			  "			Virtual base:  %#lx\n"
-			  "			Size: %zu MB\n",
+			  "		Device type: %s\n"
+			  "		Host Bridge UID: %d\n"
+			  "		Physical base: %#lx\n"
+			  "		Virtual base:  %#lx\n"
+			  "		Size: %zu MB\n",
 			  type_str,
 			  window.host_bridge_uid,
 			  window.phys_base,
 			  virt,
-				(size_t)BYTES_TO_MB(window.size));
+			  (size_t)BYTES_TO_MB(window.size));
 	return DRIVER_OK;
 }
 #endif

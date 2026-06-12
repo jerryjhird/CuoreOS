@@ -4,7 +4,6 @@
 #include "cpu/apic/ioapic.h"
 #include <stddef.h>
 #include "mem/mem.h"
-#include "panic.h"
 
 static uintptr_t lapic_phys = 0;
 static uintptr_t ioapic_phys = 0;
@@ -12,11 +11,8 @@ static uintptr_t ioapic_phys = 0;
 static madt_iso_t isos[16];
 static int iso_count = 0;
 
-void madt_init(void) {
-	struct madt* table = (struct madt*)acpi_find_sdt("APIC");
-	if (!table) {
-		panic("MADT", "MADT table is missing or corrupted.");
-	}
+void madt_init(struct acpi_sdt_header* acpi_tab) {
+	struct madt* table = (struct madt*)acpi_tab;
 
 	lapic_phys = table->lapic_addr;
 

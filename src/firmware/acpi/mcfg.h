@@ -20,5 +20,5 @@ struct mcfg_table {
 
 extern bool mcfg_is_initialized;
 
-void mcfg_init(void);
+void mcfg_init(struct acpi_sdt_header* acpi_tab);
 void* mcfg_get_device_addr(uint16_t segment, uint8_t bus, uint8_t slot, uint8_t func);

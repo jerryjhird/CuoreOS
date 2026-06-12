@@ -5,8 +5,45 @@
 #include "abs.h"
 #include "logbuf.h"
 
+#include "madt.h"
+#include "fadt.h"
+#include "mcfg.h"
+#include "cedt.h"
+#include "hpet.h"
+#include "waet.h"
+
+typedef void (*acpi_dtable_handler)(struct acpi_sdt_header* table);
+#define TO_CHAR_ARRAY(s) { (s)[0], (s)[1], (s)[2], (s)[3] }
+
+struct acpi_dtable_entry {
+	char signature[4];
+	acpi_dtable_handler handler;
+};
+
+static const struct acpi_dtable_entry acpi_discovery_table[] = {
+	{ TO_CHAR_ARRAY("APIC"), madt_init },
+	{ TO_CHAR_ARRAY("FACP"), fadt_init },
+	{ TO_CHAR_ARRAY("MCFG"), mcfg_init },
+	{ TO_CHAR_ARRAY("CEDT"), cedt_init },
+	{ TO_CHAR_ARRAY("HPET"), hpet_init },
+	{ TO_CHAR_ARRAY("WAET"), waet_init }
+};
+
+static const size_t acpi_discovery_table_c = sizeof(acpi_discovery_table) / sizeof(struct acpi_dtable_entry);
+
 static struct acpi_sdt_header* xsdt = NULL;
 static bool is_xsdt = false;
+
+bool acpi_checksum(struct acpi_sdt_header* table) {
+	uint8_t sum = 0;
+	uint8_t* bytes = (uint8_t*)table;
+
+	for (uint32_t i = 0; i < table->length; i++) {
+		sum += bytes[i];
+	}
+
+	return (sum == 0);
+}
 
 void acpi_init(void) {
 	struct limine_rsdp_response* resp = rsdp_request.response;
@@ -20,55 +57,7 @@ void acpi_init(void) {
 		is_xsdt = false;
 	}
 
-	#ifdef DEBUG
-		if (UNLIKELY(!xsdt)) return;
-
-		size_t ptr_size = is_xsdt ? 8 : 4;
-		int entries = (xsdt->length - sizeof(struct acpi_sdt_header)) / ptr_size;
-		uint8_t* table_ptrs_base = (uint8_t*)xsdt + sizeof(struct acpi_sdt_header);
-
-		for (int i = 0; i < entries; i++) {
-			uint64_t table_phys = 0;
-			uint8_t* entry_ptr = table_ptrs_base + (i * ptr_size);
-
-			if (is_xsdt) {
-				memcpy(&table_phys, entry_ptr, 8);
-			} else {
-				uint32_t table_phys_32;
-				memcpy(&table_phys_32, entry_ptr, 4);
-				table_phys = table_phys_32;
-			}
-
-			if (table_phys == 0) continue;
-
-			struct acpi_sdt_header* table = (struct acpi_sdt_header*)(table_phys + hhdm_offset);
-
-			char sig[5] = {0};
-			memcpy(sig, table->signature, 4);
-
-			bool ok = acpi_checksum(table);
-			if (ok) {
-				logbuf_debug("[ ACPI ] Found Table: %s at %p (Checksum: OK)\n", sig, (void*)table);
-			} else {
-				logbuf_warn("[ ACPI ] Found Table: %s at %p (Checksum: FAILED)\n", sig, (void*)table);
-			}
-		}
-	#endif
-}
-
-bool acpi_checksum(struct acpi_sdt_header* table) {
-	uint8_t sum = 0;
-	uint8_t* bytes = (uint8_t*)table;
-
-	for (uint32_t i = 0; i < table->length; i++) {
-		sum += bytes[i];
-	}
-
-	return (sum == 0);
-}
-
-void* acpi_find_sdt(const char* signature) {
-	if (UNLIKELY(!xsdt)) return NULL;
+	if (UNLIKELY(!xsdt)) return;
 
 	size_t ptr_size = is_xsdt ? 8 : 4;
 	int entries = (xsdt->length - sizeof(struct acpi_sdt_header)) / ptr_size;
@@ -90,14 +79,23 @@ void* acpi_find_sdt(const char* signature) {
 
 		struct acpi_sdt_header* table = (struct acpi_sdt_header*)(table_phys + hhdm_offset);
 
-		if (memcmp(table->signature, signature, 4) == 0) {
-			if (!acpi_checksum(table)) {
-				logbuf_warn("[ ACPI ] Checksum failed for table %s", signature);
-				return NULL;
-			}
+		bool ok = acpi_checksum(table);
 
-			return (void*)table;
+		char sig[5] = {0};
+		memcpy(sig, table->signature, 4);
+
+		if (ok) {
+			logbuf_debug("[ ACPI ] Found Table: %s at %p (Checksum: OK)\n", sig, (void*)table);
+		} else {
+			logbuf_warn("[ ACPI ] Invalid Table: %s at %p (Checksum: FAILED)\n", sig, (void*)table);
+			continue; // skip init
+		}
+
+		for (size_t j = 0; j < acpi_discovery_table_c; j++) {
+			if (memcmp(table->signature, acpi_discovery_table[j].signature, 4) == 0) {
+				acpi_discovery_table[j].handler(table);
+				break;
+			}
 		}
 	}
-	return NULL;
 }

@@ -36,5 +36,4 @@ struct rsdp_v2 {
 } __attribute__((packed));
 
 void acpi_init(void);
-void* acpi_find_sdt(const char* signature);
 bool acpi_checksum(struct acpi_sdt_header* table);

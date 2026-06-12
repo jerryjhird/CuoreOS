@@ -72,4 +72,5 @@ typedef struct {
 	bool found;
 } cedt_ret_t;
 
-void parse_cedt(acpi_sdt_header_t* table, cedt_ret_t* match);
+void cedt_init(struct acpi_sdt_header* table);
+bool cedt_get_info(cedt_ret_t* out_info);

@@ -23,8 +23,6 @@
 #include "_time.h"
 #include "cpu/MSR.h"
 #include "multimedia/beep.h"
-#include "firmware/acpi/mcfg.h"
-#include "firmware/acpi/fadt.h"
 #include "abs.h"
 #include "disk/diskinit.h"
 #include "tests.h"
@@ -317,9 +315,6 @@ void _kstartc(void) {
 	dev_puts(debug_dev, "\033[2J\033[H");
 
 	acpi_init();
-	fadt_init();
-	madt_init();
-	hpet_init();
 
 	gdt_init();
 	idt_init();
@@ -356,7 +351,6 @@ void _kstartc(void) {
 	uart16550_init_late();
 
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
-	mcfg_init();
 
 	logbuf_flush(debug_dev);
 

@@ -59,7 +59,7 @@ typedef struct acpi_fadt {
 
 extern acpi_fadt_t* fadt;
 
-void fadt_init(void);
+void fadt_init(struct acpi_sdt_header* acpi_tab);
 uint16_t fadt_get_s5_types(void);
 uintptr_t fadt_get_pm1a_cnt(void);
 bool fadt_is_pm1a_mmio(void);

@@ -10,13 +10,8 @@ static size_t mcfg_entry_count = 0;
 static struct mcfg_entry* primary_entry = NULL;
 bool mcfg_is_initialized = false;
 
-void mcfg_init(void) {
-	mcfg_ptr = (struct mcfg_table*)acpi_find_sdt("MCFG");
-
-	if (UNLIKELY(!mcfg_ptr)) {
-		logbuf_warn("[ MCFG ] table not found. PCIe ECAM will be unavailable!!!\n");
-		return;
-	}
+void mcfg_init(struct acpi_sdt_header* acpi_tab) {
+	mcfg_ptr = (struct mcfg_table*)acpi_tab;
 
 	size_t table_size = mcfg_ptr->header.length;
 	mcfg_entry_count = (table_size - sizeof(struct mcfg_table)) / sizeof(struct mcfg_entry);
@@ -26,8 +21,6 @@ void mcfg_init(void) {
 	}
 
 	mcfg_is_initialized = true;
-
-	logbuf_ok("[ MCFG ] Initialized MCFG at %p, entries: %zu\n", (void*)mcfg_ptr, (size_t)mcfg_entry_count);
 }
 
 void* mcfg_get_device_addr(uint16_t segment, uint8_t bus, uint8_t slot, uint8_t func) {
@@ -53,7 +46,5 @@ void* mcfg_get_device_addr(uint16_t segment, uint8_t bus, uint8_t slot, uint8_t 
 	uintptr_t base = (uintptr_t)entry->base_address + hhdm_offset;
 	uint32_t bus_off = (uint32_t)(bus - entry->start_bus);
 
-	return (void*)(base + ((bus_off << 20) |
-						   ((uint32_t)slot << 15) |
-						   ((uint32_t)func << 12)));
+	return (void*)(base + ((bus_off << 20) | ((uint32_t)slot << 15) | ((uint32_t)func << 12)));
 }

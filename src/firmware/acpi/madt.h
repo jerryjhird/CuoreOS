@@ -21,7 +21,7 @@ typedef struct {
 #define MADT_TYPE_ISO 2
 #define MADT_TYPE_NMI 4
 
-void madt_init(void);
+void madt_init(struct acpi_sdt_header* acpi_tab);
 
 void madt_query_irq(uint8_t irq, uint8_t *out_pin, uint32_t *out_flags);
 

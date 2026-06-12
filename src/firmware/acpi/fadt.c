@@ -4,15 +4,8 @@
 
 acpi_fadt_t* fadt = NULL;
 
-void fadt_init(void) {
-	fadt = (acpi_fadt_t*)acpi_find_sdt("FACP");
-
-	if (!fadt) {
-		logbuf_error("[ FADT ] FADT is missing or corrupted!\n");
-		return;
-	}
-
-	logbuf_ok("[ FADT ] Initialized FADT at %p\n", (void*)fadt);
+void fadt_init(struct acpi_sdt_header* acpi_tab) {
+	fadt = (acpi_fadt_t*)acpi_tab;
 }
 
 uintptr_t fadt_get_pm1a_cnt(void) {
