@@ -9,6 +9,20 @@
 #define SMAX(a, b) ((a) > (b) ? (a) : (b))
 #define IP_ADDR(a, b, c, d) ((a) | (b << 8) | (c << 16) | (d << 24))
 
+#define BSWAP16(x) __builtin_bswap16(x)
+#define BSWAP32(x) __builtin_bswap32(x)
+#define BSWAP64(x) __builtin_bswap64(x)
+
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	#define BE16_TO_HOST(x) (x)
+	#define BE32_TO_HOST(x) (x)
+	#define BE64_TO_HOST(x) (x)
+#else
+	#define BE16_TO_HOST(x) BSWAP16(x)
+	#define BE32_TO_HOST(x) BSWAP32(x)
+	#define BE64_TO_HOST(x) BSWAP64(x)
+#endif
+
 #define BIT_SET(var, mask) ((var) |=  (mask))
 #define BIT_CLEAR(var, mask) ((var) &= ~(mask))
 #define BIT_CHECK(var, mask) (((var) & (mask)) == (mask))
