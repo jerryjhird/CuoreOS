@@ -7,7 +7,7 @@
 #include "mem/dmalloc.h"
 #include "mbr.h"
 #include "gpt.h"
-#include <string.h>
+#include "mem/mem.h"
 
 typedef struct {
 	uint8_t guid[16];

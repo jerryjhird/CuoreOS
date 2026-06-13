@@ -14,7 +14,6 @@ typedef int dummy0;
 #include "mem/dmalloc.h"
 #include "devices/types.h"
 #include <stdint.h>
-#include <string.h>
 #include "_time.h"
 #include "disk/ata.h"
 #include "devices/registry.h"

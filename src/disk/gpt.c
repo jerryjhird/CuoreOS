@@ -4,7 +4,7 @@
 #include "partition.h"
 #include "logbuf.h"
 #include "math/crc32.h"
-#include <string.h>
+#include "mem/mem.h"
 #include "mem/heap.h"
 #include "mem/dmalloc.h"
 

@@ -1,5 +1,5 @@
 #include "ata.h"
-#include <string.h>
+#include "mem/mem.h"
 
 static void ata_parse_string(char* dest, const uint16_t* id_data, int word_start, int word_count) {
 	for (int i = 0; i < word_count; i++) {

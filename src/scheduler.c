@@ -6,7 +6,7 @@
 #include "mem/heap.h"
 #include "panic.h"
 #include "mem/mem.h"
-#include <string.h>
+#include "mem/mem.h"
 #include "mem/paging.h"
 #include "cpu/coreinfo.h"
 

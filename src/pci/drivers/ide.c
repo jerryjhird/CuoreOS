@@ -12,7 +12,7 @@ typedef int dummy0; // satisfy ISO C / -Wpedantic
 #include "mem/dmalloc.h"
 #include "_time.h"
 #include "ide.h"
-#include <string.h>
+#include "mem/mem.h"
 #include "disk/ata.h"
 #include "devices/registry.h"
 

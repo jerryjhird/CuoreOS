@@ -3,7 +3,6 @@
 #include "mem/heap.h"
 #include "mem/mem.h"
 #include "mem/dmalloc.h"
-#include <string.h>
 
 uint8_t mbr_parse(kernel_disk_dev_t* dev) {
 	dmalloc_ret_t sector_res = dmalloc32(512);

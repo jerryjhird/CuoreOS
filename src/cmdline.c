@@ -3,7 +3,7 @@
 #include "panic.h"
 #include "math/fnv1a.h"
 #include <stddef.h>
-#include <string.h>
+#include "mem/mem.h"
 #include "stdio.h"
 
 static arg_entry_t arg_registry[CMDLINE_MAX_ARGS];
