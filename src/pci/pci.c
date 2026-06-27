@@ -21,7 +21,6 @@ static const pci_status_lookup_t pci_status_table[] = {
 	{INVALID_BAR,				 "Invalid BAR configuration"},
 	{DOWNLOAD_MORE_RAM,		   "Out of memory"},
 	{DOWNLOAD_MORE_RAM_32BIT,	 "Out of memory (< 4GB)"},
-	{DEVICE_BUFFER_IS_FULL,	   "Device buffer is full"},
 	{CARD_NOT_PRESENT,			"Card not present"},
 	{DRIVER_UNSUPPORTED_CARD,	 "Unsupported card"},
 	{DRIVER_UNSUPPORTED_HOST,	 "Unsupported host"},

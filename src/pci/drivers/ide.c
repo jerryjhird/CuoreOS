@@ -101,8 +101,6 @@ pci_driver_status ide_init(pci_dev_t pdev) {
 
 	kernel_disk_dev_t* dev = zalloc(sizeof(kernel_disk_dev_t));
 
-	memset(dev, 0, sizeof(kernel_disk_dev_t));
-
 	uint16_t data[256];
 	insw(base + IDE_REG_DATA, data, 256);
 
