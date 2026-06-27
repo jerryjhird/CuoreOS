@@ -20,11 +20,9 @@ ata_identity_t ata_identify(const uint16_t* id_data) {
 	info.config = id_data[0];
 
 	if (id_data[83] & (1 << 10)) {
-		memcpy(&info.total_sectors, &id_data[100], sizeof(uint64_t));
+		info.total_sectors = ((uint64_t)id_data[103] << 48) | ((uint64_t)id_data[102] << 32) | ((uint64_t)id_data[101] << 16) | ((uint64_t)id_data[100]);
 	} else {
-		uint32_t sectors;
-		memcpy(&sectors, &id_data[60], sizeof(uint32_t));
-		info.total_sectors = sectors;
+		info.total_sectors = ((uint32_t)id_data[61] << 16) | ((uint32_t)id_data[60]);
 	}
 
 	ata_parse_string(info.model, id_data, 27, 20);
@@ -34,7 +32,7 @@ ata_identity_t ata_identify(const uint16_t* id_data) {
 	info.capabilities = id_data[49];
 	info.field_validity = id_data[53];
 	info.pio_modes = id_data[64];
-	info.dma_modes = (id_data[63] << 16) | id_data[88];
+	info.dma_modes = ((uint32_t)id_data[63] << 16) | id_data[88];
 	info.command_sets_82 = id_data[82];
 	info.command_sets_83 = id_data[83];
 	info.logical_sector_size = id_data[106] & 0x0FFF;
