@@ -10,7 +10,7 @@
 #include "limine.h"
 #include "mem/pma.h"
 #include "mem/mem.h"
-#include "graphics/ui/fb_flanterm.h"
+#include "graphics/ui/cuterm.h"
 #include "cpu/GDT.h"
 #include "cpu/apic/lapic.h"
 #include "cpu/apic/ioapic.h"
@@ -245,7 +245,7 @@ static void kernel_main(void) {
 	}
 
 	logbuf_flush(debug_dev);
-	logbuf_flush(&flanterm_dev);
+	logbuf_flush(&cuterm_dev);
 	logbuf_clear();
 
 	scheduler_init();
@@ -356,10 +356,10 @@ void _kstartc(void) {
 
 	logbuf_flush(debug_dev);
 
-	GENERIC_FB_FROM_LIMINE_FB(&gfb_limine_framebuffer, framebuffer_request.response->framebuffers[0]);
-	_c_flanterm_init(&gfb_limine_framebuffer);
+	LINEAR_FB_FROM_LIMINE_FB(&gfb_limine_framebuffer, framebuffer_request.response->framebuffers[0]);
+	cuterm_init(gfb_limine_framebuffer);
 
-	logbuf_flush(&flanterm_dev);
+	logbuf_flush(&cuterm_dev);
 	logbuf_clear();
 
 	__asm__ volatile ("sti");

@@ -23,7 +23,7 @@ typedef struct {
 	uint8_t memory_model;
 } linear_framebuffer_t;
 
-#define GENERIC_FB_FROM_LIMINE_FB(gfb, lfb) \
+#define LINEAR_FB_FROM_LIMINE_FB(gfb, lfb) \
 	do { \
 		(gfb)->address = (lfb)->address; \
 		(gfb)->width   = (lfb)->width; \

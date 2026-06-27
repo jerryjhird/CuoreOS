@@ -35,11 +35,9 @@ TOOLS := tools
 # GIT CONSTANTS
 GIT_LIMINE = "https://github.com/Limine-Bootloader/Limine.git" --depth=1 --branch v11.x-binary
 GIT_LIMINE_PROTOCOL = "https://github.com/Limine-Bootloader/limine-protocol.git" --depth=1
-GIT_FLANTERM = "https://github.com/Mintsuki/Flanterm.git" --depth=1
 LIMINE_DIR := $(CACHEDIR)/limine
 LIMINE_PROTOCOL_DIR := $(CACHEDIR)/limine-protocol
-FLANTERM_DIR := $(CACHEDIR)/flanterm
-ALL_REPOS_DIR := $(FLANTERM_DIR) $(LIMINE_DIR) $(LIMINE_PROTOCOL_DIR)
+ALL_REPOS_DIR := $(LIMINE_DIR) $(LIMINE_PROTOCOL_DIR)
 
 DISK_IMG := $(CACHEDIR)/qemu-disk.img
 C_SRCS := $(shell find $(SRCDIR) -name "*.c")
@@ -56,7 +54,7 @@ INITRD := $(BUILDDIR)/initrd.img
 
 # flags
 # -fno-pie/-fno-pic for systems that auto enable PIE/PIC like microslop windows subsystem for linux
-CFLAGS := -fno-pie -fno-pic -std=c23 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(FLANTERM_DIR)/src -I$(LIMINE_PROTOCOL_DIR)/include -I. -MMD -MP
+CFLAGS := -fno-pie -fno-pic -std=c23 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(LIMINE_PROTOCOL_DIR)/include -I. -MMD -MP
 CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wmissing-declarations
 GCC_WARNINGS := -Wlogical-op
 
@@ -87,10 +85,7 @@ configsync:
 	@echo -e "it is recommended to run 'make clean' after regenerating the config"
 
 deps_setup:
-	@mkdir -p $(FLANTERM_DIR) $(LIMINE_DIR) $(LIMINE_PROTOCOL_DIR)
-	@if [ ! -d "$(FLANTERM_DIR)/.git" ]; then \
-		git clone $(GIT_FLANTERM) $(FLANTERM_DIR); \
-	fi
+	@mkdir -p $(ALL_REPOS_DIR)
 	@if [ ! -d "$(LIMINE_DIR)/.git" ]; then \
 		git clone $(GIT_LIMINE) $(LIMINE_DIR); \
 	fi
