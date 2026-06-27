@@ -11,6 +11,7 @@
 #define LAPIC_REG_LVT_TIMER 0x0320
 #define LAPIC_REG_TIMER_INIT 0x0380
 #define LAPIC_REG_TIMER_DIV 0x03E0
+#define LAPIC_REG_TIMER_CURRENT 0x0390
 
 #define ICR_FIXED 0x000
 #define ICR_INIT 0x500
@@ -20,9 +21,7 @@
 #define ICR_LEVEL_DEASSERT 0x000
 #define ICR_SEND_PENDING 0x1000
 
-#define LAPIC_VIRTUAL_BASE 0xFFFFFFFFFF000000ULL
-
-void lapic_init(uintptr_t base_addr);
+void lapic_init(uint32_t frequency_hz);
 
 uint32_t lapic_get_id(void);
 void lapic_send_ipi(uint8_t target_lapic_id, uint8_t vector);

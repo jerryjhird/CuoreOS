@@ -23,6 +23,8 @@ struct hpet_table {
 } __attribute__((packed));
 
 void hpet_init(struct acpi_sdt_header* header);
+
+uint64_t hpet_get_frequency(void);
 uint64_t hpet_get_nanos(void);
 uint64_t hpet_get_ms(void);
 uint32_t hpet_femto_per_tick(void);

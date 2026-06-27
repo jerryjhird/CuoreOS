@@ -326,12 +326,7 @@ void _kstartc(void) {
 	vmm_init();
 
 	// lapic stuff
-	uintptr_t lapic_phys = madt_get_lapic_base();
-	uint64_t* pml4_virt = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
-	uint64_t flags = PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE;
-
-	vmm_map_page(pml4_virt, LAPIC_VIRTUAL_BASE, lapic_phys, flags);
-	lapic_init(LAPIC_VIRTUAL_BASE);
+	lapic_init(100);
 	uint8_t hardware_id = (uint8_t)lapic_get_id();
 
 	heap_init(HEAP_SIZE);

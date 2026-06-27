@@ -1,8 +1,13 @@
 #include "lapic.h"
 #include "cpu/MSR.h"
+#include "firmware/acpi/hpet.h"
 #include "abs.h"
+#include "mem/vmm.h"
+#include "mem/paging.h"
+#include "firmware/acpi/madt.h"
 
 static uintptr_t lapic_base = 0;
+static uint32_t cached_lapic_calibration = 0;
 
 static void lapic_write(uint32_t reg, uint32_t data) {
 	*(volatile uint32_t*)(lapic_base + reg) = data;
@@ -46,11 +51,20 @@ uint32_t lapic_get_id(void) {
 	return lapic_read(LAPIC_REG_ID) >> 24;
 }
 
-void lapic_init(uintptr_t base_addr) {
-	lapic_base = base_addr;
+void lapic_init(uint32_t frequency_hz) {
+	if (UNLIKELY(lapic_base == 0)) {
+		uintptr_t lapic_phys = madt_get_lapic_base();
+		lapic_base = vmm_alloc_pages(1);
+
+		vmm_map_page(
+			(uint64_t*)vmm_get_pml4(),
+			lapic_base,
+			lapic_phys,
+			PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE
+		);
+	}
 
 	uint64_t apic_base = read_msr(MSR_IA32_APIC_BASE);
-
 	if (!(apic_base & (1ULL << 11))) {
 		apic_base |= (1ULL << 11);
 		WRITE_MSR(MSR_IA32_APIC_BASE, apic_base);
@@ -59,8 +73,21 @@ void lapic_init(uintptr_t base_addr) {
 	lapic_write(LAPIC_REG_TPR, 0);
 	lapic_write(LAPIC_REG_SPURIOUS, 0x1FF);
 	lapic_write(LAPIC_REG_TIMER_DIV, 0x3);
-	lapic_write(LAPIC_REG_LVT_TIMER, 32 | (1 << 17));
-	lapic_write(LAPIC_REG_TIMER_INIT, 0x400000);
+
+	if (UNLIKELY(cached_lapic_calibration == 0)) {
+		lapic_write(LAPIC_REG_TIMER_INIT, 0xFFFFFFFF);
+
+		uint64_t hpet_freq = hpet_get_frequency();
+		uint64_t start = hpet_get_ticks();
+		uint64_t target = start + (hpet_freq / 100);
+		while (hpet_get_ticks() < target) __asm__ volatile ("pause");
+
+		uint32_t elapsed = 0xFFFFFFFF - lapic_read(LAPIC_REG_TIMER_CURRENT);
+		cached_lapic_calibration = (elapsed * 100) / frequency_hz;
+	}
+
+	lapic_write(LAPIC_REG_TIMER_INIT, cached_lapic_calibration);
+	lapic_write(LAPIC_REG_LVT_TIMER, 32 | (1 << 17)); // Periodic mode
 }
 
 void lapic_eoi(void) {

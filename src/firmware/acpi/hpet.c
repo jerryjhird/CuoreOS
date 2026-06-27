@@ -25,6 +25,10 @@ void hpet_init(struct acpi_sdt_header* header) {
 	*(volatile uint64_t*)(hpet_base + HPET_REG_CONFIG) |= 0x01;
 }
 
+uint64_t hpet_get_frequency(void) {
+	return 1000000000000000ULL / femtoseconds_per_tick;
+}
+
 uint64_t hpet_get_nanos(void) {
 	if (UNLIKELY(hpet_base == 0)) return 0;
 	return (hpet_get_ticks() * femtoseconds_per_tick) / 1000000ULL;

@@ -32,7 +32,7 @@ __attribute__((noinline))
 void AP_kstartc(struct limine_mp_info *mp) {
 	gdt_init();
 	idt_init();
-	lapic_init(LAPIC_VIRTUAL_BASE);
+	lapic_init(100);
 
 	SPIN_LOCK(&AP_init_spinlock);
 
