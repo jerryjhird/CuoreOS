@@ -10,6 +10,7 @@
 #include "cedt.h"
 #include "hpet.h"
 #include "waet.h"
+#include "bgrt.h"
 #include <stdint.h>
 
 typedef void (*acpi_dtable_handler)(struct acpi_sdt_header* table);
@@ -26,7 +27,8 @@ static const struct acpi_dtable_entry acpi_discovery_table[] = {
 	{ TO_CHAR_ARRAY("MCFG"), mcfg_init },
 	{ TO_CHAR_ARRAY("CEDT"), cedt_init },
 	{ TO_CHAR_ARRAY("HPET"), hpet_init },
-	{ TO_CHAR_ARRAY("WAET"), waet_init }
+	{ TO_CHAR_ARRAY("WAET"), waet_init },
+	{ TO_CHAR_ARRAY("BGRT"), bgrt_init }
 };
 
 static const size_t acpi_discovery_table_c = sizeof(acpi_discovery_table) / sizeof(struct acpi_dtable_entry);
