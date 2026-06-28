@@ -11,13 +11,13 @@ static uint32_t femtoseconds_per_tick = 0;
 void hpet_init(struct acpi_sdt_header* header) {
 	struct hpet_table* table = (struct hpet_table*)header;
 
-	uintptr_t pml4_phys = vmm_get_pml4();
+	uintptr_t pml4_phys = paging_get_pml4();
 	uint64_t* pml4_virt = (uint64_t*)(pml4_phys + hhdm_offset);
 
 	uintptr_t hpet_phys = table->address.address;
 	hpet_base = hpet_phys + hhdm_offset;
 
-	vmm_map_page(pml4_virt, hpet_base, hpet_phys, PTE_PRESENT | PTE_WRITABLE | PTE_WRITE_THROUGH | PTE_CACHE_DISABLE);
+	paging_map_page(pml4_virt, hpet_base, hpet_phys, PTE_PRESENT | PTE_WRITABLE | PTE_WRITE_THROUGH | PTE_CACHE_DISABLE);
 
 	uint64_t caps = *(volatile uint64_t*)(hpet_base + HPET_REG_CAPS);
 	femtoseconds_per_tick = (uint32_t)(caps >> 32);

@@ -32,9 +32,9 @@ static struct trap_frame* scheduler_timer_handler(struct trap_frame* tf) {
 		free(old_task);
 	}
 
-	uint64_t current_pml4 = vmm_get_pml4();
+	uint64_t current_pml4 = paging_get_pml4();
 	if (next_task->cr3 != current_pml4 && next_task->cr3 != 0) {
-		vmm_set_pml4(next_task->cr3);
+		paging_set_pml4(next_task->cr3);
 	}
 
 	SET_CURRENT_TASK(next_task);
@@ -58,7 +58,7 @@ task_t* scheduler_create_task(void (*entry_point)(void)) {
 	if (!new_task) return NULL;
 
 	new_task->upid = 0;
-	new_task->cr3 = vmm_get_pml4(); // current page table as default
+	new_task->cr3 = paging_get_pml4(); // current page table as default
 
 	uint64_t stack_phys = pma_alloc_pages(4);
 	uint64_t stack_top = stack_phys + (4 * 4096) + hhdm_offset;
@@ -139,7 +139,7 @@ void scheduler_yield(void) {
 void scheduler_init(void) {
 	task_t* bootstrap_task = (task_t*)zalloc(sizeof(task_t));
 	bootstrap_task->upid = 0;
-	bootstrap_task->cr3 = vmm_get_pml4();
+	bootstrap_task->cr3 = paging_get_pml4();
 
 	task_t* current_task; GET_CURRENT_TASK(current_task);
 

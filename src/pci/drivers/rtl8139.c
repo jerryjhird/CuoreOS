@@ -216,8 +216,8 @@ pci_driver_status rtl8139_init(pci_dev_t pdev) {
 
 	if (state->is_mmio) {
 		uintptr_t phys = pdev.bars[1].base;
-		uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
-		vmm_map_page(pml4, phys + hhdm_offset, phys,
+		uint64_t* pml4 = (uint64_t*)(paging_get_pml4() + hhdm_offset);
+		paging_map_page(pml4, phys + hhdm_offset, phys,
 			PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 		state->base = phys + hhdm_offset;
 	} else {

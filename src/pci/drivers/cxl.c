@@ -36,16 +36,16 @@ pci_driver_status cxl_init(pci_dev_t dev) {
 	uintptr_t virt = vmm_alloc_pages(pages);
 	if (!virt) { panic("CXL", "vmm failed to allocate virtual region"); }
 
-	uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
+	uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
 
 	for (size_t i = 0; i < pages; i++) {
-		vmm_map_page_noflush(pml4,
+		paging_map_page_noflush(pml4,
 			virt + i * PAGE_SIZE,
 			window.phys_base + i * PAGE_SIZE,
 			PTE_PRESENT | PTE_WRITABLE);
 	}
 
-	vmm_flush_tlb_all();
+	paging_flush_tlb_all();
 
 	kernel_extmem_dev_t *ext_dev = zalloc(sizeof(kernel_extmem_dev_t));
 	pci_dev_t *dev_copy = zalloc(sizeof(pci_dev_t));

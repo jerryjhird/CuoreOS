@@ -297,7 +297,7 @@ void _kstartc(void) {
 	}
 
 	hhdm_offset = hhdm_req.response->offset;
-	kernel_pml4_phys = vmm_get_pml4();
+	kernel_pml4_phys = paging_get_pml4();
 
 	cmdline_init(cmdline_request.response->cmdline);
 

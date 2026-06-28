@@ -56,8 +56,8 @@ void lapic_init(uint32_t frequency_hz) {
 		uintptr_t lapic_phys = madt_get_lapic_base();
 		lapic_base = vmm_alloc_pages(1);
 
-		vmm_map_page(
-			(uint64_t*)vmm_get_pml4(),
+		paging_map_page(
+			(uint64_t*)paging_get_pml4(),
 			lapic_base,
 			lapic_phys,
 			PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE

@@ -100,11 +100,11 @@ static bool heap_grow(size_t size_needed) {
 		return false;
 	}
 
-	uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
+	uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
 	for (size_t i = 0; i < pages; i++) {
-		vmm_map_page_noflush(pml4, virt + i * PAGE_SIZE, phys + i * PAGE_SIZE, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		paging_map_page_noflush(pml4, virt + i * PAGE_SIZE, phys + i * PAGE_SIZE, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
 	}
-	vmm_flush_tlb_all();
+	paging_flush_tlb_all();
 
 	BlockHeader *bh = (BlockHeader *)virt;
 	*bh = (BlockHeader){0};
@@ -116,7 +116,7 @@ static bool heap_grow(size_t size_needed) {
 }
 
 static void heap_init_pools(void) {
-	uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
+	uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
 
 	for (int i = 0; i < POOL_COUNT; i++) {
 		pools[i].block_size = pool_sizes[i];
@@ -128,7 +128,7 @@ static void heap_init_pools(void) {
 		uintptr_t virt = vmm_alloc_pages(1);
 		if (!virt) { panic("HEAP", "vmm failed for pool page"); }
 
-		vmm_map_page(pml4, virt, phys, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_POOL);
+		paging_map_page(pml4, virt, phys, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_POOL);
 
 		if (registered_pool_pages >= MAX_POOL_PAGES) {
 			panic("HEAP", "pool page registry exhausted");
@@ -167,13 +167,13 @@ void heap_init(size_t size) {
 	uintptr_t phys = pma_alloc_pages(pages);
 	if (!phys) { panic("HEAP", "pma failed for heap init"); }
 
-	uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
+	uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
 
 	for (size_t i = 0; i < pages; i++) {
-		vmm_map_page_noflush(pml4, virt + i * PAGE_SIZE, phys + i * PAGE_SIZE, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		paging_map_page_noflush(pml4, virt + i * PAGE_SIZE, phys + i * PAGE_SIZE, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
 	}
 
-	vmm_flush_tlb_all();
+	paging_flush_tlb_all();
 
 	head = (BlockHeader *)virt;
 	*head = (BlockHeader){0};
@@ -288,8 +288,8 @@ static void _free(void *ptr, uint8_t type) {
 			}
 
 			// get phys before unmapping
-			uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
-			uint64_t *pte = vmm_get_pte(pml4, page_base, 0);
+			uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
+			uint64_t *pte = paging_get_pte(pml4, page_base, 0);
 			uintptr_t phys = pte ? (*pte & ~(uintptr_t)0xfff) : 0;
 
 			list_unlink(bh);

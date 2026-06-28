@@ -53,18 +53,18 @@ elf64_parser_ret elf64_parse(void *file_data, size_t file_size, uint64_t target_
 
 		// allocate and map segment pages
 		for (uintptr_t addr = seg_start; addr < seg_end; addr += PAGE_SIZE) {
-			uintptr_t existing_phys = vmm_get_phys(pml4, addr);
+			uintptr_t existing_phys = paging_get_phys(pml4, addr);
 
 			if (!existing_phys) {
 				uintptr_t phys = pma_alloc_pages(1);
 
 				if (!phys) { return ret; }
 
-				vmm_map_page(pml4, addr, phys, flags);
+				paging_map_page(pml4, addr, phys, flags);
 				memset((void *)(phys + hhdm_offset), 0, PAGE_SIZE);
 			} else {
 				// combine flags for overlapping segments
-				uint64_t *pte = vmm_get_pte(pml4, addr, 0);
+				uint64_t *pte = paging_get_pte(pml4, addr, 0);
 				uint64_t existing_flags = pte ? (*pte & (PTE_PRESENT | PTE_USER | PTE_WRITABLE | PTE_NX)) : flags;
 
 				// if either segment wants write page must be writeable
@@ -72,7 +72,7 @@ elf64_parser_ret elf64_parse(void *file_data, size_t file_size, uint64_t target_
 				uint64_t combined_flags = existing_flags | (flags & PTE_WRITABLE);
 				if (!(flags & PTE_NX)) { combined_flags &= ~PTE_NX; }
 
-				vmm_map_page(pml4, addr, existing_phys, combined_flags);
+				paging_map_page(pml4, addr, existing_phys, combined_flags);
 			}
 		}
 
@@ -88,7 +88,7 @@ elf64_parser_ret elf64_parse(void *file_data, size_t file_size, uint64_t target_
 
 			if (chunk > copy_size) { chunk = copy_size; }
 
-			uintptr_t phys = vmm_get_phys(pml4, page);
+			uintptr_t phys = paging_get_phys(pml4, page);
 
 			if (!phys) { return ret; }
 
@@ -110,7 +110,7 @@ elf64_parser_ret elf64_parse(void *file_data, size_t file_size, uint64_t target_
 
 				if (chunk > bss_size) { chunk = bss_size; }
 
-				uintptr_t phys = vmm_get_phys(pml4, page);
+				uintptr_t phys = paging_get_phys(pml4, page);
 
 				if (!phys) { return ret; }
 
@@ -122,7 +122,7 @@ elf64_parser_ret elf64_parse(void *file_data, size_t file_size, uint64_t target_
 		}
 	}
 
-	vmm_flush_tlb_all();
+	paging_flush_tlb_all();
 
 	ret.status = 1;
 	ret.entry = ehdr->e_entry;
@@ -139,7 +139,7 @@ task_t* elf64_alloc(void *file_data, size_t file_size) {
 	memset(proc_pml4_virt, 0, PAGE_SIZE);
 
 	// clone higher half
-	uint64_t *kernel_pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
+	uint64_t *kernel_pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
 	for (int i = 256; i < 512; i++) {
 		proc_pml4_virt[i] = kernel_pml4[i];
 	}

@@ -41,10 +41,10 @@ static uint16_t e1000_eeprom_read(e1000_state_t* s, uint8_t addr) {
 
 pci_driver_status e1000_init(pci_dev_t dev) {
 	e1000_state_t* s = zalloc(sizeof(e1000_state_t));
-	uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
+	uint64_t* pml4 = (uint64_t*)(paging_get_pml4() + hhdm_offset);
 
 	for (uintptr_t offset = 0; offset < dev.bars[0].size; offset += 4096) {
-		vmm_map_page(pml4, dev.bars[0].base + hhdm_offset + offset,
+		paging_map_page(pml4, dev.bars[0].base + hhdm_offset + offset,
 					 dev.bars[0].base + offset,
 					 PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 	}

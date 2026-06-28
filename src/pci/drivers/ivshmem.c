@@ -26,15 +26,15 @@ pci_driver_status ivshmem_init(pci_dev_t dev) {
 
 	uintptr_t virt = vmm_alloc_pages(pages);
 
-	uint64_t *pml4 = (uint64_t *)(vmm_get_pml4() + hhdm_offset);
+	uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
 	for (size_t i = 0; i < pages; i++) {
-		vmm_map_page_noflush(pml4,
+		paging_map_page_noflush(pml4,
 			virt + i * PAGE_SIZE,
 			phys + i * PAGE_SIZE,
 			PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 	}
 
-	vmm_flush_tlb_all();
+	paging_flush_tlb_all();
 
 	kernel_extmem_dev_t *ext = zalloc(sizeof(kernel_extmem_dev_t));
 

@@ -3,7 +3,7 @@
 #include "mem.h"
 #include "pma.h"
 
-uint64_t* vmm_get_pte(uint64_t* pml4, uintptr_t virt, int allocate) {
+uint64_t* paging_get_pte(uint64_t* pml4, uintptr_t virt, int allocate) {
 	uint64_t* table = pml4;
 
 	for (int level = 3; level > 0; level--) {
@@ -28,30 +28,30 @@ uint64_t* vmm_get_pte(uint64_t* pml4, uintptr_t virt, int allocate) {
 	return &table[index];
 }
 
-void vmm_map_page_noflush(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags) {
-	uint64_t* pte = vmm_get_pte(pml4, virt, 1);
+void paging_map_page_noflush(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags) {
+	uint64_t* pte = paging_get_pte(pml4, virt, 1);
 	if (!pte) { return; }
 	*pte = (phys & ~0xFFFULL) | flags;
 }
 
-void vmm_map_page(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags) {
-	vmm_map_page_noflush(pml4, virt, phys, flags);
-	vmm_flush_tlb_page(virt);
+void paging_map_page(uint64_t* pml4, uintptr_t virt, uintptr_t phys, uint64_t flags) {
+	paging_map_page_noflush(pml4, virt, phys, flags);
+	paging_flush_tlb_page(virt);
 }
 
-void vmm_unmap_page_noflush(uint64_t* pml4, uintptr_t virt) {
-	uint64_t* pte = vmm_get_pte(pml4, virt, 0);
+void paging_unmap_page_noflush(uint64_t* pml4, uintptr_t virt) {
+	uint64_t* pte = paging_get_pte(pml4, virt, 0);
 	if (pte && (*pte & 1)) {
 		*pte = 0;
 	}
 }
 
-void vmm_unmap_page(uint64_t* pml4, uintptr_t virt) {
-	vmm_unmap_page_noflush(pml4, virt);
-	vmm_flush_tlb_page(virt);
+void paging_unmap_page(uint64_t* pml4, uintptr_t virt) {
+	paging_unmap_page_noflush(pml4, virt);
+	paging_flush_tlb_page(virt);
 }
 
-uintptr_t vmm_get_phys(uint64_t* pml4, uintptr_t vaddr) {
+uintptr_t paging_get_phys(uint64_t* pml4, uintptr_t vaddr) {
 	// PML4
 	uint64_t pml4e = pml4[(vaddr >> 39) & 0x1FF];
 	if (!(pml4e & 1)) return 0;

@@ -93,8 +93,8 @@ static void ac97_play(kernel_audio_dev_t* dev, void* buffer, size_t size) {
 	__asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
 	uint64_t* pml4 = (uint64_t*)((cr3 & ~0xFFFULL) + hhdm_offset);
 
-	uintptr_t phys_buffer = vmm_get_phys(pml4, (uintptr_t)buffer);
-	uintptr_t bdl_phys = vmm_get_phys(pml4, (uintptr_t)state->bdl);
+	uintptr_t phys_buffer = paging_get_phys(pml4, (uintptr_t)buffer);
+	uintptr_t bdl_phys = paging_get_phys(pml4, (uintptr_t)state->bdl);
 
 	if (!phys_buffer || !bdl_phys) return;
 
@@ -158,15 +158,15 @@ pci_driver_status ac97_init(pci_dev_t dev) {
 
 	// map na(b)mbar apply offsets if MMIO
 	if (state->is_mmio) {
-		uintptr_t pml4_phys = vmm_get_pml4();
+		uintptr_t pml4_phys = paging_get_pml4();
 		uint64_t* pml4_virt = (uint64_t*)(pml4_phys + hhdm_offset);
 
 		// NAMBAR
-		vmm_map_page(pml4_virt, state->nambar + hhdm_offset, state->nambar,
+		paging_map_page(pml4_virt, state->nambar + hhdm_offset, state->nambar,
 					 PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 
 		// NABMBAR
-		vmm_map_page(pml4_virt, state->nabmbar + hhdm_offset, state->nabmbar,
+		paging_map_page(pml4_virt, state->nabmbar + hhdm_offset, state->nabmbar,
 					 PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE);
 
 		state->nambar  += hhdm_offset;
@@ -194,8 +194,8 @@ pci_driver_status ac97_init(pci_dev_t dev) {
 	// allocate 32 entries for BDL
 	state->bdl = (ac97_bdl_entry_t*)zalloc(sizeof(ac97_bdl_entry_t) * 32);
 
-	uint64_t* pml4 = (uint64_t*)(vmm_get_pml4() + hhdm_offset);
-	uintptr_t bdl_phys = vmm_get_phys(pml4, (uintptr_t)state->bdl);
+	uint64_t* pml4 = (uint64_t*)(paging_get_pml4() + hhdm_offset);
+	uintptr_t bdl_phys = paging_get_phys(pml4, (uintptr_t)state->bdl);
 	ac97_write32(state, state->nabmbar, AC97_PO_BDBAR, (uint32_t)bdl_phys);
 
 	kernel_audio_dev_t* adev = zalloc(sizeof(kernel_audio_dev_t));
