@@ -273,14 +273,36 @@ static void kernel_main(void) {
 
 void _kstartc(void);
 
+// boot order:
+// 1. cmdline parsing
+// 2, inital log device init
+// 3. GDT/IDT
+// 4. initramfs
+// 5. symtable (if exists in initramfs)
+// 6. acpi (and by extension things like HPET)
+// 7. memory management. (CMM, PMA, VMM, HEAP)
+// 8. lapic
+// 9. CPU control block
+// 10. ioapic
+// 11. framebuffer terminal
+// 12. pci init / driver init
+// 13. pcspeaker
+// 14. post hardware setup kernel
+
 __attribute__((used))
 void _kstartc(void) {
+	if (!module_request.response || !memmap_request.response || !executable_request.response || !hhdm_req.response || !framebuffer_request.response || !rsdp_request.response || !mp_request.response || !cmdline_request.response || !smbios_request.response) {
+		uart16550_init();
+		panic("LIMINE", "failed to fill response structs. this is an issue with your version of limine make sure it is up to date");
+	}
+
 	hhdm_offset = hhdm_req.response->offset;
 	kernel_pml4_phys = vmm_get_pml4();
 
 	cmdline_init(cmdline_request.response->cmdline);
 
 	const char* debugout = cmdline_get_string("debugout");
+	bool debugout_is_uart = false;
 
 	if (debugout != NULL && strcmp(debugout, "e9") == 0) {
 		E9_init();
@@ -289,9 +311,12 @@ void _kstartc(void) {
 		// default
 		uart16550_init();
 		debug_dev = &uart16550_dev;
+		debugout_is_uart = true;
 	}
 
-	pcspeaker_init();
+	// GDT/IDT
+	gdt_init();
+	idt_init();
 
 	// initramfs
 	if (module_request.response->module_count <= 0) {
@@ -300,11 +325,10 @@ void _kstartc(void) {
 		ramfs_init(&initramfs, module_request.response->modules[0]->address);
 	}
 
+	// symtable
 	ramfs_file_t sym_file = ramfs_get_file(&initramfs, "symtable.data");
 
-	if (sym_file.data == NULL || sym_file.size == 0) {
-		panic("SYMTABLE", "failed to find 'symtable.data' in initramfs");
-	} else {
+	if (sym_file.data != NULL) {
 		symtable_init(sym_file.data, (size_t)sym_file.size);
 	}
 
@@ -318,18 +342,15 @@ void _kstartc(void) {
 	struct limine_rsdp_response* rsdp_resp = rsdp_request.response;
 	acpi_init((uintptr_t)rsdp_resp->address);
 
-	gdt_init();
-	idt_init();
-
+	// memory management
 	cmm_init();
 	pma_init();
 	vmm_init();
+	heap_init(HEAP_SIZE);
 
 	// lapic stuff
 	lapic_init(100);
 	uint8_t hardware_id = (uint8_t)lapic_get_id();
-
-	heap_init(HEAP_SIZE);
 
 	// cpu block
 	coreinfo_t *my_cpu = zalloc(sizeof(coreinfo_t));
@@ -345,24 +366,27 @@ void _kstartc(void) {
 
 	cpu_blocks_c++;
 
-	uart16550_init_late();
+	// late uart init for input interrupts
+	if (debugout_is_uart == true) {
+		uart16550_init_late();
+	}
 
+	// ioapic
 	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
 
-	logbuf_flush(debug_dev);
-
+	// cuterm (fb terminal)
 	LINEAR_FB_FROM_LIMINE_FB(&gfb_limine_framebuffer, framebuffer_request.response->framebuffers[0]);
 	cuterm_init(gfb_limine_framebuffer);
 
+	logbuf_flush(debug_dev);
 	logbuf_flush(&cuterm_dev);
 	logbuf_clear();
 
 	__asm__ volatile ("sti");
 
-	// pci stuff
+	// pci
 	pci_init();
 
-	// scan disks previously found by pci discovery
 	for (size_t i = 0; i < registry_count; i++) {
 		if (registry[i].type != DISK_DEV) continue;
 
@@ -377,6 +401,9 @@ void _kstartc(void) {
 
 		generic_disk_init(dev);
 	}
+
+	// pcspeaker
+	pcspeaker_init();
 
 	// start the kernel
 	kernel_main();
