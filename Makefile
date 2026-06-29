@@ -180,3 +180,5 @@ clean-cache: clean
 	rm -rf .cache
 
 fullclean: clean clean-cache
+
+-include $(DEPS)
