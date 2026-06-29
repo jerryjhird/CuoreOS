@@ -347,6 +347,7 @@ void _kstartc(void) {
 	pma_init();
 	vmm_init();
 	heap_init(HEAP_SIZE);
+	cmm_migrate_to_heap(); // migrate cmm memmap to heap
 
 	// lapic stuff
 	lapic_init(100);

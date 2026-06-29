@@ -25,7 +25,7 @@ void pma_init(void) {
 
 	uintptr_t bitmap_phys_addr = 0;
 	for (size_t i = 0; i < cmm_get_region_count(); i++) {
-		const struct cmm_region *r = cmm_get_region(i);
+		const struct cmm_region *r = cmm_get_region_by_index(i);
 		if (r->type == CMM_USABLE && r->length >= bitmap_reserved_bytes) {
 			bitmap_phys_addr = r->base;
 			pma_bitmap = (uint8_t *)(bitmap_phys_addr + hhdm_offset);
@@ -37,7 +37,7 @@ void pma_init(void) {
 	if (!pma_bitmap) panic("PMA", "failed to allocate bitmap");
 
 	for (size_t i = 0; i < cmm_get_region_count(); i++) {
-		const struct cmm_region *r = cmm_get_region(i);
+		const struct cmm_region *r = cmm_get_region_by_index(i);
 
 		if (r->type == CMM_USABLE) {
 			for (uintptr_t addr = r->base; addr < r->base + r->length; addr += PAGE_SIZE) {
