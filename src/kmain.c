@@ -27,12 +27,7 @@
 #include "disk/diskinit.h"
 #include "tests.h"
 #include "graphics/fb.h"
-#include "net/link/eth.h"
-#include "net/protocol/ntp.h"
-#include "net/protocol/dns.h"
-#include "net/protocol/telnet.h"
 #include "mem/vmm.h"
-#include "net/arp.h"
 #include "binfmt/elf64.h"
 #include "symtable.h"
 #include "cpu/coreinfo.h"
@@ -233,25 +228,6 @@ static void kernel_main(void) {
 
 	logbuf_info("[ KRNL ] Signature: %llu\n", (unsigned long long)compile_signature);
 	logbuf_info("[ BOOT ] Time it took to boot (nano's): %llu\n", (unsigned long long)hpet_get_nanos());
-
-	kernel_net_dev_t* net_dev = (kernel_net_dev_t*)device_find_first(NET_DEV);
-
-	if (net_dev) {
-		eth_init(net_dev);
-
-		net_dev->ip_addr = IP_ADDR(10, 0, 2, 15);
-		net_dev->gateway = IP_ADDR(10, 0, 2, 2);
-		net_dev->subnet_mask  = IP_ADDR(255, 255, 255, 0);
-
-		arp_send_request(net_dev, net_dev->gateway);
-
-		uint32_t google_time = dns_query_blocking(net_dev, IP_ADDR(8,8,8,8), "time.google.com");
-		if (google_time != 0) {
-			ntp_send_request(net_dev, google_time);
-		} else {
-			dev_puts(debug_dev, "[ DNS ] could not resolve\n");
-		}
-	}
 
 	logbuf_flush(debug_dev);
 	logbuf_flush(&cuterm_dev);
