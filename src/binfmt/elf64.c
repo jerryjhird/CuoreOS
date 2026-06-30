@@ -51,13 +51,70 @@ elf64_parser_ret elf64_parse(void *file_data, size_t file_size, uint64_t target_
 			highest_vaddr = seg_end;
 		}
 
-		// allocate and map segment pages
-		for (uintptr_t addr = seg_start; addr < seg_end; addr += PAGE_SIZE) {
+		// 2mb-aligned huge page portion
+		uintptr_t huge_start = (seg_start + PAGE_SIZE_2MB - 1) & ~(uintptr_t)(PAGE_SIZE_2MB - 1);
+		uintptr_t huge_end = seg_end & ~(uintptr_t)(PAGE_SIZE_2MB - 1);
+
+		// head: 4kb pages before the 2mb-aligned region
+		for (uintptr_t addr = seg_start; addr < huge_start && addr < seg_end; addr += PAGE_SIZE) {
 			uintptr_t existing_phys = paging_get_phys(pml4, addr);
 
 			if (!existing_phys) {
 				uintptr_t phys = pma_alloc_pages(1);
+				if (!phys) { return ret; }
 
+				paging_map_page(pml4, addr, phys, flags);
+				memset((void *)(phys + hhdm_offset), 0, PAGE_SIZE);
+			} else {
+				// combine flags for overlapping segments
+				uint64_t *pte = paging_get_pte(pml4, addr, 0);
+				uint64_t existing_flags = pte ? (*pte & (PTE_PRESENT | PTE_USER | PTE_WRITABLE | PTE_NX)) : flags;
+
+				// if either segment wants write page must be writeable
+				// if either wants execute clear NX
+				uint64_t combined_flags = existing_flags | (flags & PTE_WRITABLE);
+				if (!(flags & PTE_NX)) { combined_flags &= ~PTE_NX; }
+
+				paging_map_page(pml4, addr, existing_phys, combined_flags);
+			}
+		}
+
+		// middle: 2mb huge pages
+		for (uintptr_t addr = huge_start; addr < huge_end; addr += PAGE_SIZE_2MB) {
+			uintptr_t existing_phys = paging_get_phys(pml4, addr);
+
+			if (!existing_phys) {
+				uintptr_t phys = pma_alloc_pages_2mb(1);
+				if (!phys) { return ret; }
+
+				paging_map_2mb(pml4, addr, phys, flags);
+				memset((void *)(phys + hhdm_offset), 0, PAGE_SIZE_2MB);
+			} else {
+				// combine flags for overlapping segments
+				uintptr_t existing_base = existing_phys & ~(uintptr_t)(PAGE_SIZE_2MB - 1);
+				uint64_t existing_flags = 0;
+				uint64_t *pte = paging_get_pte(pml4, addr, 0);
+				if (pte) {
+					existing_flags = *pte & (PTE_PRESENT | PTE_USER | PTE_WRITABLE | PTE_NX);
+				} else {
+					existing_flags = flags;
+				}
+
+				// if either segment wants write page must be writeable
+				// if either wants execute clear NX
+				uint64_t combined_flags = existing_flags | (flags & PTE_WRITABLE);
+				if (!(flags & PTE_NX)) { combined_flags &= ~PTE_NX; }
+
+				paging_map_2mb(pml4, addr, existing_base, combined_flags);
+			}
+		}
+
+		// tail: 4kb pages after the 2mb-aligned region
+		for (uintptr_t addr = huge_end; addr < seg_end; addr += PAGE_SIZE) {
+			uintptr_t existing_phys = paging_get_phys(pml4, addr);
+
+			if (!existing_phys) {
+				uintptr_t phys = pma_alloc_pages(1);
 				if (!phys) { return ret; }
 
 				paging_map_page(pml4, addr, phys, flags);
@@ -134,6 +191,7 @@ elf64_parser_ret elf64_parse(void *file_data, size_t file_size, uint64_t target_
 
 task_t* elf64_alloc(void *file_data, size_t file_size) {
 	uintptr_t proc_pml4_phys = pma_alloc_pages(1);
+	if (!proc_pml4_phys) return NULL;
 
 	uint64_t *proc_pml4_virt = (uint64_t *)(proc_pml4_phys + hhdm_offset);
 	memset(proc_pml4_virt, 0, PAGE_SIZE);

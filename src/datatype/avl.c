@@ -52,7 +52,7 @@ static avl_node_t* unlink_leftmost(avl_node_t *n, avl_node_t **out, const avl_ca
 }
 
 avl_node_t* avl_insert(avl_node_t *root, avl_node_t *n, const avl_callbacks_t *cb) {
-	if (!root) return n;
+	if (!root) { update_node(n, cb); return n; }
 	int cmp = cb->compare(n, root);
 	if (cmp < 0) root->left = avl_insert(root->left, n, cb);
 	else if (cmp > 0) root->right = avl_insert(root->right, n, cb);

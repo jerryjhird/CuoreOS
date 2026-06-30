@@ -26,7 +26,7 @@ static struct trap_frame* scheduler_timer_handler(struct trap_frame* tf) {
 
 		if (old_task->stack_base != NULL) {
 			uintptr_t stack_phys = (uintptr_t)old_task->stack_base - hhdm_offset;
-			pma_free_pages(stack_phys, 4);
+			pma_free_pages(stack_phys, PAGE_SIZE_2MB / PAGE_SIZE);
 		}
 
 		free(old_task);
@@ -60,8 +60,9 @@ task_t* scheduler_create_task(void (*entry_point)(void)) {
 	new_task->upid = 0;
 	new_task->cr3 = paging_get_pml4(); // current page table as default
 
-	uint64_t stack_phys = pma_alloc_pages(4);
-	uint64_t stack_top = stack_phys + (4 * 4096) + hhdm_offset;
+	uint64_t stack_phys = pma_alloc_pages_2mb(1);
+	if (!stack_phys) { free(new_task); return NULL; }
+	uint64_t stack_top = stack_phys + PAGE_SIZE_2MB + hhdm_offset;
 	new_task->stack_base = (void*)(stack_phys + hhdm_offset);
 
 	struct trap_frame* frame = (struct trap_frame*)(stack_top - sizeof(struct trap_frame));

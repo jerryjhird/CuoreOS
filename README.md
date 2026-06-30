@@ -7,17 +7,6 @@ Hobby x86-64 ELF Kernel
 [How to Build](#how-to-build)
 
 ---
-## Project Information
-
-### Features in Development
-- binary loading
-- core specific log buffers
-
-### Planned Features
-- userspace
-- VFS
-
----
 ## Contributing
 - All contributions are welcome. Before committing, please run make format to keep the code clean. PRs that dont follow the style guide may be asked to reformat
 
@@ -44,11 +33,11 @@ make -j$(nproc) -Otarget
 ```
 
 ### Qemu example:
-uefi (Recommended):
+uefi:
 ```bash
-QEMU_FIRMWARE=PATH_TO_OVMF make run
+QEMU_FIRMWARE=PATH_TO_OVMF make runu
 ```
 bios:
 ```bash
-make runb
+make run
 ```

@@ -2,10 +2,14 @@
 #include <limine.h>
 #include "ioapic.h"
 #include "logbuf.h"
+#include "abs.h"
+#include "mem/vmm.h"
+#include "mem/paging.h"
 #include "firmware/acpi/madt.h"
 
 #define IOAPIC_REG_SEL  0x00
 #define IOAPIC_REG_WIN  0x10
+#define IOAPIC_PAGE_COUNT 1
 
 static uintptr_t ioapic_virt_base = 0;
 static uint8_t pin_to_vector[24] = {0};
@@ -45,14 +49,22 @@ uint8_t ioapic_map_irq_to_free_vector(uint8_t irq_pin, uint8_t cpu_apic_id, uint
 	return vector;
 }
 
-void ioapic_init(uintptr_t base_addr) {
-	ioapic_virt_base = base_addr;
+void ioapic_init(uintptr_t phys_addr) {
+	ioapic_virt_base = vmm_alloc_pages(IOAPIC_PAGE_COUNT);
+	if (!ioapic_virt_base) return;
+
+	paging_map_page(
+		(uint64_t*)paging_get_pml4(),
+		ioapic_virt_base,
+		phys_addr,
+		PTE_PRESENT | PTE_WRITABLE | PTE_CACHE_DISABLE
+	);
 
 	// sanity check
 	*(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_SEL) = 0x00;
 	uint32_t id = *(volatile uint32_t*)(ioapic_virt_base + IOAPIC_REG_WIN) >> 24;
 
-	logbuf_ok("[IOAPIC] Initialized IOAPIC at %p, ID: %u\n", (void*)base_addr, id);
+	logbuf_ok("[IOAPIC] Initialized IOAPIC at %p, ID: %u\n", (void*)phys_addr, id);
 
 	uint8_t pin;
 	uint32_t flags;

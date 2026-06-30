@@ -54,7 +54,7 @@ INITRD := $(BUILDDIR)/initrd.img
 
 # flags
 # -fno-pie/-fno-pic for systems that auto enable PIE/PIC like microslop windows subsystem for linux
-CFLAGS := -fno-pie -fno-pic -std=c23 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(LIMINE_PROTOCOL_DIR)/include -I. -MMD -MP
+CFLAGS := -fno-pie -fno-pic -std=c23 -O2 -g -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-lto -m64 -mcmodel=kernel -mno-red-zone -mno-mmx -mno-80387 -mno-bmi -mno-bmi2 -I$(SRCDIR) -I$(LIMINE_PROTOCOL_DIR)/include -I. -MMD -MP
 CC_WARNINGS := -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wcast-align -Wmissing-declarations
 GCC_WARNINGS := -Wlogical-op
 

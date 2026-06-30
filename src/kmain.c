@@ -89,6 +89,14 @@ limine_request_a struct limine_smbios_request smbios_request = {
 	.revision = 0
 };
 
+limine_request_a struct limine_paging_mode_request paging_req = {
+	.id = LIMINE_PAGING_MODE_REQUEST_ID,
+	.revision = 1,
+	.mode = LIMINE_PAGING_MODE_X86_64_5LVL,
+	.max_mode = LIMINE_PAGING_MODE_X86_64_5LVL,
+	.min_mode = LIMINE_PAGING_MODE_X86_64_4LVL
+};
+
 #ifndef KERNEL_BUILD_SIGNATURE
 	#define KERNEL_BUILD_SIGNATURE 0x0ULL
 #endif
@@ -157,6 +165,7 @@ extern void AP_kentry(struct limine_mp_info *mp);
 coreinfo_t *cpu_blocks[SMP_MAX_CORES];
 uint32_t cpu_blocks_c = 0;
 uint64_t kernel_pml4_phys = 0;
+uint64_t kernel_cr4 = 0;
 
 static void kernel_main(void) {
 	struct limine_mp_response *mp_response = mp_request.response;
@@ -273,23 +282,7 @@ static void kernel_main(void) {
 
 void _kstartc(void);
 
-// boot order:
-// 1. cmdline parsing
-// 2, inital log device init
-// 3. GDT/IDT
-// 4. initramfs
-// 5. symtable (if exists in initramfs)
-// 6. acpi (and by extension things like HPET)
-// 7. memory management. (CMM, PMA, VMM, HEAP)
-// 8. lapic
-// 9. CPU control block
-// 10. ioapic
-// 11. framebuffer terminal
-// 12. pci init / driver init
-// 13. pcspeaker
-// 14. post hardware setup kernel
-
-__attribute__((used))
+__attribute__((used, force_align_arg_pointer))
 void _kstartc(void) {
 	if (!module_request.response || !memmap_request.response || !executable_request.response || !hhdm_req.response || !framebuffer_request.response || !rsdp_request.response || !mp_request.response || !cmdline_request.response || !smbios_request.response) {
 		uart16550_init();
@@ -298,6 +291,12 @@ void _kstartc(void) {
 
 	hhdm_offset = hhdm_req.response->offset;
 	kernel_pml4_phys = paging_get_pml4();
+	kernel_cr4 = paging_read_cr4();
+
+	paging_init();
+	size_t paging_level = paging_get_level();
+
+	logbuf_info("[PAGING] %d-level paging is enabled\n", (int)paging_level);
 
 	cmdline_init(cmdline_request.response->cmdline);
 
@@ -314,7 +313,7 @@ void _kstartc(void) {
 		debugout_is_uart = true;
 	}
 
-	// GDT/IDT
+	// gdt/idt
 	gdt_init();
 	idt_init();
 
@@ -373,7 +372,7 @@ void _kstartc(void) {
 	}
 
 	// ioapic
-	ioapic_init(madt_get_ioapic_base() + hhdm_offset);
+	ioapic_init(madt_get_ioapic_base());
 
 	// cuterm (fb terminal)
 	LINEAR_FB_FROM_LIMINE_FB(&gfb_limine_framebuffer, framebuffer_request.response->framebuffers[0]);

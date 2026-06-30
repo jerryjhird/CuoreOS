@@ -7,6 +7,7 @@
 #define ALIGN(alignment, size) (((size) + ((alignment) - 1)) & ~((alignment) - 1))
 #define GET_CONTAINER(ptr, type, member) ((type *)((uintptr_t)(ptr) - offsetof(type, member)))
 #define SMAX(a, b) ((a) > (b) ? (a) : (b))
+#define SMIN(a, b) ((a) < (b) ? (a) : (b))
 #define IP_ADDR(a, b, c, d) ((a) | (b << 8) | (c << 16) | (d << 24))
 
 #define BSWAP16(x) __builtin_bswap16(x)

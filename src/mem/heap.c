@@ -12,6 +12,7 @@
 #include "panic.h"
 #include "vmm.h"
 #include "logbuf.h"
+#include "drivers/UART16550.h"
 
 #define POOL_COUNT 3
 static size_t pool_sizes[POOL_COUNT] = { 32, 64, 128 };
@@ -87,24 +88,53 @@ static void list_unlink(BlockHeader *bh) {
 	if (last_fit == bh) { last_fit = NULL; }
 }
 
+#define PAGES_2MB (PAGE_SIZE_2MB / PAGE_SIZE)
+
 static bool heap_grow(size_t size_needed) {
 	size_t pages = (size_needed + sizeof(BlockHeader) + PAGE_SIZE - 1) / PAGE_SIZE;
 	if (pages < PAGES_PER_GROWTH) { pages = PAGES_PER_GROWTH; }
 
-	uintptr_t phys = pma_alloc_pages(pages);
-	if (!phys) { return false; }
+	uintptr_t phys;
+	uintptr_t virt;
 
-	uintptr_t virt = vmm_alloc_pages(pages);
-	if (!virt) {
-		pma_free_pages(phys, pages);
-		return false;
-	}
+	// Use 2MB huge pages for large aligned growths
+	if (pages >= PAGES_2MB && pages % PAGES_2MB == 0) {
+		size_t huge_count = pages / PAGES_2MB;
+		phys = pma_alloc_pages_2mb(huge_count);
+		if (!phys) { return false; }
 
-	uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
-	for (size_t i = 0; i < pages; i++) {
-		paging_map_page_noflush(pml4, virt + i * PAGE_SIZE, phys + i * PAGE_SIZE, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		virt = vmm_alloc_aligned(pages, PAGE_SIZE_2MB);
+		if (!virt) {
+			pma_free_pages(phys, pages);
+			return false;
+		}
+
+		uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
+
+		for (size_t i = 0; i < huge_count; i++) {
+			paging_map_2mb_noflush(pml4, virt + i * PAGE_SIZE_2MB, phys + i * PAGE_SIZE_2MB, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		}
+
+		paging_flush_tlb_all();
+	} else {
+		phys = pma_alloc_pages(pages);
+		if (!phys) { return false; }
+
+		virt = vmm_alloc_pages(pages);
+
+		if (!virt) {
+			pma_free_pages(phys, pages);
+			return false;
+		}
+
+		uint64_t *pml4 = (uint64_t *)(paging_get_pml4() + hhdm_offset);
+
+		for (size_t i = 0; i < pages; i++) {
+			paging_map_page_noflush(pml4, virt + i * PAGE_SIZE, phys + i * PAGE_SIZE, KERNEL_HEAP_FLAGS | PTE_TYPE_HEAP_BLOCK);
+		}
+
+		paging_flush_tlb_all();
 	}
-	paging_flush_tlb_all();
 
 	BlockHeader *bh = (BlockHeader *)virt;
 	*bh = (BlockHeader){0};
@@ -185,6 +215,7 @@ void heap_init(size_t size) {
 	tail = head;
 
 	logbuf_ok("[ HEAP ] Initialized HEAP with %zu pages (%zu MB) starting at %p\n", pages, (size_t)BYTES_TO_MB(pages * PAGE_SIZE), (void *)virt);
+
 	heap_init_pools();
 }
 
@@ -209,9 +240,16 @@ void *malloc(size_t size) {
 	bool wrapped = false;
 
 	while (curr) {
-		if (UNLIKELY(curr->magic != HEAP_MAGIC)) { panic("MEMORY CORRUPTION", "heap magic invalid"); }
+		if (UNLIKELY(curr->magic != HEAP_MAGIC)) {
+			#ifdef DEBUG
+				dev_printf(&uart16550_dev, "h=%p magic=%lx size=%lx flags=%x\n", curr, (uint64_t)curr->magic, curr->size, curr->flags);
+			#endif
+
+			panic("MEMORY CORRUPTION", "heap magic invalid");
+		}
 
 		if (BH_IS_FREE(curr) && !BH_IS_POOL(curr) && curr->size >= size) {
+
 			if (curr->size >= size + sizeof(BlockHeader) + MIN_SPLIT_SIZE) {
 				BlockHeader *split = (BlockHeader *)((uintptr_t)(curr + 1) + size);
 				*split = (BlockHeader){0};
@@ -225,6 +263,7 @@ void *malloc(size_t size) {
 				curr->next = split;
 				curr->size = size;
 			}
+
 			BH_CLR_FREE(curr);
 			last_fit = curr;
 			return (void *)(curr + 1);
@@ -240,6 +279,7 @@ void *malloc(size_t size) {
 				break;
 			}
 		}
+
 		if (curr == start) { break; }
 	}
 
@@ -254,14 +294,17 @@ static void _free(void *ptr, uint8_t type) {
 		BlockHeader *bh = (BlockHeader *)((uintptr_t)ptr & ~(uintptr_t)(PAGE_SIZE - 1));
 		size_t bin = bh->bin_size;
 		int bin_idx = -1;
+
 		for (int i = 0; i < POOL_COUNT; i++) {
 			if (pools[i].block_size == bin) { bin_idx = i; break; }
 		}
+
 		if (bin_idx == -1) { panic("MEMORY CORRUPTION", "pool bin mismatch"); }
 
 		PoolNode *node = (PoolNode *)ptr;
 		node->next = pools[bin_idx].free_list;
 		pools[bin_idx].free_list = node;
+
 		if (bh->used_slots > 0) { bh->used_slots--; }
 
 		if (bh->used_slots == 0) {
@@ -296,6 +339,7 @@ static void _free(void *ptr, uint8_t type) {
 			vmm_free_pages(page_base, 1);
 			if (phys) { pma_free_pages(phys, 1); }
 		}
+
 		return;
 	}
 
@@ -391,6 +435,7 @@ void *realloc(void *ptr, size_t new_size) {
 		}
 
 		void *new_ptr = malloc(new_size);
+
 		if (new_ptr) {
 			memcpy(new_ptr, ptr, old_size);
 			_free(ptr, PTE_STATE_HEAP_BLOCK);

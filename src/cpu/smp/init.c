@@ -28,7 +28,7 @@ struct trap_frame* AP_clock_tick_irq(struct trap_frame *tf) {
 }
 
 // NOTE: swap out limine_mp_info with a custom struct eventually
-__attribute__((noinline))
+__attribute__((noinline, force_align_arg_pointer))
 void AP_kstartc(struct limine_mp_info *mp) {
 	gdt_init();
 	idt_init();

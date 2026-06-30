@@ -35,3 +35,4 @@ const struct cmm_region* cmm_get_region_by_index(size_t index);
 size_t cmm_get_region_count(void);
 uintptr_t cmm_get_phys_top(void);
 uintptr_t cmm_get_ram_top(void);
+uintptr_t cmm_get_ram_top_2mb_aligned(void);

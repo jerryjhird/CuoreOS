@@ -9,6 +9,9 @@
 #define NTOHL(n) HTONL(n)
 
 #define PAGE_SIZE 4096
+#define PAGE_SIZE_2MB 0x200000
+#define PAGE_SIZE_1GB 0x40000000
+
 extern uint64_t hhdm_offset;
 
 char *strncpy(char *dest, const char *src, size_t n);
