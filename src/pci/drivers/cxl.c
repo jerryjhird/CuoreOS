@@ -50,7 +50,7 @@ pci_driver_status cxl_init(pci_dev_t dev) {
 	kernel_extmem_dev_t *ext_dev = zalloc(sizeof(kernel_extmem_dev_t));
 	pci_dev_t *dev_copy = zalloc(sizeof(pci_dev_t));
 
-	__builtin_memcpy(dev_copy, &dev, sizeof(pci_dev_t));
+	memcpy(dev_copy, &dev, sizeof(pci_dev_t));
 
 	ext_dev->type = determine_cxl_type(dev);
 	ext_dev->virt_addr = virt;

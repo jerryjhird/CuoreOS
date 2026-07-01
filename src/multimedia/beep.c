@@ -17,26 +17,29 @@ static void beep_cleanup_hook(void* arg) {
 void audio_beep(kernel_audio_dev_t* dev, uint32_t freq, uint32_t duration_ms) {
 	if (UNLIKELY(!dev || freq == 0 || duration_ms == 0)) return;
 
-	while (dev->is_playing || dev->hook != NULL) {
+	while (dev->is_playing) {
 		__builtin_ia32_pause();
 	}
 
 	uint32_t num_samples = (dev->sample_rate * duration_ms) / 1000;
-	size_t buffer_size = num_samples * dev->channels * (dev->bit_depth / 8);
+	size_t sample_size = (dev->bit_depth / 8);
+	size_t buffer_size = num_samples * dev->channels * sample_size;
 
 	dmalloc_ret_t dma = dmalloc32(buffer_size);
 	if (!dma.virt) return;
 
-	int16_t* buffer = (int16_t*)dma.virt;
-	memset(buffer, 0, buffer_size);
+	memset((void*)dma.virt, 0, buffer_size);
 
-	uint32_t period = dev->sample_rate / freq;
-	uint32_t half_period = (period == 0) ? 1 : period / 2;
+	if (dev->bit_depth == 16) {
+		int16_t* buffer = (int16_t*)dma.virt;
+		uint32_t period = dev->sample_rate / freq;
+		uint32_t half_period = (period == 0) ? 1 : period / 2;
 
-	for (uint32_t i = 0; i < num_samples; i++) {
-		int16_t sample = ((i / half_period) % 2) ? 3000 : -3000;
-		for (int c = 0; c < dev->channels; c++) {
-			buffer[i * dev->channels + c] = sample;
+		for (uint32_t i = 0; i < num_samples; i++) {
+			int16_t sample = ((i / half_period) % 2) ? 3000 : -3000;
+			for (int c = 0; c < dev->channels; c++) {
+				buffer[i * dev->channels + c] = sample;
+			}
 		}
 	}
 

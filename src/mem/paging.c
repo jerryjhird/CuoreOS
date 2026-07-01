@@ -16,6 +16,10 @@ static uint64_t* walk_to_level(uint64_t* top_table, uintptr_t virt, int target_l
 	int top = (int)paging_level - 1;
 
 	for (int level = top; level > target_level; level--) {
+		if (!range_is_safe(table, sizeof(uint64_t) * 512)) {
+			panic("PAGING", "invalid page table pointer in walk_to_level");
+		}
+
 		uint64_t index = (virt >> (12 + level * 9)) & 0x1FF;
 		uint64_t entry = table[index];
 

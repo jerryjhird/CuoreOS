@@ -53,15 +53,16 @@ static uint32_t pack_color(uint8_t r, uint8_t g, uint8_t b) {
 
 // TODO: optimize me :3
 static void set_pixel(int x, int y, uint8_t r, uint8_t g, uint8_t b) {
-	uint8_t* pixel_ptr = (uint8_t*)g_cuterm_state.fb_info.address + (y * g_cuterm_state.fb_info.pitch) + (x * (g_cuterm_state.fb_info.bpp / 8));
+	uintptr_t addr = (uintptr_t)g_cuterm_state.fb_info.address + (y * g_cuterm_state.fb_info.pitch) + (x * (g_cuterm_state.fb_info.bpp / 8));
 	uint32_t color = pack_color(r, g, b);
 
 	if (g_cuterm_state.fb_info.bpp == 32) {
-		memcpy(pixel_ptr, &color, sizeof(uint32_t));
+		*(volatile uint32_t *)addr = color;
 	} else if (g_cuterm_state.fb_info.bpp == 24) {
-		pixel_ptr[0] = (uint8_t)(color & 0xFF);
-		pixel_ptr[1] = (uint8_t)((color >> 8) & 0xFF);
-		pixel_ptr[2] = (uint8_t)((color >> 16) & 0xFF);
+		volatile uint8_t *pixel = (volatile uint8_t *)addr;
+		pixel[0] = (uint8_t)(color & 0xFF);
+		pixel[1] = (uint8_t)((color >> 8) & 0xFF);
+		pixel[2] = (uint8_t)((color >> 16) & 0xFF);
 	}
 }
 

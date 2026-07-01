@@ -58,20 +58,23 @@ task_t* scheduler_create_task(void (*entry_point)(void)) {
 	if (!new_task) return NULL;
 
 	new_task->upid = 0;
-	new_task->cr3 = paging_get_pml4(); // current page table as default
+	new_task->cr3 = paging_get_pml4();
 
 	uint64_t stack_phys = pma_alloc_pages_2mb(1);
 	if (!stack_phys) { free(new_task); return NULL; }
+
 	uint64_t stack_top = stack_phys + PAGE_SIZE_2MB + hhdm_offset;
 	new_task->stack_base = (void*)(stack_phys + hhdm_offset);
 
-	struct trap_frame* frame = (struct trap_frame*)(stack_top - sizeof(struct trap_frame));
+	uint64_t aligned_stack_top = stack_top & ~0xF;
+	struct trap_frame* frame = (struct trap_frame*)(aligned_stack_top - sizeof(struct trap_frame));
+
 	memset(frame, 0, sizeof(struct trap_frame));
 
 	frame->rip = (uint64_t)entry_point;
 	frame->cs  = 0x08;
 	frame->ss  = 0x10;
-	frame->rsp = stack_top;
+	frame->rsp = aligned_stack_top;
 	frame->rflags = 0x202;
 
 	new_task->rsp = (uint64_t)frame;
