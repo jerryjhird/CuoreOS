@@ -415,12 +415,18 @@ int vsnprintf(char *buf, size_t bufsz, const char *fmt, va_list args) {
 			case 'M': {
 				// mac: expects uint8_t[6]
 				uint8_t *mac = va_arg(args, uint8_t *);
-				_internal_printf_fmt_u8_hex2(&ctx, mac[0]); _internal_printf_ctx_putc(&ctx, ':');
-				_internal_printf_fmt_u8_hex2(&ctx, mac[1]); _internal_printf_ctx_putc(&ctx, ':');
-				_internal_printf_fmt_u8_hex2(&ctx, mac[2]); _internal_printf_ctx_putc(&ctx, ':');
-				_internal_printf_fmt_u8_hex2(&ctx, mac[3]); _internal_printf_ctx_putc(&ctx, ':');
-				_internal_printf_fmt_u8_hex2(&ctx, mac[4]); _internal_printf_ctx_putc(&ctx, ':');
-				_internal_printf_fmt_u8_hex2(&ctx, mac[5]);
+
+				if (!mac) {
+					_internal_printf_fmt_string(&ctx, "(null)", width, flags);
+				} else {
+					_internal_printf_fmt_u8_hex2(&ctx, mac[0]); _internal_printf_ctx_putc(&ctx, ':');
+					_internal_printf_fmt_u8_hex2(&ctx, mac[1]); _internal_printf_ctx_putc(&ctx, ':');
+					_internal_printf_fmt_u8_hex2(&ctx, mac[2]); _internal_printf_ctx_putc(&ctx, ':');
+					_internal_printf_fmt_u8_hex2(&ctx, mac[3]); _internal_printf_ctx_putc(&ctx, ':');
+					_internal_printf_fmt_u8_hex2(&ctx, mac[4]); _internal_printf_ctx_putc(&ctx, ':');
+					_internal_printf_fmt_u8_hex2(&ctx, mac[5]);
+				}
+
 				break;
 			}
 
